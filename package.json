@@ -13,10 +13,24 @@
     "type-check": "vue-tsc --build --force"
   },
   "dependencies": {
+    "@codemirror/language": "^6.10.3",
+    "@codemirror/language-data": "^6.5.1",
+    "@codemirror/state": "^6.4.1",
+    "@codemirror/view": "^6.34.1",
     "axios": "^1.7.7",
+    "lib0": "^0.2.98",
+    "lucide-vue-next": "^0.452.0",
     "mitt": "^3.0.1",
+    "nanoid": "^5.0.7",
+    "prosemirror-inputrules": "^1.4.0",
+    "prosemirror-model": "^1.23.0",
+    "prosemirror-state": "^1.4.3",
+    "prosemirror-view": "^1.34.3",
     "vue": "^3.4.29",
     "vue-router": "^4.3.3",
+    "vue-virt-list": "^1.5.3",
+    "w3c-keyname": "^2.2.8",
+    "y-protocols": "^1.0.6",
     "y-websocket": "^2.0.4",
     "yjs": "^13.6.19",
     "zod": "^3.23.8"
@@ -25,17 +39,21 @@
     "@playwright/test": "^1.44.1",
     "@tsconfig/node20": "^20.1.4",
     "@types/jsdom": "^21.1.7",
-    "@types/node": "^20.14.5",
+    "@types/node": "^20.16.10",
     "@vitejs/plugin-vue": "^5.0.5",
     "@vitejs/plugin-vue-jsx": "^4.0.0",
     "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.5.1",
+    "add": "^2.0.6",
     "jsdom": "^24.1.0",
     "npm-run-all2": "^6.2.0",
+    "pnpm": "^9.12.1",
+    "sass-embedded": "^1.79.5",
     "typescript": "~5.4.0",
     "vite": "^5.3.1",
     "vite-plugin-vue-devtools": "^7.3.1",
     "vitest": "^1.6.0",
     "vue-tsc": "^2.0.21"
-  }
+  },
+  "packageManager": "pnpm@9.12.1+sha512.e5a7e52a4183a02d5931057f7a0dbff9d5e9ce3161e33fa68ae392125b79282a8a8a470a51dfc8a0ed86221442eb2fb57019b0990ed24fab519bf0e1bc5ccfc4"
 }
