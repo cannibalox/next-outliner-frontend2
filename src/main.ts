@@ -1,6 +1,5 @@
 import "./assets/main.css";
-
-import { createApp } from "vue";
+import { createApp, ref, type Ref } from "vue";
 import App from "./App.vue";
 import router from "./router";
 import { buildModules } from "./common/module";
@@ -14,9 +13,13 @@ import { eventBus } from "./modules/eventBus";
 import { blockTreeRegistry } from "./modules/blockTreeRegistry";
 import { globalUiVars } from "./modules/globalUiVars";
 import { keymapManager } from "./modules/keymapManager";
+import { importer } from "./modules/importer";
+import type { Block } from "./common/types";
+import { fulltextSearch } from "./modules/fulltextSearch";
 
 const app = createApp(App);
 export let globalEnv: Awaited<ReturnType<typeof initGlobalEnv>>;
+export const loaded = ref(false);
 
 const initGlobalEnv = async () => {
   const env = await buildModules({
@@ -30,6 +33,8 @@ const initGlobalEnv = async () => {
     blockTreeRegistry,
     globalUiVars,
     keymapManager,
+    importer,
+    fulltextSearch,
   });
   (window as any).globalEnv = env;
   env.settings.serverUrl.value = "localhost:8081";
@@ -43,9 +48,22 @@ const initGlobalEnv = async () => {
 };
 
 const startApp = async () => {
-  globalEnv = await initGlobalEnv();
-  app.use(router);
+  // app.use(router);
   app.mount("#app");
+  globalEnv = await initGlobalEnv();
+  loaded.value = true;
+
+  // 热更新环境
+  const hmr = import.meta.hot;
+  if (hmr) {
+    if (hmr.data.stop) {
+      await hmr.data.stop();
+    }
+
+    hmr.data.stop = async () => {
+      globalEnv.yjsManager.disconnect();
+    }
+  }
 };
 
-startApp();
+document.addEventListener("DOMContentLoaded", startApp);

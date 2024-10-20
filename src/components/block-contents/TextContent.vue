@@ -7,11 +7,12 @@
     :plugins-generator="customPluginsGenerator"
     :disable-spellcheck-when-blur="true"
     :on-doc-changed="onDocChanged"
+    :node-views="nodeViews"
   ></ProseMirror>
 </template>
 
 <script setup lang="ts">
-import type { LoadedBlockWithLevel, TextContent } from "@/common/types";
+import type { BlockWithLevel, TextContent } from "@/common/types";
 import type { EditorProps, EditorView } from "prosemirror-view";
 import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from "vue";
 import ProseMirror from "@/components/prosemirror/ProseMirror.vue";
@@ -21,16 +22,25 @@ import { inputRules } from "prosemirror-inputrules";
 import { mkPasteLinkPlugin } from "../prosemirror/plugins/pasteLink";
 import type { BlockTree } from "@/modules/blockTreeRegistry";
 import { mkKeymapPlugin } from "../prosemirror/plugins/keymap";
+import "prosemirror-view/style/prosemirror.css";
+import { MathInlineKatex } from "../prosemirror/node-views/inlineMath";
+import "katex/dist/katex.css";
 
 const props = defineProps<{
   blockTree?: BlockTree;
-  block: LoadedBlockWithLevel;
+  block: BlockWithLevel;
   readonly?: boolean;
 }>();
 
 const { taskQueue, blockEditor } = globalEnv;
 const docJson = shallowRef<any | null>(null);
 const pmWrapper = ref<InstanceType<typeof ProseMirror> | null>(null);
+const nodeViews: EditorProps["nodeViews"] = {
+  mathInline(node, view, getPos) {
+    return new MathInlineKatex(node, view, getPos);
+  },
+};
+
 const onDocChanged = ({ newDoc }: { newDoc: any }) => {
   const blockId = props.block.id;
   const newBlockContent: TextContent = [BLOCK_CONTENT_TYPES.TEXT, newDoc];
@@ -38,9 +48,12 @@ const onDocChanged = ({ newDoc }: { newDoc: any }) => {
     () => {
       blockEditor.changeBlockContent(blockId, newBlockContent);
     },
-    "updateBlockContent" + blockId,
-    500,
-    true,
+    {
+      type: "updateBlockContent" + blockId,
+      delay: 500,
+      debounce: true,
+      description: `update block ${blockId} content`,
+    }
   );
 };
 
@@ -72,15 +85,19 @@ watch(
 );
 
 onMounted(() => {
-  // 将 editorView 附到 wrapperDom 上
+  // 加载时，向 blockTree 注册 editorView
+  const blockId = props.block.id;
   const editorView = pmWrapper.value?.getEditorView();
-  const wrapperDom = pmWrapper.value?.getWrapperDom();
-  if (editorView && wrapperDom) Object.assign(wrapperDom, { pmView: editorView });
+  if (editorView) {
+    props.blockTree?.registerEditorView(blockId, editorView);
+  }
 });
 
 onBeforeUnmount(() => {
-  const wrapperDom = pmWrapper.value?.getWrapperDom();
-  if (wrapperDom && "pmView" in wrapperDom) delete wrapperDom["pmView"];
+  // 卸载时，从 blockTree 注销 editorView
+  console.log("unregister editorView", props.block.id);
+  const blockId = props.block.id;
+  props.blockTree?.unregisterEditorView(blockId);
 });
 </script>
 
@@ -92,6 +109,14 @@ onBeforeUnmount(() => {
   font-family: var(--text-font);
   font-size: var(--text-font-size);
   line-height: var(--line-height-normal);
+
+  .ProseMirror {
+    outline: none;
+  }
+
+  .katex {
+    font-size: 1.1em;
+  }
 }
 
 // 拖拽时光标样式

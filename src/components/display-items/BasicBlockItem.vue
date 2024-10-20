@@ -1,11 +1,13 @@
 <template>
   <div class="block-item"
-    :class="{}"
+    :class="{ hasChildren, fold }"
+    :blockId="item.block.id"
+    @focusin="handleFocusIn"
   >
   <div class="indent-lines">
       <div class="indent-line" v-for="i in block.level" :key="i"></div>
     </div>
-    <div class="fold-button" v-if="!hideFoldButton">
+    <div class="fold-button" v-if="!hideFoldButton" @click="handleClickFoldButton">
       <Triangle></Triangle>
     </div>
     <div class="bullet" v-if="!hideBullet" draggable="true">
@@ -16,7 +18,7 @@
       v-if="block.content[0] == BLOCK_CONTENT_TYPES.TEXT"
       :block="block"
       :block-tree="blockTree"
-    ></TextContent>  
+    ></TextContent>
   </div>
 </template>
 
@@ -38,9 +40,26 @@ const props = defineProps<{
   showPath?: boolean;
 }>();
 
-const {blocksManager} = globalEnv;
+const {blocksManager, globalUiVars, taskQueue, blockEditor} = globalEnv;
+
+// computed
 const block = computed(() => props.item.block);
 const mirrorIds = computed(() => blocksManager.getMirrors(block.value.id));
+const fold = computed(() => props.item.block.fold);
+const hasChildren = computed(() => props.item.block.childrenIds.length > 0);
+
+// handlers
+const handleFocusIn = () => {
+  const blockId = props.item.block.id;
+  const blockTreeId = props.blockTree?.getId() ?? null;
+  globalUiVars.lastFocusedBlockId.value = blockId;
+  globalUiVars.lastFocusedBlockTreeId.value = blockTreeId;
+};
+
+const handleClickFoldButton = () => {
+  const blockId = props.item.block.id;
+  taskQueue.addTask(() => blockEditor.toggleFold(blockId));
+}
 </script>
 
 <style lang="scss">
@@ -51,7 +70,7 @@ const mirrorIds = computed(() => blocksManager.getMirrors(block.value.id));
   &.selected {
     .block-content,
     .bullet {
-      background-color: var(--selected-block-item-bg);
+      background-color: var(--muted);
     }
   }
 
@@ -63,6 +82,7 @@ const mirrorIds = computed(() => blocksManager.getMirrors(block.value.id));
       height: 100%;
       border-right: var(--border-indent);
       margin-right: var(--block-indent-adjust);
+      border-right: 1px solid var(--indent-line-color);
     }
   }
 
@@ -73,17 +93,14 @@ const mirrorIds = computed(() => blocksManager.getMirrors(block.value.id));
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    opacity: 0;
+    opacity: 0; // 默认隐藏 fold button
 
-    svg {
-      height: 6px;
-      width: 6px;
-      stroke: none;
-      fill: var(--bullet-color);
-      transform: rotate(180deg);
-      padding: 4px;
-    }
-
+    // 如果：
+    // 1. 这个 block 有 children，且 hover
+    // 2. 这个 block 有 backlink，且 hover
+    // 3. 这个 block 有编号
+    // 4. 这个 block 有 metadata，且 hover
+    // 则显示 fold button
     @at-root .block-item.hasChildren:hover > .fold-button,
       .block-item.hasBacklink:hover > .fold-button,
       .block-item.hasChildren.no > .fold-button,
@@ -91,13 +108,22 @@ const mirrorIds = computed(() => blocksManager.getMirrors(block.value.id));
       opacity: 1;
     }
 
+    svg {
+      height: var(--fold-button-size);
+      width: var(--fold-button-size);
+      stroke: none;
+      fill: var(--fold-button-color);
+      transform: rotate(180deg);
+      padding: 4px;
+    }
+
+    // 如果这个 block 是 folded 的，则将 fold button 旋转 90 度
     @at-root .block-item.fold > .fold-button svg {
       transform: rotate(90deg);
     }
   }
 
   .bullet {
-    // TODO hard coded
     height: calc(26px + var(--content-padding));
     min-width: 18px;
     display: flex;
@@ -114,8 +140,8 @@ const mirrorIds = computed(() => blocksManager.getMirrors(block.value.id));
     }
 
     svg {
-      height: 7px;
-      width: 7px;
+      height: var(--bullet-size);
+      width: var(--bullet-size);
       stroke: none;
       fill: var(--bullet-color);
       padding: 4px;
@@ -126,6 +152,11 @@ const mirrorIds = computed(() => blocksManager.getMirrors(block.value.id));
       }
     }
 
+    // 如果一个折叠的块
+    // 1. 有孩子
+    // 2. 有反链
+    // 3. 有元数据
+    // 总之就是可以展开，则 bullet 外面加一圈浅色
     @at-root .block-item.fold.hasChildren .bullet svg,
       .block-item.fold.hasBacklink .bullet svg,
       .block-item.fold.hasMetadata .bullet svg {

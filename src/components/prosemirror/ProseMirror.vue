@@ -119,5 +119,3 @@ onBeforeUnmount(() => {
   editorView = null;
 });
 </script>
-
-<style lang="scss"></style>

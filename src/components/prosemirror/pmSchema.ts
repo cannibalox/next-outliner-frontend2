@@ -63,20 +63,17 @@ export const pmSchema = new Schema({
         const { toBlockId } = node.attrs;
         const span = document.createElement("span");
         span.classList.add("block-ref-v2");
-        if (node.attrs.tag) {
-          // 是标签
-          span.classList.add("tag");
-        }
+        if (node.attrs.tag) span.classList.add("tag"); // 是标签
+
         span.setAttribute("to-block-id", toBlockId);
         // 点击块引用，跳转到对应块
         span.addEventListener("click", async (e) => {
-          // TODO
-          // e.preventDefault();
-          // e.stopPropagation();
-          // // 从这个元素往上找，找到对应的 blockTree 更好？
-          // const blockTree = app.getBlockTree("main");
-          // if (blockTree == null) return;
-          // await app.locateBlock(blockTree, toBlockId, true, true);
+          e.preventDefault();
+          e.stopPropagation();
+          // 从这个元素往上找，找到对应的 blockTree 更好？
+          const mainTree = globalEnv.blockTreeRegistry.getBlockTree("main");
+          if (mainTree == null) return;
+          await mainTree.focusBlock(toBlockId);
         });
         // 当源块 ctext 更新时，更新引用锚文本
         const blockRef = globalEnv.blocksManager.getBlockRef(toBlockId);
@@ -111,7 +108,7 @@ export const pmSchema = new Schema({
         },
       ],
       leafText: (node) => {
-        const {toBlockId} = node.attrs;
+        const { toBlockId } = node.attrs;
         if (!toBlockId) return "";
         const blockRef = globalEnv.blocksManager.getBlockRef(toBlockId);
         return blockRef.value?.ctext ?? "";

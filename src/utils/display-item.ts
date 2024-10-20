@@ -1,10 +1,8 @@
-import type { BlockId, LoadedBlockWithLevel } from "@/common/types";
+import type { BlockId, BlockWithLevel } from "@/common/types";
 import { globalEnv } from "@/main";
 import type { ForDescendantsOptions } from "@/modules/blocksManager";
 
-export type DisplayItem =
-  | { type: "block", block: LoadedBlockWithLevel }
-  ;
+export type DisplayItem = { itemId: string } & { type: "block"; block: BlockWithLevel };
 
 export type DisplayItemGenerator = (params: {
   rootBlockIds?: BlockId[];
@@ -21,7 +19,7 @@ const defaultDfsOptions = (resultCollector: DisplayItem[]) => {
   dfsOptions.includeSelf = true;
 
   dfsOptions.onEachBlock = (block, ignore) => {
-    resultCollector.push({ type: "block", block });
+    resultCollector.push({ type: "block", itemId: `block-${block.id}`, block });
   };
 
   return dfsOptions;
@@ -31,7 +29,7 @@ export const defaultDiGenerator: DisplayItemGenerator = (params) => {
   if (!params.rootBlockIds) return [];
   const resultCollector: DisplayItem[] = [];
   const dfsOptions = defaultDfsOptions(resultCollector);
-  const {blocksManager} = globalEnv;
+  const { blocksManager } = globalEnv;
 
   for (const rootBlockId of params.rootBlockIds) {
     dfsOptions.rootBlockId = rootBlockId;
@@ -53,4 +51,4 @@ export const defaultDiGenerator: DisplayItemGenerator = (params) => {
   }
 
   return resultCollector;
-}
+};

@@ -1,11 +1,33 @@
 import { settings } from "@/modules/settings";
 import { ref, type Ref } from "vue";
 import * as Y from "yjs";
-import type { BlockInfo } from "./types";
+import type { BlockData, BlockInfo } from "./types";
 // @ts-ignore
 import { WebsocketProvider } from "@/common/yjs/y-websocket";
 import { backendApi } from "@/modules/backendApi";
 import { defineModule } from "@/common/module";
+import type { BlockId } from "@/common/types";
+
+export type YjsLayerPatch =
+  | { op: "upsertBlockInfo"; blockId: BlockId; blockInfo: BlockInfo }
+  | { op: "deleteBlockInfo"; blockId: BlockId }
+  | { op: "upsertBlockData"; docId: number; blockId: BlockId; blockData: BlockData }
+  | { op: "deleteBlockData"; docId: number; blockId: BlockId }
+
+// YjsLayerTransaction 是 Yjs 文档层级的操作
+// 如果不将操作表示为事务，而是直接 `yMap.set` 或 `yMap.delete`，会导致无法批量提交
+// 因为不能在每个需要 set 或 delete 的地方都调用 yDoc.transact
+export type YjsLayerTransaction = {
+  patches: YjsLayerPatch[];
+  upsertBlockInfo: (blockId: BlockId, blockInfo: BlockInfo) => void;
+  deleteBlockInfo: (blockId: BlockId) => void;
+  upsertBlockData: (docId: number, blockId: BlockId, blockData: BlockData) => void;
+  deleteBlockData: (docId: number, blockId: BlockId) => void;
+  // onLoad 是可选的，在加载一个新文档时调用
+  commit: (onLoad?: (doc: Y.Doc) => void) => void;
+}
+
+const BLOCK_DATA_MAP_NAME = "blockData";
 
 /**
  * 管理所有 Yjs Documents 的模块
@@ -65,14 +87,13 @@ export const yjsManager = defineModule(
       wsProvider.value = null;
     }
 
-    const loadDataDoc = (docId: number) => {
+    const getDataDoc = (docId: number, onLoad?: (doc: Y.Doc) => void) => {
       if (!blockDataDocs.value) {
         console.error("数据文档未初始化，先 connect 以初始化");
         return;
       }
       const { location } = settings;
       if (blockDataDocs.value?.has(docId)) {
-        console.log(`数据文档 ${docId} 已加载，什么都不做`);
         return blockDataDocs.value.get(docId);
       }
       const dataDoc = new Y.Doc({ guid: `${location.value ?? "temp"}${docId}` });
@@ -81,6 +102,7 @@ export const yjsManager = defineModule(
         console.log("dataDoc 加入 wsProvider，开始同步");
         wsProvider.value.addDoc(dataDoc);
       }
+      onLoad?.(dataDoc);
       return dataDoc;
     }
 
@@ -105,6 +127,89 @@ export const yjsManager = defineModule(
       }, interval);
     });
 
+    const allSyncedRef = ref(false);
+
+    setInterval(() => {
+      if (!wsProvider.value) {
+        allSyncedRef.value = false;
+        return;
+      }
+      let result = true;
+      for (const doc of wsProvider.value.docs.values()) {
+        const docGuid = doc.guid;
+        if (!wsProvider.value?.isSynced(docGuid)) {
+          result = false;
+          break;
+        }
+      }
+      allSyncedRef.value = result;
+    }, 1000);
+
+    const createYjsLayerTransaction = () => {
+      const tr: YjsLayerTransaction = {
+        patches: [],
+        upsertBlockInfo: (blockId, blockInfo) => {
+          tr.patches.push({ op: "upsertBlockInfo", blockId, blockInfo });
+        },
+        deleteBlockInfo: (blockId) => {
+          tr.patches.push({ op: "deleteBlockInfo", blockId });
+        },
+        upsertBlockData: (docId, blockId, blockData) => {
+          tr.patches.push({ op: "upsertBlockData", docId, blockId, blockData });
+        },
+        deleteBlockData: (docId, blockId) => {
+          tr.patches.push({ op: "deleteBlockData", docId, blockId });
+        },
+        commit: (onLoad?: (doc: Y.Doc) => void) => {
+          if (!baseDoc.value || !blockInfoMap.value) {
+            console.error("baseDoc or blockInfoMap is null, cannot commit");
+            return;
+          }
+          // 先处理 blockInfoMap 的变更
+          baseDoc.value.transact(() => {
+            if (!blockInfoMap.value) return;
+            for (const p of tr.patches) {
+              if (p.op === "upsertBlockInfo") {
+                blockInfoMap.value.set(p.blockId, p.blockInfo);
+              } else if (p.op === "deleteBlockInfo") {
+                blockInfoMap.value.delete(p.blockId);
+              }
+            }
+          }, baseDoc.value.clientID);
+          console.log("send origin", baseDoc.value.clientID);
+          // 再处理 blockData 的变更
+          // 将所有对同一个文档的变更合到一起
+          const doc2patches = new Map<number, YjsLayerPatch[]>();
+          for (const p of tr.patches) {
+            if (p.op === "upsertBlockData" || p.op === "deleteBlockData") {
+              const patches = doc2patches.get(p.docId);
+              if (!patches) {
+                doc2patches.set(p.docId, [p]);
+              } else {
+                patches.push(p);
+              }
+            }
+          }
+          for (const [docId, patches] of doc2patches.entries()) {
+            const dataDoc = getDataDoc(docId, onLoad);
+            // 每个文档分别事务
+            dataDoc?.transact(() => {
+              const blockDataMap = dataDoc.getMap<BlockData>(BLOCK_DATA_MAP_NAME);
+              for (const p of patches) {
+                if (p.op === "upsertBlockData") {
+                  blockDataMap.set(p.blockId, p.blockData);
+                } else if (p.op === "deleteBlockData") {
+                  blockDataMap.delete(p.blockId);
+                }
+              }
+            }, dataDoc.clientID);
+          }
+        }
+      };
+
+      return tr;
+    }
+
     return {
       connect,
       disconnect,
@@ -112,8 +217,10 @@ export const yjsManager = defineModule(
       // 不要使用 Doc.isSynced 或 isLoaded！！！！！！
       isSynced,
       whenSynced,
-      loadDataDoc,
+      getDataDoc,
       unloadDataDoc,
+      allSyncedRef,
+      createYjsLayerTransaction,
       // 手工 as 指定类型，防止 ts 推导出超级长的类型导致错误
       wsProvider,
       baseDoc: baseDoc as Ref<Y.Doc | null>,

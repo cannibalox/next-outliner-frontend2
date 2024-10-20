@@ -7,11 +7,11 @@ import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { EditorView } from "@codemirror/view";
 import { Compartment, EditorSelection, EditorState, type Extension } from "@codemirror/state";
 import { LanguageDescription } from "@codemirror/language";
-import { mkContentChangePlugin } from "@/cm/plugins/content-change";
+import { mkContentChangePlugin } from "./plugins/content-change";
 import { languages } from "@codemirror/language-data";
-import { basicLight } from "@/cm/themes/cm-basic-light";
-import { basicDark } from "@/cm/themes/cm-basic-dark";
-import { updateHighlightTerms } from "@/cm/plugins/highlight-matches";
+import { basicLight } from "./themes/basicLight";
+import { basicDark } from "./themes/basicDark";
+import { updateHighlightTerms } from "./plugins/highlight-matches";
 
 const props = defineProps<{
   theme: string;

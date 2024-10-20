@@ -1,13 +1,15 @@
 import { defineModule } from "@/common/module";
+import { useDebounceFn } from "@vueuse/core";
 import mitt from "mitt";
 import { ref, type Ref } from "vue";
+import type { BlockTransaction } from "./blocksManager";
 
 type Events = {
-  // 当 blocks 改变时（增加、更新或删除 block）时触发
-  blocksChanged: undefined;
+  // 当 blockTransaction 提交后触发
+  afterBlocksTrCommit: BlockTransaction;
 }
 
-const EVENTS: (keyof Events)[] = ["blocksChanged"] as const;
+const EVENTS: (keyof Events)[] = ["afterBlocksTrCommit"] as const;
 
 /**
  * 全局事件总线
