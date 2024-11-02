@@ -16,3 +16,8 @@ export function withTimeout<T>(promise: Promise<T>, timeout: number): Promise<T>
     );
   });
 }
+
+export function timeout(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+

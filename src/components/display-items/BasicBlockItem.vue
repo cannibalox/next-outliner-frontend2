@@ -7,29 +7,52 @@
   <div class="indent-lines">
       <div class="indent-line" v-for="i in block.level" :key="i"></div>
     </div>
-    <div class="fold-button" v-if="!hideFoldButton" @click="handleClickFoldButton">
+    <div class="fold-button shrink-0" v-if="!hideFoldButton" @click="handleClickFoldButton">
       <Triangle></Triangle>
     </div>
-    <div class="bullet" v-if="!hideBullet" draggable="true">
+    <div class="bullet shrink-0" v-if="!hideBullet" draggable="true">
       <Diamond class="diamond" v-if="mirrorIds.size > 0"></Diamond>
       <Circle class="circle" v-else></Circle>
     </div>
     <TextContent
-      v-if="block.content[0] == BLOCK_CONTENT_TYPES.TEXT"
+      v-if="block.content[0] === BLOCK_CONTENT_TYPES.TEXT"
       :block="block"
       :block-tree="blockTree"
+      :readonly="readonly"
     ></TextContent>
+    <MathContent
+      v-if="block.content[0] === BLOCK_CONTENT_TYPES.MATH"
+      :block="block"
+      :block-tree="blockTree"
+      :readonly="readonly"
+    ></MathContent>
+    <CodeContent
+      v-if="block.content[0] === BLOCK_CONTENT_TYPES.CODE"
+      :block="block"
+      :block-tree="blockTree"
+      :readonly="readonly"
+    ></CodeContent>
+    <ImageContent
+      v-if="block.content[0] === BLOCK_CONTENT_TYPES.IMAGE"
+      :block="block"
+      :block-tree="blockTree"
+    ></ImageContent>
   </div>
 </template>
 
 <script setup lang="ts">
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import TextContent from "@/components/block-contents/TextContent.vue";
-import type { BlockTree } from "@/modules/blockTreeRegistry";
+import MathContent from "@/components/block-contents/MathContent.vue";
 import type { DisplayItem } from "@/utils/display-item";
 import { computed } from "vue";
 import { Diamond, Circle, Triangle } from 'lucide-vue-next';
-import { globalEnv } from "@/main";
+import type { BlockTree } from "@/context/blockTree";
+import { useTaskQueue } from "@/plugins/taskQueue";
+import BlocksContext from "@/context/blocks-provider/blocks";
+import LastFocusContext from "@/context/lastFocus";
+import CodeContent from "../block-contents/CodeContent.vue";
+import ImageContent from "../block-contents/ImageContent.vue";
 
 const props = defineProps<{
   blockTree?: BlockTree;
@@ -38,9 +61,12 @@ const props = defineProps<{
   hideBullet?: boolean;
   forceFold?: boolean;
   showPath?: boolean;
+  readonly?: boolean;
 }>();
 
-const {blocksManager, globalUiVars, taskQueue, blockEditor} = globalEnv;
+const taskQueue = useTaskQueue();
+const { blocksManager, blockEditor } = BlocksContext.useContext();
+const { lastFocusedBlockId, lastFocusedBlockTreeId } = LastFocusContext.useContext();
 
 // computed
 const block = computed(() => props.item.block);
@@ -52,8 +78,8 @@ const hasChildren = computed(() => props.item.block.childrenIds.length > 0);
 const handleFocusIn = () => {
   const blockId = props.item.block.id;
   const blockTreeId = props.blockTree?.getId() ?? null;
-  globalUiVars.lastFocusedBlockId.value = blockId;
-  globalUiVars.lastFocusedBlockTreeId.value = blockTreeId;
+  lastFocusedBlockId.value = blockId;
+  lastFocusedBlockTreeId.value = blockTreeId;
 };
 
 const handleClickFoldButton = () => {
@@ -87,7 +113,7 @@ const handleClickFoldButton = () => {
   }
 
   .fold-button {
-    height: calc(26px + var(--content-padding));
+    height: calc(var(--editor-line-height) + var(--content-padding));
     width: 18px;
     display: flex;
     justify-content: center;
@@ -124,7 +150,7 @@ const handleClickFoldButton = () => {
   }
 
   .bullet {
-    height: calc(26px + var(--content-padding));
+    height: calc(var(--editor-line-height) + var(--content-padding));
     min-width: 18px;
     display: flex;
     justify-content: center;

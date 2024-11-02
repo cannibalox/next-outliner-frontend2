@@ -1,5 +1,5 @@
 export const autoRetryGet = <T>(
-  tryGet: (onSuccess: (result: T) => void) => void,
+  tryGet: (onSuccess: (result: T) => void) => void | Promise<void>,
   interval: { mode: "fixed"; value: number } | { mode: "backoff"; base: number; max: number },
   maxRetryTimes: number,
   stopOnError: boolean = true,

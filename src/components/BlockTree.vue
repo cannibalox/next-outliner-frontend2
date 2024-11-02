@@ -4,8 +4,8 @@
     ref="$blockTree"
     :block-tree-id="id"
     :style="{
+      '--padding-bottom': `${paddingBottom ?? 200}px`,
       '--padding-top': `${paddingTop ?? 0}px`,
-      '--padding-bottom': `${paddingBottom ?? 200}px`
     }"
   >
     <virt-list
@@ -18,6 +18,7 @@
       ref="$vlist"
       itemClass="block-container"
     >
+      <template #header> </template>
       <template #default="{ itemData }">
         <BasicBlockItem
           v-if="itemData.type == 'block'"
@@ -32,11 +33,9 @@
 </template>
 
 <script setup lang="ts">
-import type { BlockId, Block } from "@/common/types";
-import { globalEnv } from "@/main";
-import type { BlockTree, BlockTreeEventMap, BlockTreeProps } from "@/modules/blockTreeRegistry";
+import type { BlockId } from "@/common/types";
 import {
-  defaultDiGenerator,
+  getDefaultDiGenerator,
   type DisplayItem,
   type DisplayItemGenerator,
 } from "@/utils/display-item";
@@ -46,12 +45,19 @@ import { VirtList } from "vue-virt-list";
 import { EditorView as PmEditorView } from "prosemirror-view";
 import { EditorView as CmEditorView } from "@codemirror/view";
 import BasicBlockItem from "./display-items/BasicBlockItem.vue";
+import { AllSelection } from "prosemirror-state";
+import { useEventBus } from "@/plugins/eventbus";
+import type { Block } from "@/context/blocks-provider/blocksManager";
+import { BlockTreeContext, type BlockTree, type BlockTreeEventMap, type BlockTreeProps } from "@/context/blockTree";
+import BlocksContext from "@/context/blocks-provider/blocks";
 
 const props = defineProps<BlockTreeProps>();
+const eventBus = useEventBus();
+const blockTreeContext = BlockTreeContext.useContext();
+const { blocksManager } = BlocksContext.useContext();
 const $blockTree = ref<HTMLElement | null>(null);
 const $vlist = ref<InstanceType<typeof VirtList> | null>(null);
 const displayItems = shallowRef<DisplayItem[]>();
-const { eventBus, blockTreeRegistry } = globalEnv;
 const localEventBus = mitt<BlockTreeEventMap>();
 const changeRef = eventBus.eventRefs.afterBlocksTrCommit;
 const editorViews = new Map<BlockId, PmEditorView | CmEditorView>();
@@ -60,7 +66,7 @@ let fixedOffset: number | null = null;
 const tempExpanded = ref(new Set<BlockId>());
 
 const updateDisplayItems = () => {
-  const diGenerator = props.diGenerator ?? defaultDiGenerator;
+  const diGenerator = props.diGenerator ?? getDefaultDiGenerator(blocksManager);
 
   // 计算 displayItems
   const blockTreeId = props.id;
@@ -142,13 +148,31 @@ const getSuccessorBlock = (blockId: BlockId): Block | null => {
 const getEditorView = (blockId: BlockId) => editorViews.get(blockId) ?? null;
 
 const scrollBlockIntoView = (blockId: BlockId) => {
-  const index = displayItems.value!.findIndex((item) => item.type == "block" && item.block.id == blockId);
+  const index = displayItems.value!.findIndex(
+    (item) => item.type == "block" && item.block.id == blockId,
+  );
   if (index != null && index >= 0) {
     $vlist.value?.scrollToIndex(index);
   }
-}
+};
 
-const focusBlock = (blockId: BlockId, scrollIntoView: boolean = true) => {
+const getDomOfDi = (itemId: string): HTMLElement | null => {
+  return $blockTree.value?.querySelector(`[data-id="${itemId}"]`) ?? null;
+};
+
+const focusBlock = (
+  blockId: BlockId,
+  options: {
+    scrollIntoView?: boolean;
+    highlight?: boolean;
+    expandIfFold?: boolean;
+  } = {},
+) => {
+  let { scrollIntoView, highlight, expandIfFold } = options;
+  scrollIntoView ??= true;
+  highlight ??= false;
+  expandIfFold ??= true;
+
   // 父元素，滚动时以其为基准
   const $parent = $blockTree.value;
   if (!$parent) return;
@@ -162,7 +186,51 @@ const focusBlock = (blockId: BlockId, scrollIntoView: boolean = true) => {
   if (editorView) {
     editorView.focus();
   }
+
+  if (highlight) {
+    const blockItemDom = getDomOfDi(`block-${blockId}`)?.querySelector(".block-item");
+    if (blockItemDom) {
+      // 0-1000ms 高亮，1000-3000ms 淡化，3000ms 后移除高亮
+      blockItemDom.classList.add("highlight-keep");
+      setTimeout(() => {
+        blockItemDom.classList.add("highlight-fade");
+      }, 1000);
+      setTimeout(() => {
+        blockItemDom.classList.remove("highlight-keep");
+        blockItemDom.classList.remove("highlight-fade");
+      }, 3000);
+    }
+  }
+};
+
+const moveCursorToTheEnd = (blockId: BlockId) => {
+  const editorView = getEditorView(blockId);
+  if (editorView instanceof PmEditorView) {
+    const tr = editorView.state.tr;
+    const sel = AllSelection.atEnd(editorView.state.doc);
+    tr.setSelection(sel);
+    editorView.dispatch(tr);
+  } else if (editorView instanceof CmEditorView) {
+    const sel = editorView.state.doc.length;
+    editorView.dispatch({
+      selection: { anchor: sel },
+    });
+  }
 }
+
+const moveCursorToBegin = (blockId: BlockId) => {
+  const editorView = getEditorView(blockId);
+  if (editorView instanceof PmEditorView) {
+    const tr = editorView.state.tr;
+    const sel = AllSelection.atStart(editorView.state.doc);
+    tr.setSelection(sel);
+    editorView.dispatch(tr);
+  } else if (editorView instanceof CmEditorView) {
+    editorView.dispatch({
+      selection: { anchor: 0 },
+    });
+  }
+};
 
 const controller: BlockTree = {
   getProps: () => props,
@@ -181,17 +249,20 @@ const controller: BlockTree = {
   nextUpdate,
   getEditorView,
   focusBlock,
+  getDomOfDi,
+  moveCursorToTheEnd,
+  moveCursorToBegin,
 };
 defineExpose(controller);
 
 onMounted(() => {
   const el = $blockTree.value;
   if (el) Object.assign(el, { controller });
-  blockTreeRegistry.registerBlockTree(controller);
+  blockTreeContext.registerBlockTree(controller);
 });
 
 onUnmounted(() => {
-  blockTreeRegistry.unregisterBlockTree(props.id);
+  blockTreeContext.unregisterBlockTree(props.id);
 });
 </script>
 
@@ -201,8 +272,6 @@ onUnmounted(() => {
 
   // 用 footer 遮挡掉不想看到的缩进线
   .vlist {
-    padding-top: var(--padding-top);
-    
     [data-id="footer"] {
       flex-grow: 1;
       flex-shrink: 0;
@@ -210,6 +279,10 @@ onUnmounted(() => {
       background-color: var(--bg-color-primary);
       position: relative;
       z-index: 99;
+    }
+
+    [data-id="header"] {
+      min-height: var(--padding-top);
     }
   }
 

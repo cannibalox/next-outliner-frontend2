@@ -2,14 +2,25 @@
   <template v-if="'itemComp' in item">
     <component :is="item.itemComp" />
   </template>
-  <template v-else>
-    <component :is="item.icon" class="size-4 stroke-[1.8] mr-3"></component>
-    <template v-if="!iconOnly">{{ item.label }}</template>
-  </template>
+  <div v-else class="flex items-center">
+    <component
+      :is="item.icon"
+      class="size-5 stroke-[1.8]"
+      :class="iconClass + ` ${!iconOnly ? 'mr-3' : ''}`"
+    ></component>
+    <template v-if="!iconOnly">
+      <component :is="item.label" :class="labelClass" />
+    </template>
+  </div>
 </template>
 
 <script setup lang="ts">
-import type { MoreOptionsItem } from ".";
+import type { HeaderBarItemType } from ".";
 
-const props = defineProps<{ item: MoreOptionsItem; iconOnly?: boolean }>();
+const props = defineProps<{
+  item: HeaderBarItemType;
+  iconOnly?: boolean;
+  iconClass?: string;
+  labelClass?: string;
+}>();
 </script>

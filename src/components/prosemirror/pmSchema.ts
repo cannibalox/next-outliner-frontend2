@@ -1,4 +1,3 @@
-import { globalEnv } from "@/main";
 import type { MarkSpec, NodeSpec } from "prosemirror-model";
 import { Schema } from "prosemirror-model";
 import { watch, watchEffect } from "vue";
@@ -60,6 +59,14 @@ export const pmSchema = new Schema({
       group: "inline",
       selectable: true,
       toDOM: (node) => {
+        const blockTreeContext = globalThis.getBlockTreeContext();
+        const blocksContext = globalThis.getBlocksContext();
+        if (!blockTreeContext || !blocksContext) {
+          const span = document.createElement("span");
+          span.innerHTML = "INVALID ENV (blockTreeContext or blocksContext not found)";
+          return span;
+        }
+
         const { toBlockId } = node.attrs;
         const span = document.createElement("span");
         span.classList.add("block-ref-v2");
@@ -71,12 +78,12 @@ export const pmSchema = new Schema({
           e.preventDefault();
           e.stopPropagation();
           // 从这个元素往上找，找到对应的 blockTree 更好？
-          const mainTree = globalEnv.blockTreeRegistry.getBlockTree("main");
+          const mainTree = blockTreeContext.getBlockTree("main");
           if (mainTree == null) return;
-          await mainTree.focusBlock(toBlockId);
+          await mainTree.focusBlock(toBlockId, { highlight: true });
         });
         // 当源块 ctext 更新时，更新引用锚文本
-        const blockRef = globalEnv.blocksManager.getBlockRef(toBlockId);
+        const blockRef = blocksContext.blocksManager.getBlockRef(toBlockId);
         watch(
           blockRef,
           (toBlock) => {
@@ -108,9 +115,11 @@ export const pmSchema = new Schema({
         },
       ],
       leafText: (node) => {
+        const blocksContext = globalThis.getBlocksContext();
+        if (!blocksContext) return "";
         const { toBlockId } = node.attrs;
         if (!toBlockId) return "";
-        const blockRef = globalEnv.blocksManager.getBlockRef(toBlockId);
+        const blockRef = blocksContext.blocksManager.getBlockRef(toBlockId);
         return blockRef.value?.ctext ?? "";
       },
     },

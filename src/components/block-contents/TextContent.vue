@@ -12,19 +12,24 @@
 </template>
 
 <script setup lang="ts">
-import type { BlockWithLevel, TextContent } from "@/common/types";
+import type { TextContent } from "@/common/types";
 import type { EditorProps, EditorView } from "prosemirror-view";
 import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from "vue";
 import ProseMirror from "@/components/prosemirror/ProseMirror.vue";
-import { globalEnv } from "@/main";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import { inputRules } from "prosemirror-inputrules";
 import { mkPasteLinkPlugin } from "../prosemirror/plugins/pasteLink";
-import type { BlockTree } from "@/modules/blockTreeRegistry";
 import { mkKeymapPlugin } from "../prosemirror/plugins/keymap";
 import "prosemirror-view/style/prosemirror.css";
 import { MathInlineKatex } from "../prosemirror/node-views/inlineMath";
 import "katex/dist/katex.css";
+import type { BlockWithLevel } from "@/context/blocks-provider/blocksManager";
+import { useTaskQueue } from "@/plugins/taskQueue";
+import type { BlockTree } from "@/context/blockTree";
+import BlocksContext from "@/context/blocks-provider/blocks";
+import { openRefSuggestions } from "../prosemirror/input-rules/openRefSuggestions";
+import { turnToCodeBlock } from "../prosemirror/input-rules/turn-to-code-block";
+import { mkPasteImagePlugin } from "../prosemirror/plugins/pasteImage";
 
 const props = defineProps<{
   blockTree?: BlockTree;
@@ -32,7 +37,8 @@ const props = defineProps<{
   readonly?: boolean;
 }>();
 
-const { taskQueue, blockEditor } = globalEnv;
+const { blockEditor } = BlocksContext.useContext();
+const taskQueue = useTaskQueue();
 const docJson = shallowRef<any | null>(null);
 const pmWrapper = ref<InstanceType<typeof ProseMirror> | null>(null);
 const nodeViews: EditorProps["nodeViews"] = {
@@ -44,6 +50,7 @@ const nodeViews: EditorProps["nodeViews"] = {
 const onDocChanged = ({ newDoc }: { newDoc: any }) => {
   const blockId = props.block.id;
   const newBlockContent: TextContent = [BLOCK_CONTENT_TYPES.TEXT, newDoc];
+  docJson.value = newDoc;
   taskQueue.addTask(
     () => {
       blockEditor.changeBlockContent(blockId, newBlockContent);
@@ -53,7 +60,7 @@ const onDocChanged = ({ newDoc }: { newDoc: any }) => {
       delay: 500,
       debounce: true,
       description: `update block ${blockId} content`,
-    }
+    },
   );
 };
 
@@ -67,10 +74,13 @@ const customPluginsGenerator = (getEditorView: () => EditorView | null, readonly
     return [
       inputRules({
         rules: [
+          openRefSuggestions(getEditorView),
+          turnToCodeBlock(getBlockId, getBlockTree),
         ],
       }),
       mkKeymapPlugin(),
       mkPasteLinkPlugin(),
+      mkPasteImagePlugin(),
     ];
   }
 };
@@ -79,6 +89,7 @@ watch(
   () => props.block.content,
   (content) => {
     if (content[0] != BLOCK_CONTENT_TYPES.TEXT) return;
+    if (JSON.stringify(docJson.value) === JSON.stringify(content[1])) return;
     docJson.value = content[1];
   },
   { immediate: true },
@@ -95,7 +106,6 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   // 卸载时，从 blockTree 注销 editorView
-  console.log("unregister editorView", props.block.id);
   const blockId = props.block.id;
   props.blockTree?.unregisterEditorView(blockId);
 });
@@ -112,147 +122,155 @@ onBeforeUnmount(() => {
 
   .ProseMirror {
     outline: none;
+
+    // 高亮样式
+    span[bg="bg1"] {
+      background-color: var(--highlight-1);
+    }
+
+    span[bg="bg2"] {
+      background-color: var(--highlight-2);
+    }
+
+    span[bg="bg3"] {
+      background-color: var(--highlight-3);
+    }
+
+    span[bg="bg4"] {
+      background-color: var(--highlight-4);
+    }
+
+    span[bg="bg5"] {
+      background-color: var(--highlight-5);
+    }
+
+    span[bg="bg6"] {
+      background-color: var(--highlight-6);
+    }
+
+    span[bg="bg7"] {
+      background-color: var(--highlight-7);
+    }
+
+    // 行内代码块样式
+    code {
+      font-family: var(--code-font);
+      font-size: var(--code-font-size);
+      color: var(--code-color);
+      line-height: 1em;
+      background-color: var(--code-background);
+      padding: 0 3px;
+      border-radius: 3px;
+      word-break: break-all;
+    }
+
+    // 链接与本地路径引用
+    a,
+    span.local-path {
+      color: var(--link-color);
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      text-decoration-thickness: 1px;
+    }
+
+    // 块引用
+    span.block-ref,
+    span.block-ref-v2 {
+      color: var(--link-color);
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 4px;
+      text-decoration-thickness: 1px;
+
+      &.invalid {
+        color: var(--errmsg-color);
+      }
+    }
+
+    span.cloze {
+      text-decoration: underline;
+      text-underline-offset: 4px;
+      text-decoration-thickness: 1.5px;
+      text-decoration-color: var(--cloze-underline-color);
+      background-color: var(--cloze-bg-color);
+    }
+
+    // 标签
+    span.block-ref-v2.tag {
+      cursor: pointer;
+      color: var(--tag-color);
+      opacity: 0.5;
+      font-size: 0.9em;
+      line-height: 1em;
+      text-decoration: unset;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
+
+    span.block-ref-v2.tag::before {
+      content: "#";
+    }
+
+    // 自动识别的日期时间 & 虚拟引用
+    span.date-time,
+    span.virtual-ref {
+      color: var(--link-color);
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      text-decoration-style: dashed;
+      text-decoration-thickness: 1px;
+    }
+
+    span.local-path:before {
+      display: inline-block;
+      margin-bottom: -3px;
+      margin-right: 2px;
+      content: "";
+      height: 15px;
+      width: 15px;
+      background-color: var(--text-secondary-color);
+      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-file'%3E%3Cpath d='M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z'/%3E%3Cpath d='M14 2v4a2 2 0 0 0 2 2h4'/%3E%3C/svg%3E");
+    }
+
+    a:before {
+      display: inline-block;
+      margin-bottom: -3px;
+      margin-right: 2px;
+      content: "";
+      height: 15px;
+      width: 15px;
+      background-color: var(--link-color);
+      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-link'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E");
+    }
+
+    .trailing-hint {
+      font-style: italic;
+      padding-left: 10px;
+      opacity: 0.37;
+      cursor: pointer;
+
+      &:hover {
+        opacity: 0.5;
+      }
+    }
   }
 
   .katex {
-    font-size: 1.1em;
+    font-size: 1em;
+  }
+
+  .math-inline--katex.empty {
+    font-style: italic;
+    color: hsl(var(--muted-foreground));
   }
 }
 
 // 拖拽时光标样式
 .block-tree.dragging .ProseMirror {
   cursor: grabbing;
-}
-
-// 高亮样式
-span[bg="bg1"] {
-  background-color: var(--highlight-1);
-}
-
-span[bg="bg2"] {
-  background-color: var(--highlight-2);
-}
-
-span[bg="bg3"] {
-  background-color: var(--highlight-3);
-}
-
-span[bg="bg4"] {
-  background-color: var(--highlight-4);
-}
-
-span[bg="bg5"] {
-  background-color: var(--highlight-5);
-}
-
-span[bg="bg6"] {
-  background-color: var(--highlight-6);
-}
-
-span[bg="bg7"] {
-  background-color: var(--highlight-7);
-}
-
-// 行内代码块样式
-code {
-  font-family: var(--code-font);
-  font-size: var(--code-font-size);
-  color: var(--code-color);
-  line-height: 1em;
-  background-color: var(--code-background);
-  padding: 0 3px;
-  border-radius: 3px;
-  word-break: break-all;
-}
-
-// 链接与本地路径引用
-a,
-span.local-path {
-  color: var(--link-color);
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  text-decoration-thickness: 1px;
-}
-
-// 块引用
-span.block-ref,
-span.block-ref-v2 {
-  color: var(--link-color);
-  cursor: pointer;
-
-  &.invalid {
-    color: var(--errmsg-color);
-  }
-}
-
-span.cloze {
-  text-decoration: underline;
-  text-underline-offset: 4px;
-  text-decoration-thickness: 1.5px;
-  text-decoration-color: var(--cloze-underline-color);
-  background-color: var(--cloze-bg-color);
-}
-
-// 标签
-span.block-ref-v2.tag {
-  cursor: pointer;
-  color: var(--tag-color);
-  opacity: 0.5;
-  font-size: 0.9em;
-  line-height: 1em;
-  text-decoration: unset;
-
-  &:hover {
-    opacity: 1;
-  }
-}
-
-span.block-ref-v2.tag::before {
-  content: "#";
-}
-
-// 自动识别的日期时间 & 虚拟引用
-span.date-time,
-span.virtual-ref {
-  color: var(--link-color);
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  text-decoration-style: dashed;
-  text-decoration-thickness: 1px;
-}
-
-span.local-path:before {
-  display: inline-block;
-  margin-bottom: -3px;
-  margin-right: 2px;
-  content: "";
-  height: 15px;
-  width: 15px;
-  background-color: var(--text-secondary-color);
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-file'%3E%3Cpath d='M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z'/%3E%3Cpath d='M14 2v4a2 2 0 0 0 2 2h4'/%3E%3C/svg%3E");
-}
-
-a:before {
-  display: inline-block;
-  margin-bottom: -3px;
-  margin-right: 2px;
-  content: "";
-  height: 15px;
-  width: 15px;
-  background-color: var(--link-color);
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-link'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E");
-}
-
-.trailing-hint {
-  font-style: italic;
-  padding-left: 10px;
-  opacity: 0.37;
-  cursor: pointer;
-
-  &:hover {
-    opacity: 0.5;
-  }
 }
 </style>

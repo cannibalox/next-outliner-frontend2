@@ -10,5 +10,6 @@
     "paths": {
       "@/*": ["./src/*"]
     }
-  }
+  },
+  "files": ["src/global.d.ts"]
 }

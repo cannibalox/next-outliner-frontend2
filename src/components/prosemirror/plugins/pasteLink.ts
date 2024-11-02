@@ -1,8 +1,8 @@
 import { Plugin } from "prosemirror-state";
 import { Fragment, Node, Slice } from "prosemirror-model";
 import { EditorView } from "prosemirror-view";
-import { globalEnv } from "@/main";
 import { pmSchema } from "../pmSchema";
+import { fetchWebpageTitle } from "@/common/api/misc";
 
 export const mkPasteLinkPlugin = () => {
   let editorView: EditorView | null = null;
@@ -15,7 +15,6 @@ export const mkPasteLinkPlugin = () => {
     },
     props: {
       transformPasted(slice) {
-        const { backendApi } = globalEnv;
         const links: string[] = [];
         const linkified = linkify(slice.content, links);
         // replace links' display text with their titles
@@ -23,9 +22,9 @@ export const mkPasteLinkPlugin = () => {
           setTimeout(async () => {
             if (!(editorView instanceof EditorView)) return;
             for (const link of links) {
-              const resp = await backendApi.fetchWebpageTitle({ url: link });
-              const title = resp.data?.title;
-              console.log("fetched title", title);
+              const resp = await fetchWebpageTitle({ webpageUrl: link });
+              if (!resp.success) return;
+              const title = resp.data.title;
               if (!title) return;
               const mark = pmSchema.marks.link.create({ href: link });
               const newNode = pmSchema.text(title, [mark]);

@@ -1,12 +1,8 @@
-import type { Component } from "vue";
+import type { Component, FunctionalComponent, Ref } from "vue";
 
-export type HeaderButtonItem = {
+export type HeaderBarItemType = {
   onClick?: () => void;
-  icon: Component;
-  label: string;
+  icon: FunctionalComponent;
+  label: FunctionalComponent;
+  active?: Ref<boolean>;
 };
-
-export type MoreOptionsItem = { onClick?: () => void; iconOnly?: boolean } & (
-  | { itemComp: Component } // 指定 itemComp 组件
-  | { icon: Component; label: string } // 或者指定 icon 和 label
-);

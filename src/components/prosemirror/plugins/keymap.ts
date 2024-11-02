@@ -1,5 +1,4 @@
-import { globalEnv } from "@/main";
-import { generateKeydownHandler, type KeyBinding } from "@/modules/keymapManager";
+import { generateKeydownHandler, type KeyBinding } from "@/context/keymap";
 import { type EditorState, Plugin } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 
@@ -22,6 +21,6 @@ const keymap = (bindings: { [key: string]: PmKeyBinding }): Plugin => {
 };
 
 export const mkKeymapPlugin = () => {
-  const {keymapManager} = globalEnv;
-  return keymap(keymapManager.prosemirrorKeymap);
+  const keymaps = globalThis.getKeymapContext();
+  return keymap(keymaps?.prosemirrorKeymap ?? {});
 };

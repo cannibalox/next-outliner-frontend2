@@ -3,7 +3,6 @@ import {Node} from "prosemirror-model";
 import katex, {type KatexOptions} from "katex";
 import {AllSelection, NodeSelection, TextSelection} from "prosemirror-state";
 import {pmSchema} from "../pmSchema";
-import { globalEnv } from "@/main";
 
 export class MathInlineKatex {
   readonly dom: HTMLSpanElement;
@@ -39,7 +38,9 @@ export class MathInlineKatex {
     const node = this.pmView.state.doc.nodeAt(this.getPos());
     if (!node) return; // TODO: 这里不应该为空
     const src = node.attrs.src;
-    globalEnv.globalUiVars.openFloatingMathInput(
+    const floatingMathInputContext = globalThis.getFloatingMathInputContext();
+    if (!floatingMathInputContext) return;
+    floatingMathInputContext.openFloatingMathInput(
       this.katexContainer,
       src,
       (newSrc: string) => {
@@ -124,7 +125,7 @@ export class MathInlineKatex {
   }
 
   ignoreMutation() {
-    return true;
+    return false;
   }
 
   selectNode() {
@@ -132,4 +133,9 @@ export class MathInlineKatex {
   }
 
   deselect() {}
+
+  destroy() {
+    this.katexContainer.innerHTML = "";
+    this.katexContainer.remove();
+  }
 }

@@ -1,5 +1,5 @@
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
-import type { TextContent } from "@/common/types";
+import type { BlockContent, TextContent } from "@/common/types";
 import { pmSchema } from "@/components/prosemirror/pmSchema";
 
 export const textContentFromString = (str: string) =>
@@ -23,3 +23,9 @@ export const textContentFromNodes = (nodes: Node[]): TextContent => [
     }),
   }
 ];
+
+export const isEmptyBlockContent = (content: BlockContent) => {
+  if (content[0] === BLOCK_CONTENT_TYPES.TEXT) {
+    return content
+  }
+}

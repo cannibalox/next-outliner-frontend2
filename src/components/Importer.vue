@@ -46,12 +46,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ref } from "vue";
 import { LoaderCircle, Check, X } from "lucide-vue-next";
-import { globalEnv } from "@/main";
+import BlocksContext from "@/context/blocks-provider/blocks";
+import { importBlocks, parseV1Backup } from "@/utils/import";
 
 const file = ref<File | null>(null);
 const open = defineModel<boolean>("open");
 const status = ref<"idle" | "importing" | "success" | "error">("idle");
-const {importer} = globalEnv;
+const { blocksManager } = BlocksContext.useContext();
 
 const handleFileChange = (e: Event) => {
   const input = e.target as HTMLInputElement;
@@ -66,8 +67,8 @@ const handleClick2 = async () => {
     status.value = "importing";
     try {
       const text = await file.value.text();
-      const blocks = importer.parseV1Backup(text);
-      await importer.importBlocks(blocks!);
+      const blocks = parseV1Backup(text);
+      await importBlocks(blocks!, blocksManager);
       status.value = "success";
     } catch (err) {
       console.error(err);
