@@ -30,6 +30,7 @@
             :block="{ ...block.value, level: 0 }"
             :readonly="true"
             class="*:cursor-default"
+            :highlight-terms="queryTerms"
           ></TextContent>
         </div>
         <div v-if="suggestions.length === 0" class="text-center">
@@ -48,10 +49,11 @@ import { generateKeydownHandlerSimple } from "@/context/keymap";
 import RefSuggestionsContext from "@/context/refSuggestions";
 import { calcPopoverPos } from "@/utils/popover";
 import { Search } from "lucide-vue-next";
-import { nextTick, watch } from "vue";
+import { computed, nextTick, watch } from "vue";
 import TextContent from "../block-contents/TextContent.vue";
 import { Input } from "../ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { simpleTokenize } from "@/utils/tokenize";
 
 const {
   showPos,
@@ -65,15 +67,21 @@ const {
   withScrollSuppressed,
 } = RefSuggestionsContext.useContext();
 
+const queryTerms = computed(() => {
+  if (query.value.length == 0) return [];
+  return simpleTokenize(query.value, false, 1) ?? [];
+});
+
 watch(showPos, async () => {
   await nextTick();
 
   if (!showPos.value) {
     // 延迟 1s 移除样式，因为有淡出动画
-    setTimeout(() => {
-      document.body.style.removeProperty("--popover-x");
-      document.body.style.removeProperty("--popover-y");
-    }, 1000);
+    // setTimeout(() => {
+    //   document.body.style.removeProperty("--popover-x");
+    //   document.body.style.removeProperty("--popover-y");
+    // }, 1000);
+    // 不移除更好，因为可能会意外移除另一次弹出时设置的样式，导致奇怪的问题
     return;
   }
 

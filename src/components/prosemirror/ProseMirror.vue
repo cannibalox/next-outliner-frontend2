@@ -5,11 +5,14 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { type EditorProps, EditorView } from "prosemirror-view";
-import { EditorState, Plugin } from "prosemirror-state";
+import { EditorState, Plugin, Selection } from "prosemirror-state";
 import { Node } from "prosemirror-model";
 import { mkEventBusPlugin } from "./plugins/eventBus";
 import { mkListenDocChangedPlugin } from "./plugins/listenDocChange";
 import { pmSchema } from "./pmSchema";
+import type { BlockId } from "@/common/types";
+import { mkHighlightMatchesPlugin } from "./plugins/highlightMatches";
+import { mkHighlightRefsPlugin } from "./plugins/highlightRefs";
 
 const props = defineProps<{
   readonly?: boolean;
@@ -18,6 +21,8 @@ const props = defineProps<{
   nodeViews?: EditorProps["nodeViews"];
   pluginsGenerator?: (getEditorView: () => EditorView | null, readonly: boolean) => Plugin[];
   onDocChanged?: (event: { newDoc: any; oldDoc: any; view: EditorView }) => void;
+  highlightTerms?: string[];
+  highlightRefs?: BlockId[];
 }>();
 
 const docJson = defineModel<any>("doc");
@@ -34,17 +39,23 @@ defineExpose({
 
 const mkPlugins = () => {
   const getEditorView = () => editorView;
+  const getHighlightTerms = () => props.highlightTerms;
+  const getHighlightRefs = () => props.highlightRefs;
 
   const customPlugins = props.pluginsGenerator?.(getEditorView, props.readonly) ?? [];
 
   if (props.readonly) {
     return [
+      mkHighlightMatchesPlugin(getHighlightTerms),
+      mkHighlightRefsPlugin(getHighlightRefs),
       ...customPlugins,
     ];
   } else {
     return [
       mkEventBusPlugin(),
       mkListenDocChangedPlugin(),
+      mkHighlightMatchesPlugin(getHighlightTerms),
+      mkHighlightRefsPlugin(getHighlightRefs),
       ...customPlugins,
     ];
   }
@@ -65,12 +76,29 @@ watch(docJson, () => {
     return;
   }
 
+  // 尝试将旧的 selection 应用到新的 doc 上
+  // 如果失败，Selection.fromJson 会抛出异常，此时 newSelection 为 undefined
+  const oldSelectionJson = editorView.state.selection.toJSON();
+  let newSelection;
+  try {
+    newSelection = Selection.fromJSON(doc, oldSelectionJson);
+  } catch {}
+
   const newState = EditorState.create({
     doc: doc,
     plugins: editorView.state.plugins,
-    selection: editorView.state.selection,
+    selection: newSelection,
   });
   editorView.updateState(newState);
+});
+
+watch([() => props.highlightTerms, () => props.highlightRefs], () => {
+  // 当 highlightTerms 或 highlightRefs 变化时
+  // dispatch 一个空的 transaction，以触发 decorations 的重新计算
+  if (editorView) {
+    const tr = editorView.state.tr.setMeta("empty", {});
+    editorView.dispatch(tr);
+  }
 });
 
 onMounted(() => {
@@ -119,3 +147,9 @@ onBeforeUnmount(() => {
   editorView = null;
 });
 </script>
+
+<style lang="scss">
+.ProseMirror .highlight-keep {
+  background-color: var(--highlight-text-bg);
+}
+</style>

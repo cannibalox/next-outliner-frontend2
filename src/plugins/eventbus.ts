@@ -6,7 +6,9 @@ type Events = {
   afterBlocksTrCommit: BlockTransaction;
 };
 
-const EVENTS: (keyof Events)[] = ["afterBlocksTrCommit"] as const;
+const EVENTS: (keyof Events)[] = [
+  "afterBlocksTrCommit",
+] as const;
 
 type EventRefs = { [key in keyof Events]: Ref<Events[key] | null> };
 

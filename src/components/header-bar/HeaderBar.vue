@@ -25,6 +25,24 @@
       </div>
     </div>
 
+    <div ref="pathContainerEl">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <template v-for="(block, index) in normalizedPath" :key="block.id">
+            <BreadcrumbItem>
+              <BreadcrumbLink
+                class="no-underline cursor-pointer"
+                @click="handleClickPathSegment(block.id)"
+              >
+                {{ block.ctext }}
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator v-if="index !== mainRootBlockPath.length - 2" />
+          </template>
+        </BreadcrumbList>
+      </Breadcrumb>
+    </div>
+
     <div class="right-part flex flex-row items-center">
       <!-- 同步状态 -->
       <Tooltip>
@@ -43,7 +61,7 @@
             <Button
               variant="ghost"
               size="icon"
-              :class="button.active?.value ? 'bg-muted' : ''"
+              :class="button.active?.value ? 'bg-muted' : 'w-fit min-w-8'"
               @focus="preventFocus"
               @click="button.onClick"
             >
@@ -93,6 +111,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
+  AlarmClock,
   ArrowLeft,
   ArrowRight,
   Dot,
@@ -122,13 +141,22 @@ import TimeMachineContext from "@/context/timeMachine";
 import FusionCommandContext from "@/context/fusionCommand";
 import BlocksContext from "@/context/blocks-provider/blocks";
 import AttachmentsManagerContext from "@/context/attachmentsManager";
+import MainTreeContext from "@/context/mainTree";
+import { useElementSize } from "@vueuse/core";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbSeparator,
+  BreadcrumbLink,
+} from "../ui/breadcrumb";
+import type { BlockId } from "@/common/types";
+import type { Block } from "@/context/blocks-provider/blocksManager";
+import { useI18n } from "vue-i18n";
+import Pomodoro from "../pomodoro/Pomodoro.vue";
 
-const {
-  sidePaneOpen,
-  sidePaneDir,
-  sidePaneWidth,
-  enableSidePaneAnimation,
-} = SidebarContext.useContext();
+const { sidePaneOpen, sidePaneDir, sidePaneWidth, enableSidePaneAnimation } =
+  SidebarContext.useContext();
 const { open: openAttachmentsManager } = AttachmentsManagerContext.useContext();
 const { menuPaneOpen } = MenubarContext.useContext();
 const { theme, toggleTheme } = ThemeContext.useContext();
@@ -136,7 +164,23 @@ const { focusModeEnabled } = FocusModeContext.useContext();
 const { timeMachineOpen } = TimeMachineContext.useContext();
 const { openFusionCommand } = FusionCommandContext.useContext();
 const { synced } = BlocksContext.useContext();
+const { mainRootBlockId, mainRootBlockPath } = MainTreeContext.useContext();
 const openImporter = ref(false);
+const pathContainerEl = ref<HTMLElement | null>(null);
+
+const { width: pathContainerWidth } = useElementSize(pathContainerEl);
+const { t } = useI18n();
+
+const normalizedPath = computed(() => {
+  const ret = [...mainRootBlockPath.value];
+  ret.reverse();
+  ret.pop();
+  return ret;
+});
+
+const handleClickPathSegment = (blockId: BlockId) => {
+  mainRootBlockId.value = blockId;
+};
 
 // 计算 header 的宽度
 // 16px 是 padding
@@ -176,8 +220,17 @@ const leftButtons: HeaderBarItemType[] = [
 
 const rightButtons: HeaderBarItemType[] = [
   {
+    icon: () => (
+      <Pomodoro>
+        <AlarmClock class="size-5 stroke-[1.8]" />
+      </Pomodoro>
+    ),
+    label: () => <>{t("kbView.headerBar.pomodoro")}</>,
+    onClick: () => {},
+  },
+  {
     icon: () => <Search class="size-5 stroke-[1.8]" />,
-    label: () => <>搜索</>,
+    label: () => <>{t("kbView.headerBar.search")}</>,
     onClick: () => openFusionCommand(""),
   },
   {
@@ -190,12 +243,16 @@ const rightButtons: HeaderBarItemType[] = [
         )}
       </div>
     ),
-    label: () => <>切换黑暗 / 明亮主题</>,
+    label: () =>
+      theme.value === "dark"
+        ? t("kbView.headerBar.switchLightTheme")
+        : t("kbView.headerBar.switchDarkTheme"),
     onClick: toggleTheme,
   },
   {
     icon: PanelRight,
-    label: () => <>{sidePaneOpen.value ? "关闭侧栏" : "打开侧栏"}</>,
+    label: () =>
+      sidePaneOpen.value ? t("kbView.headerBar.closeSidepane") : t("kbView.headerBar.openSidepane"),
     onClick: () => (sidePaneOpen.value = !sidePaneOpen.value),
     active: sidePaneOpen,
   },
@@ -204,12 +261,12 @@ const rightButtons: HeaderBarItemType[] = [
 const moreOptions: HeaderBarItemType[] = [
   {
     icon: Download,
-    label: () => <>导出</>,
+    label: () => t("kbView.headerBar.export"),
     onClick: () => {},
   },
   {
     icon: FolderInput,
-    label: () => <>导入</>,
+    label: () => t("kbView.headerBar.import"),
     onClick: () => {
       console.log("open importer");
       openImporter.value = true;
@@ -217,32 +274,35 @@ const moreOptions: HeaderBarItemType[] = [
   },
   {
     icon: Focus,
-    label: () => <>{focusModeEnabled.value ? "退出专注模式" : "进入专注模式"}</>,
+    label: () =>
+      focusModeEnabled.value
+        ? t("kbView.headerBar.exitFocusMode")
+        : t("kbView.headerBar.enterFocusMode"),
     onClick: () => (focusModeEnabled.value = !focusModeEnabled.value),
   },
   {
     icon: FolderClosed,
-    label: () => <>附件管理器</>,
-    onClick: () => openAttachmentsManager.value = true,
+    label: () => t("kbView.headerBar.attachmentsManager"),
+    onClick: () => (openAttachmentsManager.value = true),
   },
   {
     icon: History,
-    label: () => <>时光机</>,
+    label: () => t("kbView.headerBar.timeMachine"),
     onClick: () => (timeMachineOpen.value = true),
   },
   {
     icon: Settings,
-    label: () => <>设置</>,
+    label: () => t("kbView.headerBar.settings"),
     onClick: () => {},
   },
   {
     icon: HelpCircle,
-    label: () => <>帮助文档</>,
+    label: () => t("kbView.headerBar.help"),
     onClick: () => {},
   },
   {
     icon: LogOut,
-    label: () => <>退出</>,
+    label: () => t("kbView.headerBar.exit"),
     onClick: () => {},
   },
 ];

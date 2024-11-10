@@ -13,7 +13,11 @@
                         <RefSuggestionsContext.Provider>
                           <AttachmentsManagerContext.Provider>
                             <ImagesContext.Provider>
-                              <KbViewContent />
+                              <MainTreeContext.Provider>
+                                <PomodoroContext.Provider>
+                                  <KbViewContent />
+                                </PomodoroContext.Provider>
+                              </MainTreeContext.Provider>
                             </ImagesContext.Provider>
                           </AttachmentsManagerContext.Provider>
                         </RefSuggestionsContext.Provider>
@@ -46,4 +50,6 @@ import RefSuggestionsContext from "@/context/refSuggestions";
 import AttachmentsManagerContext from "@/context/attachmentsManager";
 import ImagesContext from "@/context/images";
 import PathsContext from "@/context/paths";
+import MainTreeContext from "@/context/mainTree";
+import { PomodoroContext } from "@/context/pomodoro";
 </script>

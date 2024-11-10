@@ -48,8 +48,14 @@ import BasicBlockItem from "./display-items/BasicBlockItem.vue";
 import { AllSelection } from "prosemirror-state";
 import { useEventBus } from "@/plugins/eventbus";
 import type { Block } from "@/context/blocks-provider/blocksManager";
-import { BlockTreeContext, type BlockTree, type BlockTreeEventMap, type BlockTreeProps } from "@/context/blockTree";
+import {
+  BlockTreeContext,
+  type BlockTree,
+  type BlockTreeEventMap,
+  type BlockTreeProps,
+} from "@/context/blockTree";
 import BlocksContext from "@/context/blocks-provider/blocks";
+import { inViewport } from "@/utils/dom";
 
 const props = defineProps<BlockTreeProps>();
 const eventBus = useEventBus();
@@ -148,6 +154,10 @@ const getSuccessorBlock = (blockId: BlockId): Block | null => {
 const getEditorView = (blockId: BlockId) => editorViews.get(blockId) ?? null;
 
 const scrollBlockIntoView = (blockId: BlockId) => {
+  const blockDom = getDomOfDi(`block-${blockId}`);
+  // 如果已经在视口内，则不滚动
+  if (blockDom && inViewport(blockDom)) return;
+  // 滚动到该块
   const index = displayItems.value!.findIndex(
     (item) => item.type == "block" && item.block.id == blockId,
   );
@@ -173,33 +183,37 @@ const focusBlock = (
   highlight ??= false;
   expandIfFold ??= true;
 
-  // 父元素，滚动时以其为基准
-  const $parent = $blockTree.value;
-  if (!$parent) return;
+  // 先确保这个块在视口中
+  scrollIntoView && scrollBlockIntoView(blockId);
 
-  let editorView = getEditorView(blockId);
-  if (!editorView) {
-    scrollIntoView && scrollBlockIntoView(blockId);
-    editorView = getEditorView(blockId);
+  // 聚焦到文本或代码块
+  getEditorView(blockId)?.focus();
+
+  const $diEl = getDomOfDi(`block-${blockId}`)?.querySelector(".block-item");
+  if (!$diEl) return;
+
+  // 点击公式块以聚焦到公式
+  const $mathContentEl = $diEl.querySelector(".math-content");
+  if ($mathContentEl instanceof HTMLElement) {
+    $mathContentEl.click();
   }
 
-  if (editorView) {
-    editorView.focus();
+  // 聚焦到图片块
+  const $cursorContainerEl = $diEl.querySelector(".cursor-container");
+  if ($cursorContainerEl instanceof HTMLElement) {
+    $cursorContainerEl.focus();
   }
 
   if (highlight) {
-    const blockItemDom = getDomOfDi(`block-${blockId}`)?.querySelector(".block-item");
-    if (blockItemDom) {
-      // 0-1000ms 高亮，1000-3000ms 淡化，3000ms 后移除高亮
-      blockItemDom.classList.add("highlight-keep");
-      setTimeout(() => {
-        blockItemDom.classList.add("highlight-fade");
-      }, 1000);
-      setTimeout(() => {
-        blockItemDom.classList.remove("highlight-keep");
-        blockItemDom.classList.remove("highlight-fade");
-      }, 3000);
-    }
+    // 0-1000ms 高亮，1000-3000ms 淡化，3000ms 后移除高亮
+    $diEl.classList.add("highlight-keep");
+    setTimeout(() => {
+      $diEl.classList.add("highlight-fade");
+    }, 1000);
+    setTimeout(() => {
+      $diEl.classList.remove("highlight-keep");
+      $diEl.classList.remove("highlight-fade");
+    }, 3000);
   }
 };
 
@@ -216,7 +230,7 @@ const moveCursorToTheEnd = (blockId: BlockId) => {
       selection: { anchor: sel },
     });
   }
-}
+};
 
 const moveCursorToBegin = (blockId: BlockId) => {
   const editorView = getEditorView(blockId);
@@ -232,6 +246,18 @@ const moveCursorToBegin = (blockId: BlockId) => {
   }
 };
 
+const registerEditorView = (blockId: BlockId, editorView: PmEditorView | CmEditorView) => {
+  editorViews.set(blockId, editorView);
+};
+
+const unregisterEditorView = (blockId: BlockId, editorView: PmEditorView | CmEditorView) => {
+  // const oldEditorView = editorViews.get(blockId);
+  // if (oldEditorView === editorView) {
+  //   editorViews.delete(blockId);
+  // }
+  // no need to unregister for now?
+};
+
 const controller: BlockTree = {
   getProps: () => props,
   getId: () => props.id,
@@ -243,8 +269,8 @@ const controller: BlockTree = {
   getBlockAbove,
   getBlockBelow,
   getEditorViews: () => editorViews,
-  registerEditorView: (blockId, editorView) => editorViews.set(blockId, editorView),
-  unregisterEditorView: (blockId) => editorViews.delete(blockId),
+  registerEditorView,
+  unregisterEditorView,
   localEventBus,
   nextUpdate,
   getEditorView,
@@ -326,7 +352,7 @@ onUnmounted(() => {
 }
 
 .suggestion-item .highlight-keep {
-  background-color: var(--text-highlight);
+  background-color: var(--highlight-text-bg);
 }
 
 .suggestion-item .highlight-fade {

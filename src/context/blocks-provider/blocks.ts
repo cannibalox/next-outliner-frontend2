@@ -30,6 +30,7 @@ export const BlocksContext = createContext(() => {
     blocksManager,
     blockEditor,
     fulltextSearch,
+    yjsLayer,
     synced: yjsLayer.allSyncedRef,
   };
   // 通过 globalThis 暴露给组件外使用

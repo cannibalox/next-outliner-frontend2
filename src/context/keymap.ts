@@ -143,9 +143,25 @@ const KeymapContext = createContext(() => {
   const taskQueue = useTaskQueue();
   const { lastFocusedBlock, lastFocusedBlockTree, lastFocusedEditorView, lastFocusedBlockId } =
     LastFocusContext.useContext();
-  const { blockEditor } = BlocksContext.useContext();
+  const { blockEditor, blocksManager } = BlocksContext.useContext();
 
   const prosemirrorKeymap: { [p: string]: KeyBinding } = {
+    "Mod-z": {
+      run: () => {
+        blocksManager.undo();
+        return true;
+      },
+      stopPropagation: true,
+      preventDefault: true,
+    },
+    "Mod-Shift-z": {
+      run: () => {
+        blocksManager.redo();
+        return true;
+      },
+      stopPropagation: true,
+      preventDefault: true,
+    },
     Enter: {
       run: () => {
         taskQueue.addTask(
@@ -164,13 +180,13 @@ const KeymapContext = createContext(() => {
             if (sel.eq(docEnd)) {
               const pos = onRoot
                 ? blockEditor.normalizePos({
-                    parentId: block.id,
-                    childIndex: "last-space",
-                  })
+                  parentId: block.id,
+                  childIndex: "last-space",
+                })
                 : blockEditor.normalizePos({
-                    baseBlockId: block.id,
-                    offset: 1,
-                  });
+                  baseBlockId: block.id,
+                  offset: 1,
+                });
               if (!pos) return;
               const { focusNext } =
                 blockEditor.insertNormalBlock(pos, textContentFromString("")) ?? {};
@@ -226,6 +242,15 @@ const KeymapContext = createContext(() => {
           },
           { description: `Enter handler` },
         );
+        return true;
+      },
+      stopPropagation: true,
+    },
+    "Shift-Enter": {
+      run: (state: EditorState, dispatch: EditorView["dispatch"]) => {
+        const brNode = pmSchema.nodes.hardBreak.create();
+        const tr = state.tr.replaceSelectionWith(brNode);
+        dispatch(tr);
         return true;
       },
       stopPropagation: true,
@@ -551,11 +576,17 @@ const KeymapContext = createContext(() => {
       run: (state, dispatch, view) => {
         const empty = state.doc.content.size == 0;
         if (empty) {
+          const tree = lastFocusedBlockTree.value;
           // 将这个空块变为公式块
-          taskQueue.addTask(() => {
+          taskQueue.addTask(async () => {
             const blockId = lastFocusedBlockId.value;
             if (blockId == null) return;
             blockEditor.changeBlockContent(blockId, [BLOCK_CONTENT_TYPES.MATH, ""]);
+            // 聚焦块
+            if (tree) {
+              await tree.nextUpdate();
+              tree.focusBlock(blockId, { scrollIntoView: true });
+            }
           });
         } else {
           // 下方插入公式块
@@ -824,7 +855,7 @@ const skipOneUfeffAfterCursor = (state: EditorState, dispatch: EditorView["dispa
       dispatch(tr);
       return true;
     }
-  } catch (_) {}
+  } catch (_) { }
   return false;
 };
 

@@ -85,7 +85,7 @@ const ImagesContext = createContext(() => {
         let cancelled = false;
         const [promise, cancel] = autoRetryGet<string>(
           (onSuccess) => {
-            fsGetAttachmentSignedUrl({ path: imagePath }).then(
+            fsGetAttachmentSignedUrl({ path: imagePath, inferMimeType: true, attachment: false }).then(
               (res) => res.success && onSuccess(res.data.signedUrl),
             );
           },

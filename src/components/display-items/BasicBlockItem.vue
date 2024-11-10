@@ -1,24 +1,29 @@
 <template>
-  <div class="block-item"
+  <div
+    class="block-item"
     :class="{ hasChildren, fold }"
     :blockId="item.block.id"
     @focusin="handleFocusIn"
   >
-  <div class="indent-lines">
+    <div class="indent-lines">
       <div class="indent-line" v-for="i in block.level" :key="i"></div>
     </div>
     <div class="fold-button shrink-0" v-if="!hideFoldButton" @click="handleClickFoldButton">
       <Triangle></Triangle>
     </div>
-    <div class="bullet shrink-0" v-if="!hideBullet" draggable="true">
-      <Diamond class="diamond" v-if="mirrorIds.size > 0"></Diamond>
-      <Circle class="circle" v-else></Circle>
-    </div>
+    <BlockContextMenu :block-id="block.id">
+      <div class="bullet shrink-0" v-if="!hideBullet" draggable="true" @click="handleClickBullet">
+        <Diamond class="diamond" v-if="mirrorIds.size > 0"></Diamond>
+        <Circle class="circle" v-else></Circle>
+      </div>
+    </BlockContextMenu>
     <TextContent
       v-if="block.content[0] === BLOCK_CONTENT_TYPES.TEXT"
       :block="block"
       :block-tree="blockTree"
       :readonly="readonly"
+      :highlight-terms="highlightTerms"
+      :highlight-refs="highlightRefs"
     ></TextContent>
     <MathContent
       v-if="block.content[0] === BLOCK_CONTENT_TYPES.MATH"
@@ -46,13 +51,16 @@ import TextContent from "@/components/block-contents/TextContent.vue";
 import MathContent from "@/components/block-contents/MathContent.vue";
 import type { DisplayItem } from "@/utils/display-item";
 import { computed } from "vue";
-import { Diamond, Circle, Triangle } from 'lucide-vue-next';
+import { Diamond, Circle, Triangle } from "lucide-vue-next";
 import type { BlockTree } from "@/context/blockTree";
 import { useTaskQueue } from "@/plugins/taskQueue";
 import BlocksContext from "@/context/blocks-provider/blocks";
 import LastFocusContext from "@/context/lastFocus";
 import CodeContent from "../block-contents/CodeContent.vue";
 import ImageContent from "../block-contents/ImageContent.vue";
+import type { BlockId } from "@/common/types";
+import BlockContextMenu from "../contextmenu/BlockContextMenu.vue";
+import MainTreeContext from "@/context/mainTree";
 
 const props = defineProps<{
   blockTree?: BlockTree;
@@ -62,11 +70,14 @@ const props = defineProps<{
   forceFold?: boolean;
   showPath?: boolean;
   readonly?: boolean;
+  highlightTerms?: string[];
+  highlightRefs?: BlockId[];
 }>();
 
 const taskQueue = useTaskQueue();
 const { blocksManager, blockEditor } = BlocksContext.useContext();
 const { lastFocusedBlockId, lastFocusedBlockTreeId } = LastFocusContext.useContext();
+const { mainRootBlockId } = MainTreeContext.useContext();
 
 // computed
 const block = computed(() => props.item.block);
@@ -85,7 +96,11 @@ const handleFocusIn = () => {
 const handleClickFoldButton = () => {
   const blockId = props.item.block.id;
   taskQueue.addTask(() => blockEditor.toggleFold(blockId));
-}
+};
+
+const handleClickBullet = () => {
+  mainRootBlockId.value = block.value.id;
+};
 </script>
 
 <style lang="scss">

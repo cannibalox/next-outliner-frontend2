@@ -35,7 +35,7 @@ export type BlockTree = {
   nextUpdate: (cb?: () => void | Promise<void>) => Promise<void>;
   getEditorView: (blockId: BlockId) => CmEditorView | PmEditorView | null;
   registerEditorView: (blockId: BlockId, editorView: PmEditorView | CmEditorView) => void;
-  unregisterEditorView: (blockId: BlockId) => void;
+  unregisterEditorView: (blockId: BlockId, editorView: PmEditorView | CmEditorView) => void;
   getSuccessorBlock: (blockId: BlockId) => Block | null;
   getPredecessorBlock: (blockId: BlockId) => Block | null;
   getBlockAbove: (blockId: BlockId) => Block | null;
@@ -61,7 +61,7 @@ export const BlockTreeContext = createContext(() => {
   const getBlockTree = (id: BlockTreeId) => {
     return blockTrees.get(id);
   };
-  
+
   const unregisterBlockTree = (id: BlockTreeId) => {
     blockTrees.delete(id);
   };

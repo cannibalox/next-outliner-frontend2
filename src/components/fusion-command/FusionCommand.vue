@@ -64,6 +64,7 @@
               }"
               :hide-fold-button="true"
               :hide-bullet="true"
+              :highlight-terms="queryTerms"
               @mouseover="!suppressMouseOver && (focusIndex = index)"
             ></BasicBlockItem>
           </div>
@@ -106,6 +107,7 @@ import BlocksContext from "@/context/blocks-provider/blocks";
 import BlockTreeContext from "@/context/blockTree";
 import FusionCommandContext from "@/context/fusionCommand";
 import { generateKeydownHandlerSimple } from "@/context/keymap";
+import { simpleTokenize } from "@/utils/tokenize";
 
 const { fulltextSearch, blocksManager, blockEditor } = BlocksContext.useContext();
 const blockTreeContext = BlockTreeContext.useContext();
@@ -118,6 +120,11 @@ const contentEl = ref<HTMLDivElement | null>(null);
 const suppressMouseOver = ref(false);
 const open = ref(false);
 const allowedBlockTypes = ref<boolean[]>([true, false, false, false, false]); // 默认只允许文本块
+
+const queryTerms = computed(() => {
+  if (inputText.value.length == 0) return [];
+  return simpleTokenize(inputText.value, false, 1) ?? [];
+});
 
 const updateBlockSearchResult = () => {
   const query = inputText.value.trim();

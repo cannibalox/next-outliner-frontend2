@@ -39,7 +39,7 @@ export const createYjsLayer = () => {
 
   const connect = (serverUrl_: string, location_: string, token: string) => {
     disconnect();
-    
+
     serverUrl = serverUrl_;
     location = location_;
 
@@ -156,7 +156,7 @@ export const createYjsLayer = () => {
               blockInfoMap.value.delete(p.blockId);
             }
           }
-        }, baseDoc.value.clientID);
+        }, "local");
         console.log("send origin", baseDoc.value.clientID);
         // 再处理 blockData 的变更
         // 将所有对同一个文档的变更合到一起
@@ -183,13 +183,17 @@ export const createYjsLayer = () => {
                 blockDataMap.delete(p.blockId);
               }
             }
-          }, dataDoc.clientID);
+          }, "local");
         }
       },
     };
 
     return tr;
   };
+
+  const isRemoteTr = (tr: { origin: any }) => {
+    return tr.origin === wsProvider.value; // TODO
+  }
 
   const ret = {
     connect,
@@ -200,6 +204,7 @@ export const createYjsLayer = () => {
     whenSynced,
     getDataDoc,
     unloadDataDoc,
+    isRemoteTr,
     allSyncedRef,
     createYjsLayerTransaction,
     // 手工 as 指定类型，防止 ts 推导出超级长的类型导致错误

@@ -88,6 +88,9 @@ onMounted(() => {
 onBeforeUnmount(() => {
   // 卸载时，从 blockTree 注销 editorView
   const blockId = props.block.id;
-  props.blockTree?.unregisterEditorView(blockId);
+  const editorView = cmWrapper.value?.getEditorView();
+  if (editorView) {
+    props.blockTree?.unregisterEditorView(blockId, editorView);
+  }
 });
 </script>

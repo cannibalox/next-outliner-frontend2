@@ -8,6 +8,7 @@ import type ImagesContext from "./context/images";
 import type AxiosContext from "./context/axios";
 import type LastFocusContext from "./context/lastFocus";
 import type PathsContext from "./context/paths";
+import type MainTreeContext from "./context/mainTree";
 
 export declare global {
   var getAxios: () => AxiosInstance | undefined;
@@ -19,6 +20,7 @@ export declare global {
   var getTokenContext: () => ReturnType<typeof TokenContext.useContext> | undefined;
   var getRefSuggestionsContext: () => ReturnType<typeof RefSuggestionsContext.useContext> | undefined;
   var getImagesContext: () => ReturnType<typeof ImagesContext.useContext> | undefined;
+  var getMainTreeContext: () => ReturnType<typeof MainTreeContext.useContext> | undefined;
   var getLastFocusContext: () => ReturnType<typeof LastFocusContext.useContext> | undefined;
   var getPathsContext: () => ReturnType<typeof PathsContext.useContext> | undefined;
 }

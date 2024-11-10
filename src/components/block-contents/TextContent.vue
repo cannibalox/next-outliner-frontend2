@@ -8,11 +8,13 @@
     :disable-spellcheck-when-blur="true"
     :on-doc-changed="onDocChanged"
     :node-views="nodeViews"
+    :highlight-terms="highlightTerms"
+    :highlight-refs="highlightRefs"
   ></ProseMirror>
 </template>
 
 <script setup lang="ts">
-import type { TextContent } from "@/common/types";
+import type { BlockId, TextContent } from "@/common/types";
 import type { EditorProps, EditorView } from "prosemirror-view";
 import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from "vue";
 import ProseMirror from "@/components/prosemirror/ProseMirror.vue";
@@ -30,11 +32,15 @@ import BlocksContext from "@/context/blocks-provider/blocks";
 import { openRefSuggestions } from "../prosemirror/input-rules/openRefSuggestions";
 import { turnToCodeBlock } from "../prosemirror/input-rules/turn-to-code-block";
 import { mkPasteImagePlugin } from "../prosemirror/plugins/pasteImage";
+import { mkHighlightMatchesPlugin } from "../prosemirror/plugins/highlightMatches";
+import { mkHighlightRefsPlugin } from "../prosemirror/plugins/highlightRefs";
 
 const props = defineProps<{
   blockTree?: BlockTree;
   block: BlockWithLevel;
   readonly?: boolean;
+  highlightTerms?: string[];
+  highlightRefs?: BlockId[];
 }>();
 
 const { blockEditor } = BlocksContext.useContext();
@@ -73,10 +79,7 @@ const customPluginsGenerator = (getEditorView: () => EditorView | null, readonly
   } else {
     return [
       inputRules({
-        rules: [
-          openRefSuggestions(getEditorView),
-          turnToCodeBlock(getBlockId, getBlockTree),
-        ],
+        rules: [openRefSuggestions(getEditorView), turnToCodeBlock(getBlockId, getBlockTree)],
       }),
       mkKeymapPlugin(),
       mkPasteLinkPlugin(),
@@ -107,7 +110,10 @@ onMounted(() => {
 onBeforeUnmount(() => {
   // 卸载时，从 blockTree 注销 editorView
   const blockId = props.block.id;
-  props.blockTree?.unregisterEditorView(blockId);
+  const editorView = pmWrapper.value?.getEditorView();
+  if (editorView) {
+    props.blockTree?.unregisterEditorView(blockId, editorView);
+  }
 });
 </script>
 

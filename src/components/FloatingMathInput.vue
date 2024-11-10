@@ -2,6 +2,7 @@
   <Popover v-model:open="open">
     <PopoverTrigger> </PopoverTrigger>
     <PopoverContent class="ref-suggestions-content p-2 pb-1"
+      @pointer-down-outside="() => onDirectClose?.()"
       trap-focus tabindex="-1">
       <CodeMirror v-model:src="src" class="flex-grow" ref="codeMirror" :theme="theme" lang="latex"
         :extensions-generator="extensionsGenerator" :on-src-changed="onChange ?? undefined"></CodeMirror>
@@ -28,7 +29,6 @@ const open = computed({
 const src = ref("");
 const codeMirror = ref<InstanceType<typeof CodeMirror> | null>(null);
 const { theme } = ThemeContext.useContext();
-const inputElInlineStyle = ref<string>("");
 const { registerFloatingMathInput } = FloatingMathInputContext.useContext();
 
 // context
@@ -38,7 +38,6 @@ let onSkipLeft: (() => void) | null = null;
 let onSkipRight: (() => void) | null = null;
 let onDirectClose: (() => void) | null = null;
 let onDeleteThisNode: (() => void) | null = null;
-
 
 const extensionsGenerator = () => {
   return [
@@ -121,10 +120,11 @@ watch(showPos, async () => {
 
   if (!showPos.value) {
     // 延迟 1s 移除样式，因为有淡出动画
-    setTimeout(() => {
-      document.body.style.removeProperty("--popover-x");
-      document.body.style.removeProperty("--popover-y");
-    }, 1000);
+    // setTimeout(() => {
+    //   document.body.style.removeProperty("--popover-x");
+    //   document.body.style.removeProperty("--popover-y");
+    // }, 1000);
+    // 不移除更好，因为可能会意外移除另一次弹出时设置的样式，导致奇怪的问题
     return;
   }
 

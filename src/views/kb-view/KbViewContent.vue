@@ -3,7 +3,7 @@
   <HeaderBar />
   <!-- mr-1 是为了让滚动条和屏幕边缘留出一点空隙 -->
   <BlockTree
-    v-if="synced && rootBlockRef"
+    v-if="synced && mainRootBlockRef"
     class="h-[100vh] mr-1"
     id="main"
     :style="{
@@ -12,7 +12,7 @@
       transition: enableSidePaneAnimation ? 'padding 500ms var(--tf)' : 'none',
     }"
     :virtual="true"
-    :root-block-ids="[rootBlockRef.id]"
+    :root-block-ids="[mainRootBlockRef.id]"
     :root-block-level="0"
     :padding-top="60"
   ></BlockTree>
@@ -25,8 +25,8 @@
       transition: enableSidePaneAnimation ? 'padding 500ms var(--tf)' : 'none',
     }"
   >
-    <Loader2 class="animate-spin mr-2"/>
-    {{ $t('kbView.loadingKb') }}
+    <Loader2 class="animate-spin mr-2" />
+    {{ $t("kbView.loadingKb") }}
   </div>
   <!-- 右侧侧边栏 -->
   <SidePane
@@ -89,17 +89,17 @@ import BlockTree from "@/components/BlockTree.vue";
 import { watch } from "vue";
 import RefSuggestions from "@/components/ref-suggestions/RefSuggestions.vue";
 import AttachmentsManager from "@/components/attachments-mgr/AttachmentsManager.vue";
+import MainTreeContext from "@/context/mainTree";
 
 const { sidePaneOpen, sidePaneDir, sidePaneWidth, sidePaneHeight, enableSidePaneAnimation } =
   SidebarContext.useContext();
 const { synced, blocksManager } = BlocksContext.useContext();
-const rootBlockRef = blocksManager.getRootBlockRef();
+const { mainRootBlockRef } = MainTreeContext.useContext();
 
 watch(synced, () => {
   if (synced.value) {
     const rootBlockRef = blocksManager.getRootBlockRef();
-    if (rootBlockRef.value == null)
-      blocksManager.ensureTree();
+    if (rootBlockRef.value == null) blocksManager.ensureTree();
   }
 });
 </script>

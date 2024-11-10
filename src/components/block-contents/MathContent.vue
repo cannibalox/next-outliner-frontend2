@@ -37,7 +37,6 @@ const KATEX_RENDER_OPTION: KatexOptions = {
 
 const renderEquation = () => {
   const katexContainer = $contentEl.value;
-  console.log("katexContainer", katexContainer);
   if (!katexContainer) return;
   if (currSrc.trim().length > 0) {
     katex.render(currSrc, katexContainer, KATEX_RENDER_OPTION);
@@ -123,6 +122,10 @@ watch(
 
   .katex {
     font-size: 1em;
+  }
+
+  &.empty {
+    text-align: center;
   }
 }
 </style>

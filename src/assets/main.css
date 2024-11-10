@@ -68,6 +68,7 @@
 
     --link-color: hsl(var(--foreground));
     --highlight-block-bg: hsl(var(--muted));
+    --highlight-text-bg: hsl(41, 84%, 20%);
 
     --editor-line-height: 24px;
     --content-padding: 0px;

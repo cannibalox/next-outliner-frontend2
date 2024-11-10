@@ -10,6 +10,10 @@ import { Node } from "prosemirror-model";
 import { pmSchema } from "@/components/prosemirror/pmSchema";
 import type { YjsLayer, YjsLayerTransaction } from "./yjsLayer";
 import { useEventBus } from "@/plugins/eventbus";
+import { EditorView as PmEditorView } from "prosemirror-view";
+import { EditorView as CmEditorView } from "@codemirror/view";
+import { Selection } from "prosemirror-state";
+import { EditorSelection, SelectionRange } from "@codemirror/state";
 
 export type Block = {
   id: BlockId;
@@ -27,22 +31,31 @@ export type Block = {
   boosting: number;
   acturalSrc: BlockId;
 } & (
-  | { type: "normalBlock"; docId: number }
-  | {
+    | { type: "normalBlock"; docId: number }
+    | {
       type: "mirrorBlock";
       src: BlockId;
     }
-  | {
+    | {
       type: "virtualBlock";
       src: BlockId;
       childrenCreated: boolean;
     }
-);
+  );
 
 export type BlockWithLevel = Block & { level: number };
 export type NormalBlock = Block & { type: "normalBlock" };
 export type MirrorBlock = Block & { type: "mirrorBlock" };
 export type VirtualBlock = Block & { type: "virtualBlock" };
+
+// 记录事务开始或结束时的一些状态
+// 用于撤销 & 重做
+type TransactionEnvInfo = {
+  rootBlockId: BlockId;
+  focusedBlockId: BlockId | null;
+  selection: any;
+  [key: string]: any;
+}
 
 export type AddBlockParams = {
   id: BlockId;
@@ -50,10 +63,10 @@ export type AddBlockParams = {
   parentId: BlockId;
   childrenIds: BlockId[];
 } & (
-  | { type: "normalBlock"; content: BlockContent; metadata: Record<string, any> }
-  | { type: "mirrorBlock"; src: BlockId }
-  | { type: "virtualBlock"; src: BlockId; childrenCreated: boolean }
-);
+    | { type: "normalBlock"; content: BlockContent; metadata: Record<string, any> }
+    | { type: "mirrorBlock"; src: BlockId }
+    | { type: "virtualBlock"; src: BlockId; childrenCreated: boolean }
+  );
 
 export type BlockPatch =
   | { op: "add"; block: AddBlockParams }
@@ -64,11 +77,23 @@ export type BlockTransaction = {
   origin: any;
   patches: BlockPatch[];
   reversePatches: BlockPatch[];
+  meta: {
+    // 这个事务是否是撤销或重做事务
+    isUndoRedo: boolean;
+    // 这个事务是否需要自动添加撤销点
+    autoAddUndoPoint: boolean;
+    // 这个事务是否可以撤销
+    canUndo: boolean;
+    [key: string]: any;
+  };
   addBlock: <T extends AddBlockParams>(block: T) => BlockTransaction;
   updateBlock: <T extends AddBlockParams>(block: T) => BlockTransaction;
   deleteBlock: (blockId: BlockId) => BlockTransaction;
   commit: () => void;
   setOrigin: (origin: any) => BlockTransaction;
+  setMeta: (key: string, value: any) => BlockTransaction;
+  addTransaction: (tr: BlockTransaction) => BlockTransaction;
+  addReverseTransaction: (tr: BlockTransaction) => BlockTransaction;
 };
 
 export type ForDescendantsOptions = {
@@ -155,6 +180,18 @@ export const createBlocksManager = (yjsLayer: YjsLayer) => {
   };
   const mirrors = shallowReactive(new Map<BlockId, Set<BlockId>>());
   const virtuals = shallowReactive(new Map<BlockId, Set<BlockId>>());
+
+  // 记录所有事务，以及事务开始和结束时的一些状态
+  const blockTransactions = shallowReactive(<BlockTransaction[]>[]);
+  const beforeInfos = shallowReactive(new Map<number, TransactionEnvInfo>());
+  const afterInfos = shallowReactive(new Map<number, TransactionEnvInfo>());
+  // 每个撤销点是一个下标，指向 blockTransactions 中的一个 “空位”
+  // | tr1 | tr2 | tr3 tr4 | tr5 tr6 tr7 |
+  // 上例中，撤销点是 0, 1 ,2 ,4, 7
+  // 如果将撤销点从 4 移动到 2，那么会撤销事务 tr7 - tr3，并回复 tr3 开始时的状态
+  // 如果将撤销点从 2 移动回 4，那么会重做事务 tr3 - tr7，并回复 tr7 结束时的状态
+  const undoPoints = shallowReactive(<number[]>[]);
+  let currPoint = 0;
 
   const _fromBlockParams = (blockParams: AddBlockParams): Block | null => {
     if (blockParams.type == "normalBlock") {
@@ -319,6 +356,7 @@ export const createBlocksManager = (yjsLayer: YjsLayer) => {
         // 如果不是自己删除的，blockInfoMap 会监听到变化，然后更新 blocks。
       }
 
+      tr.setOrigin(event.transaction.origin);
       tr.commit();
     });
   };
@@ -541,11 +579,159 @@ export const createBlocksManager = (yjsLayer: YjsLayer) => {
     }
   };
 
-  const createBlockTransaction = (origin?: any) => {
+  const addUndoPoint = (
+    beforeInfo: TransactionEnvInfo,
+    afterInfo: TransactionEnvInfo,
+  ) => {
+    const index = blockTransactions.length; // 指向最后一个空位
+    undoPoints.push(index);
+    beforeInfos.set(index, beforeInfo);
+    afterInfos.set(index, afterInfo);
+  };
+
+  // 捕获当前的 undo point 信息
+  const captureEnvInfo = () => {
+    const rootBlockId = "root";
+    const lastFocusContext = getLastFocusContext();
+    const focusedBlockId = lastFocusContext?.lastFocusedBlockId.value ?? null;
+    const view = lastFocusContext?.lastFocusedEditorView.value;
+    const sel = view?.state.selection.toJSON();
+    const undoPointInfo: TransactionEnvInfo = {
+      focusedBlockId,
+      selection: sel,
+      rootBlockId,
+    };
+    return undoPointInfo;
+  }
+
+  const undo = () => {
+    // 如果最后一个 undoPoint 不是 currPoint
+    // 将 currPoint 作为新 undoPoint 插入
+    // 让之后可以重做回当前状态
+    const lastUndoPoint = undoPoints[undoPoints.length - 1];
+    if (currPoint > lastUndoPoint) {
+      undoPoints.push(currPoint);
+    }
+
+    // 计算要撤回到哪个 undoPoint
+    const index = undoPoints.indexOf(currPoint);
+    if (index == -1 || index == 0) return;
+    const targetUndoPoint = undoPoints[index - 1]; // 撤销到前一个 undoPoint
+    const trsToApply = [...blockTransactions.slice(targetUndoPoint, currPoint)];
+    trsToApply.reverse();
+
+    // 将之前要撤销的事务合并为一个块事务
+    const undoTr = createBlockTransaction().setMeta("isUndoRedo", true);
+    for (const tr of trsToApply) {
+      undoTr.addReverseTransaction(tr);
+    }
+    undoTr.commit();
+
+    // 恢复其他状态
+    const lastFocusContext = getLastFocusContext()!;
+    const tree = lastFocusContext.lastFocusedBlockTree.value;
+    const { rootBlockId, focusedBlockId, selection } = beforeInfos.get(targetUndoPoint) ?? {};
+
+    // 这里先让 ProseMirror 更新 state，然后恢复 focusedBlockId 和 selection
+    setTimeout(() => {
+      try {
+        if (tree) {
+          // 1. 恢复 focusedBlockId
+          if (focusedBlockId != null) {
+            tree.focusBlock(focusedBlockId);
+          }
+          // 2. 恢复 selection
+          if (selection != null) {
+            const editorView = lastFocusContext.lastFocusedEditorView.value;
+            if (editorView instanceof PmEditorView) {
+              const sel = Selection.fromJSON(editorView.state.doc, selection);
+              const tr = editorView.state.tr.setSelection(sel);
+              editorView.dispatch(tr);
+            } else if (editorView instanceof CmEditorView) {
+              const sel = EditorSelection.fromJSON(selection);
+              editorView.dispatch({
+                selection: sel,
+              });
+            }
+          }
+        }
+      } catch { }
+    });
+
+    // 更新 currPoint
+    currPoint = targetUndoPoint;
+  }
+
+  const redo = () => {
+    // 计算要重做到的 undoPoint
+    const index = undoPoints.indexOf(currPoint);
+    if (index == -1) return;
+    if (index == undoPoints.length - 1) {
+      console.warn("Already reached the last state, cannot redo");
+      return;
+    }
+    const targetUndoPoint = undoPoints[index + 1];
+    const trsToApply = [...blockTransactions.slice(currPoint, targetUndoPoint)];
+
+    // 将之前要重做的事务合并为一个块事务
+    const redoTr = createBlockTransaction().setMeta("isUndoRedo", true);
+    for (const tr of trsToApply) {
+      redoTr.addTransaction(tr);
+    }
+    redoTr.commit();
+
+    // 恢复其他状态
+    const lastFocusContext = getLastFocusContext()!;
+    const tree = lastFocusContext.lastFocusedBlockTree.value;
+    const { rootBlockId, focusedBlockId, selection } = afterInfos.get(targetUndoPoint) ?? {};
+
+    // 这里先让 ProseMirror 更新 state，然后恢复 focusedBlockId 和 selection
+    setTimeout(() => {
+      try {
+        if (tree) {
+          // 1. 恢复 focusedBlockId
+          if (focusedBlockId != null) {
+            tree.focusBlock(focusedBlockId);
+          }
+          // 2. 恢复 selection
+          if (selection != null) {
+            const editorView = lastFocusContext.lastFocusedEditorView.value;
+            if (editorView instanceof PmEditorView) {
+              const sel = Selection.fromJSON(editorView.state.doc, selection);
+              const tr = editorView.state.tr.setSelection(sel);
+              editorView.dispatch(tr);
+            } else if (editorView instanceof CmEditorView) {
+              const sel = EditorSelection.fromJSON(selection);
+              editorView.dispatch({
+                selection: sel,
+              });
+            }
+          }
+        }
+      } catch { }
+    });
+
+    // 更新 currPoint
+    currPoint = targetUndoPoint;
+  }
+
+  const clearUndoRedoHistory = () => {
+    undoPoints.length = 0;
+    beforeInfos.clear();
+    blockTransactions.length = 0;
+    currPoint = 0;
+  }
+
+  const createBlockTransaction = () => {
     const tr: BlockTransaction = {
-      origin,
+      origin: "local", // 默认是本地事务
       patches: [],
       reversePatches: [],
+      meta: {
+        isUndoRedo: false,
+        autoAddUndoPoint: true,
+        canUndo: true,
+      },
       addBlock: <T extends AddBlockParams>(block: T) => {
         tr.patches.push({ op: "add", block });
         tr.reversePatches.push({ op: "delete", blockId: block.id });
@@ -573,10 +759,44 @@ export const createBlocksManager = (yjsLayer: YjsLayer) => {
         return tr;
       },
       commit: () => {
+        const beforeInfo = captureEnvInfo();
         commitBlockTransaction(tr);
+        const afterInfo = captureEnvInfo();
+
+        // 只有非撤销重做的事务才需要记录到 blockTransactions
+        if (!tr.meta.isUndoRedo && tr.meta.canUndo) {
+          // 新的事务会使 currPoint 后面的所有事务失效
+          blockTransactions.length = currPoint;
+          blockTransactions.push(tr);
+          currPoint = blockTransactions.length;
+
+          // 如果事务需要添加到 undoPoints，则添加
+          if (tr.meta.autoAddUndoPoint)
+            addUndoPoint(beforeInfo, afterInfo);
+        }
+
+        // 如果事务来自非本地，则不允许撤销
+        // 如果事务不能撤销，则清空撤销重做历史
+        if (!tr.meta.canUndo || tr.origin !== "local") {
+          clearUndoRedoHistory();
+        }
       },
       setOrigin: (origin: any) => {
         tr.origin = origin;
+        return tr;
+      },
+      setMeta: (key: string, value: any) => {
+        tr.meta[key] = value;
+        return tr;
+      },
+      addTransaction: (tr2: BlockTransaction) => {
+        tr.patches.push(...tr2.patches);
+        tr.reversePatches.push(...tr2.reversePatches);
+        return tr;
+      },
+      addReverseTransaction: (tr2: BlockTransaction) => {
+        tr.patches.push(...tr2.reversePatches);
+        tr.reversePatches.push(...tr2.patches);
         return tr;
       },
     };
@@ -696,7 +916,7 @@ export const createBlocksManager = (yjsLayer: YjsLayer) => {
         if (!blockInfoMap.value) return;
         console.log("origin", event.transaction.origin, baseDoc.value?.clientID);
 
-        if (event.transaction.origin == baseDoc.value?.clientID) return; // 不处理自己发出的更新
+        if (event.transaction.origin == "local") return; // 不处理自己发出的更新
         const changes = [...event.changes.keys.entries()];
 
         // 所有更新都通过块事务进行
@@ -875,15 +1095,24 @@ export const createBlocksManager = (yjsLayer: YjsLayer) => {
 
   // helper functions for creating and executing block transaction
   const addBlock = (block: AddBlockParams) => {
-    return createBlockTransaction().addBlock(block).commit();
+    return createBlockTransaction()
+      .setOrigin("local")
+      .addBlock(block)
+      .commit();
   };
 
   const updateBlock = (block: AddBlockParams) => {
-    return createBlockTransaction().updateBlock(block).commit();
+    return createBlockTransaction()
+      .setOrigin("local")
+      .updateBlock(block)
+      .commit();
   };
 
   const deleteBlock = (blockId: BlockId) => {
-    return createBlockTransaction().deleteBlock(blockId).commit();
+    return createBlockTransaction()
+      .setOrigin("local")
+      .deleteBlock(blockId)
+      .commit();
   };
 
   // 如果根块不存在，则创建之，并附带创建一个孩子
@@ -917,6 +1146,7 @@ export const createBlocksManager = (yjsLayer: YjsLayer) => {
         content: textContentFromString(""),
         metadata: {},
       })
+      .setOrigin("local")
       .commit();
   };
 
@@ -946,6 +1176,8 @@ export const createBlocksManager = (yjsLayer: YjsLayer) => {
     updateBlock,
     deleteBlock,
     destroy,
+    undo,
+    redo,
   };
 };
 

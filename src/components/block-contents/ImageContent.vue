@@ -1,6 +1,6 @@
 <template>
   <div
-    class="block-content image-content"
+    class="block-content image-content relative"
     :data-showDropdown="showDropdown"
     v-if="block.content[0] === BLOCK_CONTENT_TYPES.IMAGE && image"
   >
@@ -10,9 +10,10 @@
     </div>
     <div
       v-else-if="image.status === 'synced'"
-      class="image-container select-none my-2"
+      class="image-container flex select-none my-2 shrink-0"
       :class="{
         imageBlend: props.block.content[5]?.includes('blend'),
+        imageBlendLuminosity: props.block.content[5]?.includes('blendLuminosity'),
         imageCircle: props.block.content[5]?.includes('circle'),
         imageInvert: props.block.content[5]?.includes('invert'),
         imageInvertW: props.block.content[5]?.includes('invertW'),
@@ -30,11 +31,13 @@
           :src="image.url"
         />
 
+        <!-- 拖曳调整宽度 -->
         <div
           class="absolute right-[2px] top-1/2 -translate-y-1/2 h-full max-h-[40px] rounded w-1 bg-muted cursor-col-resize"
           @mousedown="handleMouseDown"
         ></div>
 
+        <!-- 图片操作 -->
         <DropdownMenu v-model:open="showDropdown" :modal="false">
           <DropdownMenuTrigger as-child>
             <Button variant="outline" size="icon" class="image-actions absolute top-2 right-2">
@@ -54,6 +57,15 @@
             >
               <Blend class="size-4 mr-2" />
               {{ $t("kbView.imageContent.blend") }}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              :class="{
+                active: isFilterActive('blendLuminosity'),
+              }"
+              @click="toggleFilter('blendLuminosity')"
+            >
+              <Blend class="size-4 mr-2" />
+              {{ $t("kbView.imageContent.blendLuminosity") }}
             </DropdownMenuItem>
             <DropdownMenuItem
               :class="{
@@ -104,6 +116,17 @@
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <!-- 一个可以容纳光标的容器，聚焦到图片时，光标会进入该容器 -->
+      <!-- 在这个容器中按删除键，会删除图片 -->
+      <!-- 按 Enter 等其他键也会有相应行为 -->
+      <!-- 但是这个容器中不能输入文字！！ -->
+      <div
+        class="cursor-container flex-grow !outline-none min-w-1"
+        contenteditable
+        @keydown="handleKeydownOnCursorContainer"
+        @compositionstart="preventCompositionInput"
+      ></div>
     </div>
   </div>
 </template>
@@ -138,6 +161,9 @@ import BlocksContext from "@/context/blocks-provider/blocks";
 import type { ImageContent } from "@/common/types";
 import { watch } from "vue";
 import { syncRef } from "@vueuse/core";
+import { generateKeydownHandlerSimple } from "@/context/keymap";
+import type { BlockPos } from "@/context/blocks-provider/blocksEditor";
+import { textContentFromString } from "@/utils/pm";
 
 const props = defineProps<{
   blockTree?: BlockTree;
@@ -150,6 +176,109 @@ const imageElContainerRef = ref<HTMLDivElement | null>(null);
 const taskQueue = useTaskQueue();
 const { blockEditor } = BlocksContext.useContext();
 let imageLeft = 0; // 拖曳开始时，记录图片左侧的位置，用于计算宽度
+
+const handleKeydownOnCursorContainer = generateKeydownHandlerSimple({
+  // 按删除键时删除图片
+  Backspace: {
+    run: () => {
+      taskQueue.addTask(() => {
+        blockEditor.deleteBlock(props.block.id);
+      });
+      return true;
+    },
+    stopPropagation: true,
+    preventDefault: true,
+  },
+  // 按 Enter 时在下方插入一个空段落
+  Enter: {
+    run: () => {
+      taskQueue.addTask(async () => {
+        const pos: BlockPos = {
+          baseBlockId: props.block.id,
+          offset: 1,
+        };
+        const tree = props.blockTree;
+        const { focusNext } = blockEditor.insertNormalBlock(pos, textContentFromString("")) ?? {};
+        if (tree && focusNext) {
+          await tree.nextUpdate();
+          tree.focusBlock(focusNext);
+        }
+      });
+      return true;
+    },
+    stopPropagation: true,
+    preventDefault: true,
+  },
+  ArrowDown: {
+    run: () => {
+      const tree = props.blockTree;
+      if (!tree) return false;
+      const blockBelow = tree.getBlockBelow(props.block.id);
+      if (blockBelow) {
+        tree.focusBlock(blockBelow.id);
+      }
+      return true;
+    },
+    stopPropagation: true,
+    preventDefault: true,
+  },
+  ArrowUp: {
+    run: () => {
+      const tree = props.blockTree;
+      if (!tree) return false;
+      const blockAbove = tree.getBlockAbove(props.block.id);
+      if (blockAbove) {
+        tree.focusBlock(blockAbove.id);
+      }
+      return true;
+    },
+    stopPropagation: true,
+    preventDefault: true,
+  },
+  ArrowLeft: {
+    run: () => {
+      const tree = props.blockTree;
+      if (!tree) return false;
+      const blockBefore = tree.getPredecessorBlock(props.block.id);
+      if (blockBefore) {
+        tree.focusBlock(blockBefore.id);
+      }
+      return true;
+    },
+    stopPropagation: true,
+    preventDefault: true,
+  },
+  ArrowRight: {
+    run: () => {
+      const tree = props.blockTree;
+      if (!tree) return false;
+      const blockAfter = tree.getSuccessorBlock(props.block.id);
+      if (blockAfter) {
+        tree.focusBlock(blockAfter.id);
+      }
+      return true;
+    },
+    stopPropagation: true,
+    preventDefault: true,
+  },
+  // 禁止其他所有按键
+  "*": {
+    run: () => true,
+    stopPropagation: true,
+    preventDefault: true,
+  },
+});
+
+const preventCompositionInput = (e: CompositionEvent) => {
+  const inputEl = e.target as HTMLElement;
+  inputEl.blur();
+  inputEl.contentEditable = "false";
+  inputEl.innerHTML = "";
+  setTimeout(() => {
+    inputEl.contentEditable = "true";
+    inputEl.focus();
+  }, 0);
+};
 
 const image = ref<ImageState | null>(null);
 watch(
@@ -208,7 +337,9 @@ const resetWidth = (e: MouseEvent) => {
   });
 };
 
-const toggleFilter = (filter: "blend" | "circle" | "invert" | "invertW" | "outline") => {
+const toggleFilter = (
+  filter: "blend" | "circle" | "invert" | "invertW" | "outline" | "blendLuminosity",
+) => {
   taskQueue.addTask(() => {
     const blockId = props.block.id;
     const newContent = [...props.block.content] as ImageContent;
@@ -223,7 +354,9 @@ const toggleFilter = (filter: "blend" | "circle" | "invert" | "invertW" | "outli
   });
 };
 
-const isFilterActive = (filter: "blend" | "circle" | "invert" | "invertW" | "outline") => {
+const isFilterActive = (
+  filter: "blend" | "circle" | "invert" | "invertW" | "outline" | "blendLuminosity",
+) => {
   const filters = props.block.content[5] ?? [];
   return filters.includes(filter);
 };
@@ -306,6 +439,14 @@ const handleMouseDown = (e: MouseEvent) => {
 // Filters
 .block-content .imageBlend img {
   mix-blend-mode: screen;
+}
+
+.dark .block-content .imageBlendLuminosity img {
+  filter: grayscale(1) contrast(1.5);
+}
+
+.light .block-content .imageBlendLuminosity img {
+  filter: grayscale(1) contrast(1.5) invert(1);
 }
 
 .dark .block-content .imageInvert img {
