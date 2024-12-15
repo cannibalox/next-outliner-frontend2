@@ -4,10 +4,12 @@ import { computed, ref, type FunctionalComponent, type ShallowRef } from "vue";
 import BlocksContext from "./blocks-provider/blocks";
 import { useDebounceFn } from "@vueuse/core";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
-import type { Block } from "./blocks-provider/blocksManager";
+import type { Block } from "./blocks-provider/app-state-layer/blocksManager";
+import IndexContext from ".";
 
 const RefSuggestionsContext = createContext(() => {
-  const { fulltextSearch, blocksManager } = BlocksContext.useContext();
+  const { blocksManager } = BlocksContext.useContext();
+  const { search } = IndexContext.useContext();
   const showPos = ref<{ x: number; y: number } | null>(null);
   const open = computed({
     get: () => showPos.value !== null,
@@ -24,7 +26,7 @@ const RefSuggestionsContext = createContext(() => {
       suggestions.value = [];
       return;
     }
-    const result = fulltextSearch.search(query.value, { prefix: true });
+    const result = search(query.value, { prefix: true });
     suggestions.value = result
       .slice(0, 100)
       .map((item) => blocksManager.getBlockRef(item.id))
@@ -42,12 +44,16 @@ const RefSuggestionsContext = createContext(() => {
     return fn();
   };
 
-  const openRefSuggestions = (_showPos: { x: number; y: number }, _cb: (blockId: BlockId | null) => void, _initQuery?: string) => {
+  const openRefSuggestions = (
+    _showPos: { x: number; y: number },
+    _cb: (blockId: BlockId | null) => void,
+    _initQuery?: string,
+  ) => {
     cb.value = _cb;
-      query.value = _initQuery ?? "";
-      // updateSuggestions
-      focusItemIndex.value = 0;
-      showPos.value = _showPos;
+    query.value = _initQuery ?? "";
+    // updateSuggestions
+    focusItemIndex.value = 0;
+    showPos.value = _showPos;
   };
 
   const ctx = {

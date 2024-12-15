@@ -19,7 +19,9 @@
               </PopoverTrigger>
               <PopoverContent class="w-40 p-2">
                 <!-- TODO: 添加允许的块类型 -->
-                <div class="text-[.8em] text-muted-foreground mb-1">允许的块类型</div>
+                <div class="text-[.8em] text-muted-foreground mb-1">
+                  {{ $t("kbView.fusionCommand.allowedBlockTypes") }}
+                </div>
                 <template v-for="(allowed, index) in allowedBlockTypes" :key="index">
                   <div class="flex items-center gap-x-1">
                     <Checkbox
@@ -40,7 +42,7 @@
           <Input
             class="border-none focus-visible:ring-0 focus-visible:ring-offset-0 outline-none pl-10 pr-20"
             v-model="inputText"
-            placeholder="搜索知识库"
+            :placeholder="$t('kbView.fusionCommand.searchPlaceholder')"
             @input="handleInput"
             @compositionend="handleInput"
           />
@@ -50,26 +52,24 @@
             class="max-h-[60vh] overflow-y-auto pt-2 px-2 mr-1"
             v-if="blockSearchResult.length > 0"
           >
-            <BasicBlockItem
+            <div
               v-for="(block, index) in blockSearchResult"
+              tabindex="0"
               :class="{ focus: focusIndex === index }"
               class="cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors [&.focus]:bg-accent [&.focus]:text-accent-foreground [&_.text-content]:cursor-default *:pointer-events-none"
-              tabindex="0"
-              :key="block.id"
-              :readonly="true"
-              :item="{
-                type: 'block',
-                itemId: block.id,
-                block: { ...block, level: 0 } as BlockWithLevel,
-              }"
-              :hide-fold-button="true"
-              :hide-bullet="true"
-              :highlight-terms="queryTerms"
               @mouseover="!suppressMouseOver && (focusIndex = index)"
-            ></BasicBlockItem>
+              @click="gotoFocused()"
+            >
+              <BlockContent
+                :key="block.id"
+                :readonly="true"
+                :block="block as Block"
+                :highlight-terms="queryTerms"
+              ></BlockContent>
+            </div>
           </div>
           <div v-else class="text-center text-sm text-muted-foreground pt-4 pb-2">
-            没有找到相关内容
+            {{ $t("kbView.fusionCommand.noResults") }}
           </div>
         </template>
         <template v-else>
@@ -77,14 +77,14 @@
             <div class="px-2 py-2"></div>
           </ScrollArea>
           <div v-else class="text-center text-sm text-muted-foreground pt-4 pb-2">
-            没有找到符合的命令
+            {{ $t("kbView.fusionCommand.noCommandResults") }}
           </div>
         </template>
         <div v-if="mode === 'searchBlock'" class="text-center text-xs text-muted2-foreground py-2">
-          ↑↓ 和 Home, End 可选择搜索结果，↵ 跳转到选中项，⌘+↵ 插入块链接，esc 关闭搜索面板
+          {{ $t("kbView.fusionCommand.searchHelp") }}
         </div>
         <div v-else class="text-center text-xs text-muted2-foreground py-2">
-          输入 / 可搜索命令，↑↓ 和 Home, End 选择命令然后 ↵ 执行命令，esc 关闭命令面板
+          {{ $t("kbView.fusionCommand.commandHelp") }}
         </div>
       </div>
     </DialogContent>
@@ -102,14 +102,17 @@ import ScrollArea from "../ui/scroll-area/ScrollArea.vue";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import Checkbox from "../ui/checkbox/Checkbox.vue";
 import { BLOCK_TYPE_ZH_NAMES } from "@/common/constants";
-import type { Block, BlockWithLevel } from "@/context/blocks-provider/blocksManager";
+import type { Block } from "@/context/blocks-provider/app-state-layer/blocksManager";
 import BlocksContext from "@/context/blocks-provider/blocks";
 import BlockTreeContext from "@/context/blockTree";
 import FusionCommandContext from "@/context/fusionCommand";
 import { generateKeydownHandlerSimple } from "@/context/keymap";
 import { simpleTokenize } from "@/utils/tokenize";
+import BlockContent from "../block-contents/BlockContent.vue";
+import IndexContext from "@/context";
 
-const { fulltextSearch, blocksManager, blockEditor } = BlocksContext.useContext();
+const { blocksManager, blockEditor } = BlocksContext.useContext();
+const { search } = IndexContext.useContext();
 const blockTreeContext = BlockTreeContext.useContext();
 const fusionCommandContext = FusionCommandContext.useContext();
 const inputText = ref("");
@@ -132,8 +135,7 @@ const updateBlockSearchResult = () => {
     blockSearchResult.value = [];
     return;
   }
-  blockSearchResult.value = fulltextSearch
-    .search(query)
+  blockSearchResult.value = search(query)
     .map((r) => blocksManager.getBlock(r.id))
     .filter((b): b is Block => b !== null)
     .filter((b) => b.type == "normalBlock" && allowedBlockTypes.value[b.content[0]]);
@@ -154,7 +156,7 @@ const ensureFocusedVisiblle = () => {
   setTimeout(() => {
     const el = contentEl.value?.querySelector(".fusion-command-content .focus");
     if (!(el instanceof HTMLElement)) return;
-    el.scrollIntoView(false);
+    el.scrollIntoView({ block: "nearest" });
   });
 };
 
@@ -162,6 +164,16 @@ const withScrollSuppressed = (fn: () => boolean, timeout = 500) => {
   suppressMouseOver.value = true;
   setTimeout(() => (suppressMouseOver.value = false), timeout);
   return fn();
+};
+
+const gotoFocused = () => {
+  if (focusIndex.value === -1) return false;
+  const focusBlock = blockSearchResult.value[focusIndex.value];
+  if (!focusBlock) return false;
+  const mainTree = blockTreeContext.getBlockTree("main");
+  if (!mainTree) return false;
+  open.value = false;
+  mainTree.focusBlock(focusBlock.id, { highlight: true, expandIfFold: true });
 };
 
 const handleKeydown = generateKeydownHandlerSimple({
@@ -220,11 +232,7 @@ const handleKeydown = generateKeydownHandlerSimple({
   // 聚焦到选中项
   Enter: {
     run: () => {
-      if (focusIndex.value === -1) return false;
-      const focusBlock = blockSearchResult.value[focusIndex.value];
-      if (!focusBlock) return false;
-      open.value = false;
-      blockEditor.locateBlock(focusBlock.id, undefined, true);
+      gotoFocused();
       return true;
     },
     stopPropagation: true,

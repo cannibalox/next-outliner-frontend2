@@ -1,8 +1,9 @@
-import type { MarkSpec, NodeSpec } from "prosemirror-model";
+import { getBasename, getSeperator } from "@/common/path";
+import type { MarkSpec, NodeSpec, SchemaSpec } from "prosemirror-model";
 import { Schema } from "prosemirror-model";
 import { watch, watchEffect } from "vue";
 
-export const pmSchema = new Schema({
+export const pmSchemaSpec: SchemaSpec = {
   nodes: {
     // 整个文档
     doc: {
@@ -15,27 +16,26 @@ export const pmSchema = new Schema({
       group: "inline",
     } as NodeSpec,
 
-    // 本地路径引用
-    localPath: {
+    // 路径引用
+    pathRef: {
       inline: true,
       atom: true,
       attrs: {
-        path: { default: false },
+        path: {},
       },
       group: "inline",
       selectable: true,
-      toDOM: (node) => [
-        "span",
-        {
-          class: "local-path",
-          path: node.attrs.path,
-        },
-        node.attrs.path,
-        // getBasename(node.attrs.path),
-      ],
+      toDOM: (node) => {
+        const span = document.createElement("span");
+        span.classList.add("path-ref");
+        span.dataset.path = node.attrs.path;
+        const basename = getBasename(node.attrs.path);
+        span.innerHTML = basename;
+        return span;
+      },
       parseDOM: [
         {
-          tag: "span.local-path",
+          tag: "span.path-ref",
           getAttrs: (node: HTMLElement) => {
             return {
               path: node.getAttribute("path"),
@@ -80,7 +80,7 @@ export const pmSchema = new Schema({
           // 从这个元素往上找，找到对应的 blockTree 更好？
           const mainTree = blockTreeContext.getBlockTree("main");
           if (mainTree == null) return;
-          await mainTree.focusBlock(toBlockId, { highlight: true });
+          await mainTree.focusBlock(toBlockId, { highlight: true, expandIfFold: true });
         });
         // 当源块 ctext 更新时，更新引用锚文本
         const blockRef = blocksContext.blocksManager.getBlockRef(toBlockId);
@@ -307,4 +307,6 @@ export const pmSchema = new Schema({
       ],
     },
   },
-});
+};
+
+export const pmSchema = new Schema(pmSchemaSpec);

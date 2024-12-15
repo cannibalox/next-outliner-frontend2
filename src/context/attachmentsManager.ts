@@ -6,7 +6,6 @@ import { useRoute } from "vue-router";
 import PathsContext from "./paths";
 
 const AttachmentsManagerContext = createContext(() => {
-  
   const { dbBasePath, attachmentsBasePath, attachmentsFolderName } = PathsContext.useContext();
   const open = ref(false);
   // /dbBasePath/attachments 下的所有文件
@@ -23,21 +22,36 @@ const AttachmentsManagerContext = createContext(() => {
     isDirectory: boolean;
     isPreview: boolean;
   } | null>(null);
+  // New sortBy ref
+  const sortBy = ref<"alphabet">("alphabet");
   // 当前路径下的所有文件
   const currentFiles = computed(() => {
     let ctx = files.value;
     for (const segment of currentPathSegments.value) {
-      if (segment in ctx && ctx[segment].isDirectory)
-        ctx = ctx[segment].subDirents;
-      else return {};
+      if (segment in ctx && ctx[segment].isDirectory) {
+        ctx = (ctx[segment] as any).subDirents;
+      } else return {};
     }
     return ctx;
+  });
+
+  // Computed property for ordered files
+  const orderedFiles = computed(() => {
+    const filesArray = Object.values(currentFiles.value);
+    return filesArray.sort((a, b) => {
+      if (a.isDirectory && !b.isDirectory) return -1;
+      if (!a.isDirectory && b.isDirectory) return 1;
+      if (sortBy.value === "alphabet") {
+        return a.name.localeCompare(b.name);
+      }
+      return 0;
+    });
   });
 
   const refetchFiles = async (basePath?: string, maxDepth?: number) => {
     fetchFilesStatus.value = "fetching";
     const res = await fsLs({
-      basePath: basePath ?? attachmentsBasePath.value,
+      basePath: basePath ?? "",
       includeHidden: true,
       recursive: true,
       maxDepth: maxDepth ?? 1000, // Infinity
@@ -62,6 +76,8 @@ const AttachmentsManagerContext = createContext(() => {
     attachmentsBasePath,
     currentFiles,
     activeDirent,
+    sortBy,
+    orderedFiles,
   };
 });
 

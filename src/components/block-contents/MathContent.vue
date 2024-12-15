@@ -13,14 +13,14 @@ import katex, { type KatexOptions } from "katex";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import { ScrollArea, ScrollBar } from "../ui/scroll-area";
 import type { BlockTree } from "@/context/blockTree";
-import type { BlockWithLevel } from "@/context/blocks-provider/blocksManager";
 import { useTaskQueue } from "@/plugins/taskQueue";
 import BlocksContext from "@/context/blocks-provider/blocks";
 import FloatingMathInputContext from "@/context/floatingMathInput";
+import type { Block } from "@/context/blocks-provider/blocksManager";
 
 const props = defineProps<{
   blockTree?: BlockTree;
-  block: BlockWithLevel;
+  block: Block;
   readonly?: boolean;
 }>();
 
@@ -87,14 +87,17 @@ const skipRight = () => {
 
 const deleteThis = () => {
   taskQueue.addTask(() => {
-    blockEditor.deleteBlock(props.block.id);
+    blockEditor.deleteBlock({ blockId: props.block.id });
   });
 };
 
 // 将当前的 src 同步到 state 中
 const syncToState = () => {
   taskQueue.addTask(() => {
-    blockEditor.changeBlockContent(props.block.id, [BLOCK_CONTENT_TYPES.MATH, currSrc]);
+    blockEditor.changeBlockContent({
+      blockId: props.block.id,
+      content: [BLOCK_CONTENT_TYPES.MATH, currSrc],
+    });
   });
 };
 

@@ -4,7 +4,7 @@ import type { DisplayItem, DisplayItemGenerator } from "@/utils/display-item";
 import type mitt from "@/utils/mitt";
 import type { EditorView as PmEditorView } from "prosemirror-view";
 import type { EditorView as CmEditorView } from "@codemirror/view";
-import type { Block } from "./blocks-provider/blocksManager";
+import type { Block } from "./blocks-provider/app-state-layer/blocksManager";
 import { ref } from "vue";
 
 export type BlockTreeId = string;
@@ -22,7 +22,7 @@ export type BlockTreeProps = {
   diGenerator?: DisplayItemGenerator;
   paddingBottom?: number;
   paddingTop?: number;
-}
+};
 
 export type BlockTree = {
   getEditorViews: () => Map<BlockId, CmEditorView | PmEditorView>;
@@ -40,19 +40,21 @@ export type BlockTree = {
   getPredecessorBlock: (blockId: BlockId) => Block | null;
   getBlockAbove: (blockId: BlockId) => Block | null;
   getBlockBelow: (blockId: BlockId) => Block | null;
-  focusBlock: (blockId: BlockId, options?: {
-    scrollIntoView?: boolean;
-    highlight?: boolean;
-    expandIfFold?: boolean;
-  }) => void;
+  focusBlock: (
+    blockId: BlockId,
+    options?: {
+      scrollIntoView?: boolean;
+      highlight?: boolean;
+      expandIfFold?: boolean;
+    },
+  ) => void;
   getDomOfDi: (itemId: string) => HTMLElement | null;
   moveCursorToTheEnd: (blockId: BlockId) => void;
   moveCursorToBegin: (blockId: BlockId) => void;
-}
+};
 
 export const BlockTreeContext = createContext(() => {
   const blockTrees = new Map<BlockTreeId, BlockTree>();
-  const mainTreeRootBlockIds = ref<BlockId[]>([]);
 
   const registerBlockTree = (blockTree: BlockTree) => {
     blockTrees.set(blockTree.getId(), blockTree);
@@ -70,7 +72,6 @@ export const BlockTreeContext = createContext(() => {
     registerBlockTree,
     getBlockTree,
     unregisterBlockTree,
-    mainTreeRootBlockIds,
   };
   // 通过 globalThis 暴露给组件外使用
   globalThis.getBlockTreeContext = () => ctx;

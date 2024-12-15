@@ -29,42 +29,24 @@
     {{ $t("kbView.loadingKb") }}
   </div>
   <!-- 右侧侧边栏 -->
-  <SidePane
-    v-if="sidePaneOpen && sidePaneDir === 'right'"
-    v-motion
-    :initial="{ opacity: 0, width: 0 }"
-    :enter="{
-      opacity: 1,
-      width: sidePaneWidth,
-      transition: {
-        duration: 500,
-        type: 'keyframes',
-        ease: [0.4, 0, 0.2, 1],
-      },
-    }"
-    data-side="right"
-    class="absolute right-0 top-0 h-full border-l"
-    :style="{ width: `${sidePaneWidth}px` }"
-  />
+  <Transition @leave="handleCloseR" @enter="handleOpenR">
+    <SidePane
+      v-if="sidePaneOpen && sidePaneDir === 'right'"
+      class="absolute right-0 top-0 h-full border-l"
+      :style="{ width: `${sidePaneWidth}px` }"
+    />
+  </Transition>
   <!-- 底部侧边栏 -->
-  <SidePane
-    v-if="sidePaneOpen && sidePaneDir === 'bottom'"
-    v-motion
-    :initial="{ opacity: 0, height: 0 }"
-    :enter="{
-      opacity: 1,
-      height: sidePaneHeight,
-      transition: {
-        duration: 500,
-        type: 'keyframes',
-        ease: [0.4, 0, 0.2, 1],
-      },
-    }"
-    class="absolute bottom-0 left-0 w-[100vw] border-t"
-    :style="{ height: `${sidePaneHeight}px` }"
-  />
+
+  <Transition @leave="handleCloseB" @enter="handleOpenB">
+    <SidePane
+      v-if="sidePaneOpen && sidePaneDir === 'bottom'"
+      class="absolute bottom-0 left-0 w-[100vw] border-t"
+      :style="{ height: `${sidePaneHeight}px` }"
+    />
+  </Transition>
   <!-- 菜单栏 -->
-  <!-- <MenuPane /> -->
+  <MenuPane />
   <!-- 浮动数学输入框 -->
   <FloatingMathInput />
   <!-- 融合命令 -->
@@ -74,6 +56,12 @@
   <RefSuggestions />
   <!-- 附件管理器 -->
   <AttachmentsManager />
+  <!-- 设置面板 -->
+  <SettingsPanel />
+  <!-- 块移动 popover -->
+  <BlockMover />
+  <!-- 粘贴对话框 -->
+  <PasteDialog />
 </template>
 
 <script setup lang="ts">
@@ -90,16 +78,108 @@ import { watch } from "vue";
 import RefSuggestions from "@/components/ref-suggestions/RefSuggestions.vue";
 import AttachmentsManager from "@/components/attachments-mgr/AttachmentsManager.vue";
 import MainTreeContext from "@/context/mainTree";
+import SettingsPanel from "@/components/settings/SettingsPanel.vue";
+import BlockMover from "@/block-mover/BlockMover.vue";
+import MenuPane from "@/components/menu-pane/MenuPane.vue";
+import PasteDialog from "@/components/paste-dialog/PasteDialog.vue";
+import CreateNewTreeDialogContext from "@/context/createNewTreeDialog";
 
 const { sidePaneOpen, sidePaneDir, sidePaneWidth, sidePaneHeight, enableSidePaneAnimation } =
   SidebarContext.useContext();
 const { synced, blocksManager } = BlocksContext.useContext();
 const { mainRootBlockRef } = MainTreeContext.useContext();
+const { openCreateNewTreeDialog, closeCreateNewTreeDialog } =
+  CreateNewTreeDialogContext.useContext();
 
 watch(synced, () => {
   if (synced.value) {
     const rootBlockRef = blocksManager.getRootBlockRef();
-    if (rootBlockRef.value == null) blocksManager.ensureTree();
+    if (rootBlockRef.value == null) {
+      blocksManager.ensureTree(
+        // 没有找到根块时
+        () => {
+          openCreateNewTreeDialog();
+        },
+        // 找到根块时
+        () => {
+          closeCreateNewTreeDialog();
+        },
+      );
+    }
   }
 });
+
+const handleCloseR = (el: Element, done: () => void) => {
+  if (!(el instanceof HTMLElement)) return;
+  const animation = el.animate(
+    [
+      { opacity: 1, transform: "translateX(0)" },
+      { opacity: 0, transform: `translateX(100%)` },
+    ] as any,
+    {
+      duration: 500,
+      easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+    },
+  );
+  animation.onfinish = () => {
+    done();
+  };
+};
+
+const handleOpenR = (el: Element, done: () => void) => {
+  if (!(el instanceof HTMLElement)) return;
+  const animation = el.animate(
+    [
+      { opacity: 0, transform: `translateX(100%)` },
+      { opacity: 1, transform: "translateX(0)" },
+    ] as any,
+    {
+      duration: 500,
+      easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+    },
+  );
+  animation.onfinish = () => {
+    done();
+  };
+};
+
+const handleCloseB = (el: Element, done: () => void) => {
+  if (!(el instanceof HTMLElement)) return;
+  const animation = el.animate(
+    [
+      {
+        opacity: 1,
+        transform: "translateY(0)",
+      },
+      { opacity: 0, transform: `translateY(100%)` },
+    ] as any,
+    {
+      duration: 500,
+      easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+    },
+  );
+  animation.onfinish = () => {
+    done();
+  };
+};
+
+const handleOpenB = (el: Element, done: () => void) => {
+  if (!(el instanceof HTMLElement)) return;
+  const animation = el.animate(
+    [
+      {
+        opacity: 0,
+        transform: `translateY(100%)`,
+      },
+      { opacity: 1, transform: "translateY(0)" },
+    ] as any,
+    {
+      duration: 500,
+      easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+    },
+  );
+  animation.onfinish = () => {
+    done();
+  };
+};
 </script>

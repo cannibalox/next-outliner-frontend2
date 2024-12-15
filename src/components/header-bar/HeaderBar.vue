@@ -25,23 +25,7 @@
       </div>
     </div>
 
-    <div ref="pathContainerEl">
-      <Breadcrumb>
-        <BreadcrumbList>
-          <template v-for="(block, index) in normalizedPath" :key="block.id">
-            <BreadcrumbItem>
-              <BreadcrumbLink
-                class="no-underline cursor-pointer"
-                @click="handleClickPathSegment(block.id)"
-              >
-                {{ block.ctext }}
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator v-if="index !== mainRootBlockPath.length - 2" />
-          </template>
-        </BreadcrumbList>
-      </Breadcrumb>
-    </div>
+    <BlockPath :block-id="mainRootBlockId" @click-path-segment="handleClickPathSegment" />
 
     <div class="right-part flex flex-row items-center">
       <!-- 同步状态 -->
@@ -114,6 +98,7 @@ import {
   AlarmClock,
   ArrowLeft,
   ArrowRight,
+  Bell,
   Dot,
   Download,
   Focus,
@@ -151,12 +136,15 @@ import {
   BreadcrumbLink,
 } from "../ui/breadcrumb";
 import type { BlockId } from "@/common/types";
-import type { Block } from "@/context/blocks-provider/blocksManager";
+import type { Block } from "@/context/blocks-provider/app-state-layer/blocksManager";
 import { useI18n } from "vue-i18n";
 import Pomodoro from "../pomodoro/Pomodoro.vue";
+import SettingsPanelContext from "@/context/settingsPanel";
+import BlockPath from "../BlockPath.vue";
 
 const { sidePaneOpen, sidePaneDir, sidePaneWidth, enableSidePaneAnimation } =
   SidebarContext.useContext();
+const { open: openSettingsPanel } = SettingsPanelContext.useContext();
 const { open: openAttachmentsManager } = AttachmentsManagerContext.useContext();
 const { menuPaneOpen } = MenubarContext.useContext();
 const { theme, toggleTheme } = ThemeContext.useContext();
@@ -164,19 +152,9 @@ const { focusModeEnabled } = FocusModeContext.useContext();
 const { timeMachineOpen } = TimeMachineContext.useContext();
 const { openFusionCommand } = FusionCommandContext.useContext();
 const { synced } = BlocksContext.useContext();
-const { mainRootBlockId, mainRootBlockPath } = MainTreeContext.useContext();
+const { mainRootBlockId } = MainTreeContext.useContext();
 const openImporter = ref(false);
-const pathContainerEl = ref<HTMLElement | null>(null);
-
-const { width: pathContainerWidth } = useElementSize(pathContainerEl);
 const { t } = useI18n();
-
-const normalizedPath = computed(() => {
-  const ret = [...mainRootBlockPath.value];
-  ret.reverse();
-  ret.pop();
-  return ret;
-});
 
 const handleClickPathSegment = (blockId: BlockId) => {
   mainRootBlockId.value = blockId;
@@ -203,7 +181,10 @@ const leftButtons: HeaderBarItemType[] = [
   {
     icon: Menu,
     label: () => <>{menuPaneOpen.value ? "关闭菜单栏" : "打开菜单栏"}</>,
-    onClick: () => (menuPaneOpen.value = !menuPaneOpen.value),
+    onClick: () => {
+      console.log("click menu", menuPaneOpen.value);
+      menuPaneOpen.value = !menuPaneOpen.value;
+    },
     active: menuPaneOpen,
   },
   {
@@ -250,6 +231,11 @@ const rightButtons: HeaderBarItemType[] = [
     onClick: toggleTheme,
   },
   {
+    icon: () => <Bell class="size-5 stroke-[1.8]" />,
+    label: () => t("kbView.headerBar.notifications"),
+    onClick: () => {},
+  },
+  {
     icon: PanelRight,
     label: () =>
       sidePaneOpen.value ? t("kbView.headerBar.closeSidepane") : t("kbView.headerBar.openSidepane"),
@@ -293,7 +279,7 @@ const moreOptions: HeaderBarItemType[] = [
   {
     icon: Settings,
     label: () => t("kbView.headerBar.settings"),
-    onClick: () => {},
+    onClick: () => (openSettingsPanel.value = true),
   },
   {
     icon: HelpCircle,

@@ -4,18 +4,11 @@
       <DialogHeader>
         <DialogTitle>导入</DialogTitle>
       </DialogHeader>
-      <Input
-        type="file"
-        accept="application/json"
-        :multiple="false"
-        @change="handleFileChange"
-      />
+      <Input type="file" accept="application/json" :multiple="false" @change="handleFileChange" />
       <DialogFooter>
         <Button variant="outline" size="sm" @click="open = false">取消</Button>
-        <Button type="submit"size="sm" :disabled="!file" @click="handleClick2">
-          <template v-if="status === 'idle'">
-            导入
-          </template>
+        <Button type="submit" size="sm" :disabled="!file" @click="handleClick2">
+          <template v-if="status === 'idle'"> 导入 </template>
           <template v-else-if="status === 'importing'">
             <LoaderCircle class="size-4 mr-2 animate-spin" />
             正在导入...
@@ -68,7 +61,7 @@ const handleClick2 = async () => {
     try {
       const text = await file.value.text();
       const blocks = parseV1Backup(text);
-      await importBlocks(blocks!, blocksManager);
+      await importBlocks(blocks as any, blocksManager);
       status.value = "success";
     } catch (err) {
       console.error(err);
@@ -79,5 +72,5 @@ const handleClick2 = async () => {
   } else if (status.value === "success") {
     open.value = false;
   }
-}
+};
 </script>

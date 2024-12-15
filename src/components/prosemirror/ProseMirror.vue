@@ -3,7 +3,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { onBeforeUnmount, onMounted, onUnmounted, ref, watch } from "vue";
 import { type EditorProps, EditorView } from "prosemirror-view";
 import { EditorState, Plugin, Selection } from "prosemirror-state";
 import { Node } from "prosemirror-model";
@@ -142,9 +142,12 @@ onMounted(() => {
   }
 });
 
-onBeforeUnmount(() => {
-  if (editorView && !editorView.isDestroyed) editorView.destroy();
-  editorView = null;
+// 延迟销毁 editorView，以确保动画完成
+onUnmounted(() => {
+  setTimeout(() => {
+    if (editorView && !editorView.isDestroyed) editorView.destroy();
+    editorView = null;
+  }, 1000);
 });
 </script>
 

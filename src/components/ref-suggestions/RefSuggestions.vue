@@ -24,14 +24,14 @@
           class="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 text-sm outline-none [&.focus]:bg-accent [&.focus]:text-accent-foreground"
           :class="{ focus: focusItemIndex === index }"
           @mouseover="!suppressMouseOver && (focusItemIndex = index)"
+          @click="cb?.(suggestions[focusItemIndex]?.value?.id ?? null)"
         >
-          <TextContent
-            v-if="block.value.content[0] === BLOCK_CONTENT_TYPES.TEXT"
-            :block="{ ...block.value, level: 0 }"
+          <BlockContent
+            :block="block.value"
             :readonly="true"
             class="*:cursor-default"
             :highlight-terms="queryTerms"
-          ></TextContent>
+          ></BlockContent>
         </div>
         <div v-if="suggestions.length === 0" class="text-center">
           <span class="text-sm text-muted-foreground">
@@ -54,6 +54,7 @@ import TextContent from "../block-contents/TextContent.vue";
 import { Input } from "../ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { simpleTokenize } from "@/utils/tokenize";
+import BlockContent from "../block-contents/BlockContent.vue";
 
 const {
   showPos,

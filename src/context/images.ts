@@ -1,153 +1,141 @@
 import { fsGetAttachmentSignedUrl, fsUpload } from "@/common/api/fs";
 import { autoRetryGet } from "@/utils/auto-retry";
 import { createContext } from "@/utils/createContext";
-import { computed, reactive } from "vue";
-import TokenContext from "./token";
-import { getSeperator, isAbsolutePath, joinPathSegments } from "@/common/path";
-import AxiosContext from "./axios";
+import { computed, reactive, type ComputedRef } from "vue";
+import { getRelativePath, getSeperator, isAbsolutePath, joinPathSegments } from "@/common/path";
+import ServerInfoContext from "./serverInfo";
 import AttachmentsManagerContext from "./attachmentsManager";
 import PathsContext from "./paths";
+import type { BlockId, ImageContent } from "@/common/types";
+import { BLOCK_CONTENT_TYPES } from "@/common/constants";
+import { useTaskQueue } from "@/plugins/taskQueue";
 
 export type ImageState =
-  | { status: "fetching" }
+  | { status: "fetching"; url?: string }
   | { status: "synced"; url: string }
-  | { status: "fetchError"; msg: string }
-  | { status: "uploading" }
-  | { status: "uploadError"; msg: string };
-
-type FetchTask = {
-  promise: Promise<string>;
-  cancel: () => void;
-}
+  | { status: "fetchError"; url?: string }
+  | { status: "uploading"; url: string }
+  | { status: "uploadError"; url: string };
 
 const ImagesContext = createContext(() => {
-  const { serverUrl } = AxiosContext.useContext();
+  const { serverUrl } = ServerInfoContext.useContext();
   const images = reactive<Record<string, ImageState>>({});
-  const { tokenPayload } = TokenContext.useContext();
+  const { tokenPayload } = ServerInfoContext.useContext();
   const { attachmentsBasePath } = PathsContext.useContext();
-  // imagePath => fetchTask
-  const fetchTasks = reactive<Record<string, FetchTask>>({});
 
-  const useImage = (imagePath: string, refetch: boolean = false) => {
-    console.debug("useImage", imagePath, refetch);
-    for (; ;) {
-      if (images[imagePath]?.status === "fetching") {
-        if (refetch) {
-          // 如果需要重新获取，则取消之前的获取任务
-          console.debug("图片正在获取，重新获取", imagePath);
-          const prevTask = fetchTasks[imagePath];
-          if (prevTask) {
-            prevTask.cancel();
-            delete fetchTasks[imagePath];
-          }
-        } else break;
-      }
+  // const fixImagePath = (blockId: BlockId) => {
+  //   const { blocksManager } = getBlocksContext()!;
+  //   const { attachmentsBasePath } = getPathsContext()!;
+  //   const taskQueue = useTaskQueue();
+  //   const block = blocksManager.getBlock(blockId);
+  //   if (!block || block.type !== "normalBlock" || block.content[0] !== BLOCK_CONTENT_TYPES.IMAGE)
+  //     return;
+  //   const imagePath = block.content[1];
+  //   // if (isAbsolutePath(imagePath)) {
+  //   //   const relativePath = getRelativePath(attachmentsBasePath.value, imagePath);
+  //   //   if (!relativePath) return;
+  //   //   taskQueue.addTask(() => {
+  //   //     const newContent = [...block.content] as ImageContent;
+  //   //     newContent[1] = relativePath;
+  //   //     blocksManager.updateBlock({
+  //   //       ...block,
+  //   //       content: newContent,
+  //   //     });
+  //   //   });
+  //   // }
+  //   if (isAbsolutePath(imagePath) && imagePath.search("attachments/") !== -1) {
+  //     const newImagePath = imagePath.split("attachments/")[1];
+  //     taskQueue.addTask(() => {
+  //       const newContent = [...block.content] as ImageContent;
+  //       newContent[1] = newImagePath;
+  //       blocksManager.updateBlock({
+  //         ...block,
+  //         content: newContent,
+  //       });
+  //     });
+  //   }
+  // };
 
-      // 如果图片状态不存在，则创建一个
-      if (!images[imagePath]) {
-        images[imagePath] = { status: "fetching" };
-      }
+  const tryFetchImage = (imagePath: string, refetch: boolean = false) => {
+    const currStatus = images[imagePath]?.status;
+    const currUrl =
+      images[imagePath] && "url" in images[imagePath] ? images[imagePath].url : undefined;
+    // 如果图片正在获取，则不管 refetch，总是返回
+    if (currStatus === "fetching") return;
+    if (currStatus !== undefined && !refetch) return;
 
-      if (images[imagePath].status === "uploadError") {
-        console.debug("图片上传失败，无法获取", imagePath);
-        images[imagePath] = { status: "fetchError", msg: "图片上传失败，无法获取" };
-        break;
-      }
+    // 开始获取图片
+    (async () => {
+      images[imagePath] = { status: "fetching", url: currUrl };
 
-      if (images[imagePath].status === "uploading") {
-        console.debug("图片正在上传，无法获取", imagePath);
-        images[imagePath] = { status: "fetchError", msg: "图片正在上传，上传完成后再获取" };
-        break;
-      }
+      // 获取图片
+      const [promise, cancel] = autoRetryGet<string>(
+        (onSuccess) => {
+          fsGetAttachmentSignedUrl({
+            path: imagePath,
+            inferMimeType: true,
+            attachment: false,
+          }).then((res) => res.success && onSuccess(res.data.signedUrl));
+        },
+        { mode: "backoff", base: 500, max: 5000 },
+        5,
+        true,
+      );
 
-      // 开始获取图片
-      queueMicrotask(async () => {
-        images[imagePath] = { status: "fetching" };
-
-        if (!tokenPayload.value) {
-          console.debug("token 不存在，无法获取图片", imagePath);
-          images[imagePath] = { status: "fetchError", msg: "token 不存在" };
-          return;
-        }
-
-        // 如果是相对路径，则需要转换为绝对路径
-        const location = tokenPayload.value.location;
-        if (!isAbsolutePath(imagePath)) {
-          imagePath = joinPathSegments([location, imagePath]);
-        }
-        if (!imagePath.startsWith(location)) {
-          console.debug("图片路径不合法", imagePath);
-          images[imagePath] = { status: "fetchError", msg: "图片路径不合法" };
-          return;
-        }
-
-        // 获取图片
-        let cancelled = false;
-        const [promise, cancel] = autoRetryGet<string>(
-          (onSuccess) => {
-            fsGetAttachmentSignedUrl({ path: imagePath, inferMimeType: true, attachment: false }).then(
-              (res) => res.success && onSuccess(res.data.signedUrl),
-            );
-          },
-          { mode: "backoff", base: 500, max: 5000 },
-          5,
-          true,
-        );
-        promise
-          // 成功
-          .then((signedUrl) => {
-            if (cancelled) return; // 如果已取消，则不设置图片状态
-            console.debug("图片获取成功", imagePath);
-            images[imagePath] = {
-              status: "synced",
-              url: `http://${serverUrl.value}${signedUrl}`,
-            };
-            delete fetchTasks[imagePath]; // 删除获取任务
-          })
-          // 失败
-          .catch((err) => {
-            if (cancelled) return; // 如果已取消，则不设置图片状态
-            console.debug("图片获取失败", imagePath, err.message);
-            images[imagePath] = {
-              status: "fetchError",
-              msg: err.message,
-            };
-            delete fetchTasks[imagePath]; // 删除获取任务
-          });
-
-        // 注册获取任务
-        const task = {
-          promise,
-          cancel: () => {
-            cancel();
-            cancelled = true; // 标记为已取消
-          }
-        }
-        fetchTasks[imagePath] = task;
-      });
-      break;
-    }
-
-    return computed(() => images[imagePath]);
+      promise
+        .then((signedUrl) => {
+          console.debug("图片获取成功", imagePath);
+          images[imagePath] = {
+            status: "synced",
+            url: `http://${serverUrl.value}${signedUrl}`,
+          };
+        })
+        .catch((err) => {
+          console.debug("图片获取失败", imagePath, err.message);
+          images[imagePath] = {
+            status: "fetchError",
+            url: currUrl,
+          };
+        });
+    })();
   };
 
+  function useImage(
+    getImagePath: () => string | null | undefined,
+    refetch?: boolean,
+  ): ComputedRef<ImageState | null>;
+  function useImage(imagePath: string, refetch?: boolean): ComputedRef<ImageState>;
+  function useImage(arg0: Function | string, arg1?: boolean) {
+    if (typeof arg0 === "string") {
+      return computed(() => {
+        tryFetchImage(arg0, arg1);
+        return images[arg0];
+      });
+    } else {
+      return computed(() => {
+        const imagePath = arg0();
+        if (!imagePath) return null;
+        tryFetchImage(imagePath, arg1);
+        return images[imagePath];
+      });
+    }
+  }
+
   const uploadImage = (image: File, targetPath_?: string) => {
-    const targetPath = targetPath_ ?? joinPathSegments([
-      attachmentsBasePath.value,
-      image.name,
-    ]);
-    images[targetPath] = { status: "uploading" };
+    const targetPath = targetPath_ ?? image.name;
+    const currUrl = URL.createObjectURL(image);
+    images[targetPath] = { status: "uploading", url: currUrl };
     queueMicrotask(async () => {
       const res = await fsUpload([[targetPath, image]]);
       if (res.success) {
         console.log("图片上传成功", targetPath);
-        useImage(targetPath);
+        tryFetchImage(targetPath, true);
       } else {
-        images[targetPath] = { status: "uploadError", msg: "图片上传失败" };
+        images[targetPath] = { status: "uploadError", url: currUrl };
       }
     });
     return computed(() => images[targetPath]);
-  }
+  };
 
   const ctx = { images, useImage, uploadImage };
   globalThis.getImagesContext = () => ctx;

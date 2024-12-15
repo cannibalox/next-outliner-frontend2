@@ -2,6 +2,7 @@
   <div
     class="block-content image-content relative"
     :data-showDropdown="showDropdown"
+    :data-path="block.content[1]"
     v-if="block.content[0] === BLOCK_CONTENT_TYPES.IMAGE && image"
   >
     <div v-if="image.status === 'fetching'" class="flex items-center text-muted-foreground">
@@ -49,67 +50,46 @@
               <MessageSquareMore class="size-4 mr-2" />
               {{ $t("kbView.imageContent.addCaption") }}
             </DropdownMenuItem>
-            <DropdownMenuItem
-              :class="{
-                active: isFilterActive('blend'),
-              }"
-              @click="toggleFilter('blend')"
-            >
-              <Blend class="size-4 mr-2" />
-              {{ $t("kbView.imageContent.blend") }}
+
+            <!-- 下载图片 -->
+            <DropdownMenuItem>
+              <Download class="size-4 mr-2" />
+              {{ $t("kbView.imageContent.download") }}
             </DropdownMenuItem>
-            <DropdownMenuItem
-              :class="{
-                active: isFilterActive('blendLuminosity'),
-              }"
-              @click="toggleFilter('blendLuminosity')"
-            >
-              <Blend class="size-4 mr-2" />
-              {{ $t("kbView.imageContent.blendLuminosity") }}
+            <!-- 详细信息 -->
+            <DropdownMenuItem>
+              <Info class="size-4 mr-2" />
+              {{ $t("kbView.imageContent.metadata") }}
             </DropdownMenuItem>
-            <DropdownMenuItem
-              :class="{
-                active: isFilterActive('circle'),
-              }"
-              @click="toggleFilter('circle')"
-            >
-              <Crop class="size-4 mr-2" />
-              {{ $t("kbView.imageContent.circle") }}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              :class="{
-                active: isFilterActive('invert'),
-              }"
-              @click="toggleFilter('invert')"
-            >
-              <Moon class="size-4 mr-2" />
-              {{ $t("kbView.imageContent.invert") }}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              :class="{
-                active: isFilterActive('invertW'),
-              }"
-              @click="toggleFilter('invertW')"
-            >
-              <Sun class="size-4 mr-2" />
-              {{ $t("kbView.imageContent.invertW") }}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              :class="{
-                active: isFilterActive('outline'),
-              }"
-              @click="toggleFilter('outline')"
-            >
-              <Square class="size-4 mr-2" />
-              {{ $t("kbView.imageContent.outline") }}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              :class="{
-                active: isFilterActive('outline'),
-              }"
-              class="!text-red-500"
-              @click="handleDeleteImage"
-            >
+            <!-- 滤镜 -->
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <Blend class="size-4 mr-2" />
+                {{ $t("kbView.imageContent.filter") }}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem
+                    :class="{
+                      active: isFilterActive('invert'),
+                    }"
+                    @click="toggleFilter('invert')"
+                  >
+                    {{ $t("kbView.imageContent.invert") }}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    :class="{
+                      active: isFilterActive('invertW'),
+                    }"
+                    @click="toggleFilter('invertW')"
+                  >
+                    {{ $t("kbView.imageContent.invertW") }}
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
+            <!-- 删除图片 -->
+            <DropdownMenuItem class="!text-red-500" @click="handleDeleteImage">
               <Trash2 class="size-4 mr-2" />
               {{ $t("kbView.imageContent.deleteImage") }}
             </DropdownMenuItem>
@@ -134,13 +114,14 @@
 <script setup lang="ts">
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import { Button } from "@/components/ui/button";
-import type { BlockWithLevel } from "@/context/blocks-provider/blocksManager";
 import type { BlockTree } from "@/context/blockTree";
 import ImagesContext, { type ImageState } from "@/context/images";
 import {
   Blend,
   Crop,
+  Download,
   Expand,
+  Info,
   Loader2,
   MessageSquareMore,
   Moon,
@@ -154,6 +135,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { useTaskQueue } from "@/plugins/taskQueue";
@@ -162,12 +147,13 @@ import type { ImageContent } from "@/common/types";
 import { watch } from "vue";
 import { syncRef } from "@vueuse/core";
 import { generateKeydownHandlerSimple } from "@/context/keymap";
-import type { BlockPos } from "@/context/blocks-provider/blocksEditor";
+import type { BlockPos } from "@/context/blocks-provider/app-state-layer/blocksEditor";
 import { textContentFromString } from "@/utils/pm";
+import type { Block } from "@/context/blocks-provider/app-state-layer/blocksManager";
 
 const props = defineProps<{
   blockTree?: BlockTree;
-  block: BlockWithLevel;
+  block: Block;
 }>();
 
 const { useImage } = ImagesContext.useContext();
@@ -182,7 +168,7 @@ const handleKeydownOnCursorContainer = generateKeydownHandlerSimple({
   Backspace: {
     run: () => {
       taskQueue.addTask(() => {
-        blockEditor.deleteBlock(props.block.id);
+        blockEditor.deleteBlock({ blockId: props.block.id });
       });
       return true;
     },
@@ -198,7 +184,8 @@ const handleKeydownOnCursorContainer = generateKeydownHandlerSimple({
           offset: 1,
         };
         const tree = props.blockTree;
-        const { focusNext } = blockEditor.insertNormalBlock(pos, textContentFromString("")) ?? {};
+        const { focusNext } =
+          blockEditor.insertNormalBlock({ pos, content: textContentFromString("") }) ?? {};
         if (tree && focusNext) {
           await tree.nextUpdate();
           tree.focusBlock(focusNext);
@@ -267,6 +254,26 @@ const handleKeydownOnCursorContainer = generateKeydownHandlerSimple({
     stopPropagation: true,
     preventDefault: true,
   },
+  Tab: {
+    run: () => {
+      taskQueue.addTask(() => {
+        blockEditor.promoteBlock({ blockId: props.block.id });
+      });
+      return true;
+    },
+    stopPropagation: true,
+    preventDefault: true,
+  },
+  "Shift-Tab": {
+    run: () => {
+      taskQueue.addTask(() => {
+        blockEditor.demoteBlock({ blockId: props.block.id });
+      });
+      return true;
+    },
+    stopPropagation: true,
+    preventDefault: true,
+  },
 });
 
 const preventCompositionInput = (e: CompositionEvent) => {
@@ -280,62 +287,9 @@ const preventCompositionInput = (e: CompositionEvent) => {
   }, 0);
 };
 
-const image = ref<ImageState | null>(null);
-watch(
-  () => props.block.id,
-  () => {
-    const image2 = useImage(props.block.content[1]);
-    syncRef(image, image2, { direction: "rtl" }); // image <= image2
-  },
-  { immediate: true },
-);
+const image = useImage(() => props.block.content[1]);
 
 const showDropdown = ref(false);
-
-const adjustWider = (e: MouseEvent) => {
-  e.preventDefault();
-  e.stopPropagation();
-  const imageEl = imageElRef.value;
-  const imageElContainer = imageElContainerRef.value;
-  if (!imageEl || !imageElContainer) return;
-  const defaultWidth = Math.min(imageElContainer.clientWidth, imageEl.naturalWidth);
-  const nowWidth = (props.block.content[4] ?? defaultWidth) as number;
-  const newWidth = nowWidth * 1.1;
-  taskQueue.addTask(() => {
-    const blockId = props.block.id;
-    const newContent = [...props.block.content] as ImageContent;
-    newContent[4] = newWidth;
-    blockEditor.changeBlockContent(blockId, newContent);
-  });
-};
-
-const adjustNarrower = (e: MouseEvent) => {
-  e.preventDefault();
-  e.stopPropagation();
-  const imageEl = imageElRef.value;
-  const imageElContainer = imageElContainerRef.value;
-  if (!imageEl || !imageElContainer) return;
-  const defaultWidth = Math.min(imageElContainer.clientWidth, imageEl.naturalWidth);
-  const nowWidth = (props.block.content[4] ?? defaultWidth) as number;
-  const newWidth = nowWidth * 0.9;
-  taskQueue.addTask(() => {
-    const blockId = props.block.id;
-    const newContent = [...props.block.content] as ImageContent;
-    newContent[4] = newWidth;
-    blockEditor.changeBlockContent(blockId, newContent);
-  });
-};
-
-const resetWidth = (e: MouseEvent) => {
-  e.preventDefault();
-  e.stopPropagation();
-  taskQueue.addTask(() => {
-    const blockId = props.block.id;
-    const newContent = [...props.block.content] as ImageContent;
-    newContent[4] = null;
-    blockEditor.changeBlockContent(blockId, newContent);
-  });
-};
 
 const toggleFilter = (
   filter: "blend" | "circle" | "invert" | "invertW" | "outline" | "blendLuminosity",
@@ -350,7 +304,7 @@ const toggleFilter = (
       newFilters.push(filter);
     }
     newContent[5] = newFilters;
-    blockEditor.changeBlockContent(blockId, newContent);
+    blockEditor.changeBlockContent({ blockId, content: newContent });
   });
 };
 
@@ -363,7 +317,7 @@ const isFilterActive = (
 
 const handleDeleteImage = () => {
   taskQueue.addTask(() => {
-    blockEditor.deleteBlock(props.block.id);
+    blockEditor.deleteBlock({ blockId: props.block.id });
   });
 };
 
@@ -386,7 +340,7 @@ const handleMouseUpOrLeave = () => {
     const blockId = props.block.id;
     const newContent = [...props.block.content] as ImageContent;
     newContent[4] = newWidth;
-    blockEditor.changeBlockContent(blockId, newContent);
+    blockEditor.changeBlockContent({ blockId, content: newContent });
   });
 
   // 恢复全局 cursor 样式

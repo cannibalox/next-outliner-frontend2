@@ -1,70 +1,64 @@
 <template>
   <div
     class="block-item"
-    :class="{ hasChildren, fold }"
-    :blockId="item.block.id"
+    :class="{ hasChildren, fold, selected }"
+    :blockId="block.id"
     @focusin="handleFocusIn"
   >
     <div class="indent-lines">
-      <div class="indent-line" v-for="i in block.level" :key="i"></div>
+      <div class="indent-line" v-for="i in level" :key="i"></div>
     </div>
-    <div class="fold-button shrink-0" v-if="!hideFoldButton" @click="handleClickFoldButton">
-      <Triangle></Triangle>
-    </div>
-    <BlockContextMenu :block-id="block.id">
-      <div class="bullet shrink-0" v-if="!hideBullet" draggable="true" @click="handleClickBullet">
-        <Diamond class="diamond" v-if="mirrorIds.size > 0"></Diamond>
-        <Circle class="circle" v-else></Circle>
+    <div class="relative block-content-container">
+      <div class="block-buttons">
+        <BlockContextMenu :block-id="block.id">
+          <div class="more-button">
+            <MoreHorizontal />
+          </div>
+        </BlockContextMenu>
+        <div class="fold-button" v-if="!hideFoldButton" @click="handleClickFoldButton">
+          <Triangle></Triangle>
+        </div>
       </div>
-    </BlockContextMenu>
-    <TextContent
-      v-if="block.content[0] === BLOCK_CONTENT_TYPES.TEXT"
-      :block="block"
-      :block-tree="blockTree"
-      :readonly="readonly"
-      :highlight-terms="highlightTerms"
-      :highlight-refs="highlightRefs"
-    ></TextContent>
-    <MathContent
-      v-if="block.content[0] === BLOCK_CONTENT_TYPES.MATH"
-      :block="block"
-      :block-tree="blockTree"
-      :readonly="readonly"
-    ></MathContent>
-    <CodeContent
-      v-if="block.content[0] === BLOCK_CONTENT_TYPES.CODE"
-      :block="block"
-      :block-tree="blockTree"
-      :readonly="readonly"
-    ></CodeContent>
-    <ImageContent
-      v-if="block.content[0] === BLOCK_CONTENT_TYPES.IMAGE"
-      :block="block"
-      :block-tree="blockTree"
-    ></ImageContent>
+
+      <div class="bullet shrink-0" v-if="!hideBullet" draggable="true" @click="handleClickBullet">
+        <Diamond class="diamond" v-if="hasOrIsMirrors" />
+        <Circle class="circle" v-else />
+      </div>
+
+      <BlockContent
+        :block="block"
+        :block-tree="blockTree"
+        :readonly="readonly"
+        :highlight-terms="highlightTerms"
+        :highlight-refs="highlightRefs"
+      ></BlockContent>
+
+      <BacklinksCounter :block-id="block.id" />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { BLOCK_CONTENT_TYPES } from "@/common/constants";
-import TextContent from "@/components/block-contents/TextContent.vue";
-import MathContent from "@/components/block-contents/MathContent.vue";
-import type { DisplayItem } from "@/utils/display-item";
-import { computed } from "vue";
-import { Diamond, Circle, Triangle } from "lucide-vue-next";
-import type { BlockTree } from "@/context/blockTree";
-import { useTaskQueue } from "@/plugins/taskQueue";
-import BlocksContext from "@/context/blocks-provider/blocks";
-import LastFocusContext from "@/context/lastFocus";
-import CodeContent from "../block-contents/CodeContent.vue";
-import ImageContent from "../block-contents/ImageContent.vue";
 import type { BlockId } from "@/common/types";
-import BlockContextMenu from "../contextmenu/BlockContextMenu.vue";
+import BlocksContext from "@/context/blocks-provider/blocks";
+import BlockSelectContext from "@/context/blockSelect";
+import type { BlockTree } from "@/context/blockTree";
+import LastFocusContext from "@/context/lastFocus";
 import MainTreeContext from "@/context/mainTree";
+import { useTaskQueue } from "@/plugins/taskQueue";
+import { Circle, Diamond, MoreHorizontal, Triangle } from "lucide-vue-next";
+import { computed } from "vue";
+
+import type { Block } from "@/context/blocks-provider/app-state-layer/blocksManager";
+import BlockContent from "../block-contents/BlockContent.vue";
+import BlockContextMenu from "../contextmenu/BlockContextMenu.vue";
+import IndexContext from "@/context";
+import BacklinksCounter from "../backlinks-counter/BacklinksCounter.vue";
 
 const props = defineProps<{
   blockTree?: BlockTree;
-  item: DisplayItem;
+  block: Block;
+  level: number;
   hideFoldButton?: boolean;
   hideBullet?: boolean;
   forceFold?: boolean;
@@ -78,28 +72,37 @@ const taskQueue = useTaskQueue();
 const { blocksManager, blockEditor } = BlocksContext.useContext();
 const { lastFocusedBlockId, lastFocusedBlockTreeId } = LastFocusContext.useContext();
 const { mainRootBlockId } = MainTreeContext.useContext();
+const { selectedBlockIds, selectedBlockTree } = BlockSelectContext.useContext();
+const { backlinksIndex, getMirrors } = IndexContext.useContext();
 
 // computed
-const block = computed(() => props.item.block);
-const mirrorIds = computed(() => blocksManager.getMirrors(block.value.id));
-const fold = computed(() => props.item.block.fold);
-const hasChildren = computed(() => props.item.block.childrenIds.length > 0);
+const mirrorIds = computed(() => getMirrors(props.block.id));
+const hasOrIsMirrors = computed(
+  () => mirrorIds.value.size > 0 || props.block.type === "mirrorBlock",
+);
+const fold = computed(() => props.block.fold);
+const hasChildren = computed(() => props.block.childrenIds.length > 0);
+const selected = computed(() => selectedBlockIds.value.includes(props.block.id));
+const backlinks = computed(() => backlinksIndex.value[props.block.id] ?? new Set());
 
 // handlers
 const handleFocusIn = () => {
-  const blockId = props.item.block.id;
+  const blockId = props.block.id;
   const blockTreeId = props.blockTree?.getId() ?? null;
   lastFocusedBlockId.value = blockId;
   lastFocusedBlockTreeId.value = blockTreeId;
+  // 一个块获得焦点时，清除块选择
+  selectedBlockIds.value = [];
+  selectedBlockTree.value = null;
 };
 
 const handleClickFoldButton = () => {
-  const blockId = props.item.block.id;
+  const blockId = props.block.id;
   taskQueue.addTask(() => blockEditor.toggleFold(blockId));
 };
 
 const handleClickBullet = () => {
-  mainRootBlockId.value = block.value.id;
+  mainRootBlockId.value = props.block.id;
 };
 </script>
 
@@ -111,7 +114,7 @@ const handleClickBullet = () => {
   &.selected {
     .block-content,
     .bullet {
-      background-color: var(--muted);
+      background-color: hsl(var(--muted));
     }
   }
 
@@ -124,43 +127,6 @@ const handleClickBullet = () => {
       border-right: var(--border-indent);
       margin-right: var(--block-indent-adjust);
       border-right: 1px solid var(--indent-line-color);
-    }
-  }
-
-  .fold-button {
-    height: calc(var(--editor-line-height) + var(--content-padding));
-    width: 18px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    opacity: 0; // 默认隐藏 fold button
-
-    // 如果：
-    // 1. 这个 block 有 children，且 hover
-    // 2. 这个 block 有 backlink，且 hover
-    // 3. 这个 block 有编号
-    // 4. 这个 block 有 metadata，且 hover
-    // 则显示 fold button
-    @at-root .block-item.hasChildren:hover > .fold-button,
-      .block-item.hasBacklink:hover > .fold-button,
-      .block-item.hasChildren.no > .fold-button,
-      .block-item.hasMetadata:hover > .fold-button {
-      opacity: 1;
-    }
-
-    svg {
-      height: var(--fold-button-size);
-      width: var(--fold-button-size);
-      stroke: none;
-      fill: var(--fold-button-color);
-      transform: rotate(180deg);
-      padding: 4px;
-    }
-
-    // 如果这个 block 是 folded 的，则将 fold button 旋转 90 度
-    @at-root .block-item.fold > .fold-button svg {
-      transform: rotate(90deg);
     }
   }
 
@@ -188,8 +154,8 @@ const handleClickBullet = () => {
       padding: 4px;
 
       &.diamond {
-        width: 8px;
-        height: 8px;
+        width: 15px;
+        height: 15px;
       }
     }
 
@@ -206,23 +172,101 @@ const handleClickBullet = () => {
     }
   }
 
+  .block-content-container {
+    display: flex;
+    flex-grow: 1;
+    padding-left: 18px;
+
+    .block-buttons {
+      position: absolute;
+      left: -22px;
+      width: 36px;
+      display: flex;
+      justify-content: flex-end;
+
+      .more-button {
+        height: calc(var(--editor-line-height) + var(--content-padding));
+        width: 18px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        flex-shrink: 0;
+        margin-right: 4px;
+        display: none; // 默认隐藏 more button
+
+        svg {
+          stroke: var(--block-button-color);
+        }
+
+        // 如果 hover，则显示 more button
+        @at-root .block-item:hover > .block-content-container > .block-buttons .more-button {
+          display: flex;
+        }
+      }
+
+      .fold-button {
+        height: calc(var(--editor-line-height) + var(--content-padding));
+        width: 18px;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        display: none; // 默认隐藏 fold button
+
+        // 如果：
+        // 1. 这个 block 有 children，且 hover
+        // 2. 这个 block 有 backlink，且 hover
+        // 3. 这个 block 有编号
+        // 4. 这个 block 有 metadata，且 hover
+        // 则显示 fold button
+        @at-root .block-item.hasChildren:hover
+            > .block-content-container
+            > .block-buttons
+            > .fold-button,
+          .block-item.hasBacklink:hover > .block-content-container > .block-buttons > .fold-button,
+          .block-item.hasChildren.no > .block-content-container > .block-buttons > .fold-button,
+          .block-item.hasMetadata:hover > .block-content-container > .block-buttons > .fold-button {
+          display: flex;
+        }
+
+        svg {
+          height: var(--fold-button-size);
+          width: var(--fold-button-size);
+          stroke: none;
+          fill: var(--block-button-color);
+          transform: rotate(180deg);
+          padding: 4px;
+        }
+
+        // 如果这个 block 是 folded 的，则将 fold button 旋转 90 度
+        @at-root .block-item.fold > .block-content-container > .block-buttons > .fold-button svg {
+          transform: rotate(90deg);
+        }
+      }
+    }
+  }
+
   .block-content {
     flex-grow: 1;
     width: min-content;
     background-color: var(--bg-color-primary);
-
-    // 直接改 .block-content 的 opacity 会导致 indent lines 透出来
-    @at-root .block-item.completed .block-content .ProseMirror {
-      opacity: 0.37;
-      text-decoration-line: line-through;
-      text-decoration-thickness: 1px;
-    }
   }
 
   .unsupported-block-content {
     background-color: var(--bg-color-primary);
     flex-grow: 1;
     color: red;
+  }
+
+  & > .block-content-container > .block-content:has(.tag[ctext~="later"]),
+  & > .block-content-container > .block-content:has(.tag[ctext~="abort"]) {
+    color: hsl(var(--muted-foreground));
+  }
+
+  & > .block-content-container > .block-content:has(.tag[ctext~="done"]) {
+    color: hsl(var(--muted-foreground));
+    text-decoration-line: line-through;
+    text-decoration-thickness: 1px;
   }
 
   ///// 标签颜色

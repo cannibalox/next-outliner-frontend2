@@ -7,6 +7,7 @@
       '--padding-bottom': `${paddingBottom ?? 200}px`,
       '--padding-top': `${paddingTop ?? 0}px`,
     }"
+    @pointerdown="handlePointerDown"
   >
     <virt-list
       v-if="virtual"
@@ -14,7 +15,7 @@
       class="vlist"
       :list="displayItems"
       :buffer="10"
-      :minSize="30"
+      :minSize="24"
       ref="$vlist"
       itemClass="block-container"
     >
@@ -22,8 +23,10 @@
       <template #default="{ itemData }">
         <BasicBlockItem
           v-if="itemData.type == 'block'"
+          :key="itemData.block.id"
           :block-tree="controller"
-          :item="itemData"
+          :block="itemData.block"
+          :level="itemData.level"
           :force-fold="forceFold"
         ></BasicBlockItem>
       </template>
@@ -34,33 +37,33 @@
 
 <script setup lang="ts">
 import type { BlockId } from "@/common/types";
-import {
-  getDefaultDiGenerator,
-  type DisplayItem,
-  type DisplayItemGenerator,
-} from "@/utils/display-item";
-import mitt from "@/utils/mitt";
-import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
-import { VirtList } from "vue-virt-list";
-import { EditorView as PmEditorView } from "prosemirror-view";
-import { EditorView as CmEditorView } from "@codemirror/view";
-import BasicBlockItem from "./display-items/BasicBlockItem.vue";
-import { AllSelection } from "prosemirror-state";
-import { useEventBus } from "@/plugins/eventbus";
-import type { Block } from "@/context/blocks-provider/blocksManager";
+import BlocksContext from "@/context/blocks-provider/blocks";
+import type { Block } from "@/context/blocks-provider/app-state-layer/blocksManager";
+import BlockSelectContext from "@/context/blockSelect";
 import {
   BlockTreeContext,
   type BlockTree,
   type BlockTreeEventMap,
   type BlockTreeProps,
 } from "@/context/blockTree";
-import BlocksContext from "@/context/blocks-provider/blocks";
-import { inViewport } from "@/utils/dom";
+import { useEventBus } from "@/plugins/eventbus";
+import { getDefaultDiGenerator, type DisplayItem } from "@/utils/display-item";
+import { getHoveredElementWithClass, inViewport } from "@/utils/dom";
+import mitt from "@/utils/mitt";
+import { EditorView as CmEditorView } from "@codemirror/view";
+import { useThrottleFn } from "@vueuse/core";
+import { AllSelection } from "prosemirror-state";
+import { EditorView as PmEditorView } from "prosemirror-view";
+import { nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
+import { VirtList } from "vue-virt-list";
+import BasicBlockItem from "./display-items/BasicBlockItem.vue";
+import { timeout } from "@/utils/time";
 
 const props = defineProps<BlockTreeProps>();
 const eventBus = useEventBus();
 const blockTreeContext = BlockTreeContext.useContext();
-const { blocksManager } = BlocksContext.useContext();
+const { blocksManager, blockEditor } = BlocksContext.useContext();
+const blockSelectContext = BlockSelectContext.useContext();
 const $blockTree = ref<HTMLElement | null>(null);
 const $vlist = ref<InstanceType<typeof VirtList> | null>(null);
 const displayItems = shallowRef<DisplayItem[]>();
@@ -83,7 +86,6 @@ const updateDisplayItems = () => {
     forceFold: props.forceFold,
     tempExpanded: tempExpanded.value,
   });
-  console.log("displayItems", displayItems.value);
   console.timeEnd(`calc displayItems ${blockTreeId}`);
 
   // 更新 $vlist
@@ -162,7 +164,11 @@ const scrollBlockIntoView = (blockId: BlockId) => {
     (item) => item.type == "block" && item.block.id == blockId,
   );
   if (index != null && index >= 0) {
-    $vlist.value?.scrollToIndex(index);
+    const pos = $vlist.value?.getItemPosByIndex(index);
+    if (pos) {
+      const { top } = pos;
+      $vlist.value?.scrollToOffset(top - 60); // 60 是 headerbar 的高度多一点
+    }
   }
 };
 
@@ -170,7 +176,7 @@ const getDomOfDi = (itemId: string): HTMLElement | null => {
   return $blockTree.value?.querySelector(`[data-id="${itemId}"]`) ?? null;
 };
 
-const focusBlock = (
+const focusBlock = async (
   blockId: BlockId,
   options: {
     scrollIntoView?: boolean;
@@ -181,10 +187,17 @@ const focusBlock = (
   let { scrollIntoView, highlight, expandIfFold } = options;
   scrollIntoView ??= true;
   highlight ??= false;
-  expandIfFold ??= true;
+  expandIfFold ??= false;
 
-  // 先确保这个块在视口中
+  // 如果 expandIfFold，则先展开这个块
+  if (expandIfFold) {
+    await blockEditor.locateBlock(blockId, controller);
+  }
+
+  // 确保这个块在视口中
   scrollIntoView && scrollBlockIntoView(blockId);
+
+  await timeout(0); // 等待渲染完毕
 
   // 聚焦到文本或代码块
   getEditorView(blockId)?.focus();
@@ -246,16 +259,38 @@ const moveCursorToBegin = (blockId: BlockId) => {
   }
 };
 
+// 获得包含有一个块的“最外层”的 DisplayItem
+const findBelongingDi = (blockId: BlockId): DisplayItem | null => {
+  if (!displayItems.value) return null;
+  for (const item of displayItems.value) {
+    if (item.type == "block" && item.block.id == blockId) {
+      return item;
+    }
+  }
+  return null;
+};
+
+// 获得包含有一个块的“最外层”的 DisplayItem 的 index
+const indexOfBelongingDi = (blockId: BlockId): number => {
+  if (!displayItems.value) return -1;
+  for (let i = 0; i < displayItems.value.length; i++) {
+    const item = displayItems.value[i];
+    if (item.type == "block" && item.block.id == blockId) {
+      return i;
+    }
+  }
+  return -1;
+};
+
 const registerEditorView = (blockId: BlockId, editorView: PmEditorView | CmEditorView) => {
   editorViews.set(blockId, editorView);
 };
 
 const unregisterEditorView = (blockId: BlockId, editorView: PmEditorView | CmEditorView) => {
-  // const oldEditorView = editorViews.get(blockId);
-  // if (oldEditorView === editorView) {
-  //   editorViews.delete(blockId);
-  // }
-  // no need to unregister for now?
+  const oldEditorView = editorViews.get(blockId);
+  if (oldEditorView === editorView && !oldEditorView.dom.isConnected) {
+    editorViews.delete(blockId);
+  }
 };
 
 const controller: BlockTree = {
@@ -280,6 +315,64 @@ const controller: BlockTree = {
   moveCursorToBegin,
 };
 defineExpose(controller);
+
+// 块拖动和框选
+let blockIdStart: BlockId | null = null;
+let startTime: number | null = null;
+
+const handlePointerUpOrLeave = (e: PointerEvent) => {
+  blockIdStart = null;
+  startTime = null;
+  document.removeEventListener("pointermove", handlePointerMove);
+  document.removeEventListener("pointerup", handlePointerUpOrLeave);
+  document.removeEventListener("pointerleave", handlePointerUpOrLeave);
+};
+
+const handlePointerMove = useThrottleFn((e: PointerEvent) => {
+  // 如果按下时间小于 500ms，则认为是点击，不认为是框选
+  // 防止影响双击选词的功能
+  const duration = Date.now().valueOf() - (startTime ?? 0);
+  if (duration < 500) return;
+
+  const hoveredBlockItem = getHoveredElementWithClass(e.target, "block-item");
+  if (!hoveredBlockItem) return;
+  const blockIdCurrent = hoveredBlockItem.getAttribute("blockId");
+  if (!blockIdCurrent || blockIdStart == null) return;
+  // 如果点击的是同一个块，则取消选中，并聚焦到这个块，以框选其中的文字
+  if (blockIdStart == blockIdCurrent) {
+    blockSelectContext.selectedBlockIds.value = [];
+    blockSelectContext.selectedBlockTree.value = null;
+    focusBlock(blockIdCurrent, { scrollIntoView: false });
+    return;
+  }
+  // 框选区域：blockIdStart 到 blockIdCurrent
+  (document.activeElement as HTMLElement)?.blur(); // 先让当前聚焦的块失焦
+  // 计算选中的块
+  const _indexStart = indexOfBelongingDi(blockIdStart);
+  const _indexEnd = indexOfBelongingDi(blockIdCurrent);
+  if (_indexStart == -1 || _indexEnd == -1) return;
+  const indexStart = Math.min(_indexStart, _indexEnd);
+  const indexEnd = Math.max(_indexStart, _indexEnd);
+  const selectedDis = displayItems.value!.slice(indexStart, indexEnd + 1);
+  const selectedBlockIds = selectedDis.map((item) => item.block.id);
+  // 更新 blockSelectContext
+  blockSelectContext.selectedBlockIds.value = selectedBlockIds;
+  blockSelectContext.selectedBlockTree.value = props.id;
+}, 100);
+
+const handlePointerDown = (e: PointerEvent) => {
+  const hoveredBlockContent = getHoveredElementWithClass(e.target, "block-content");
+  const hoveredBlockItem = getHoveredElementWithClass(e.target, "block-item");
+  if (!hoveredBlockContent || !hoveredBlockItem) return;
+  const blockId = hoveredBlockItem.getAttribute("blockId");
+  if (!blockId) return;
+  blockIdStart = blockId;
+  startTime = Date.now().valueOf();
+
+  document.addEventListener("pointermove", handlePointerMove);
+  document.addEventListener("pointerup", handlePointerUpOrLeave);
+  document.addEventListener("pointerleave", handlePointerUpOrLeave);
+};
 
 onMounted(() => {
   const el = $blockTree.value;

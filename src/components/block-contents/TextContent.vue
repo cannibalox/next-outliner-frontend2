@@ -14,30 +14,29 @@
 </template>
 
 <script setup lang="ts">
-import type { BlockId, TextContent } from "@/common/types";
-import type { EditorProps, EditorView } from "prosemirror-view";
-import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from "vue";
-import ProseMirror from "@/components/prosemirror/ProseMirror.vue";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
-import { inputRules } from "prosemirror-inputrules";
-import { mkPasteLinkPlugin } from "../prosemirror/plugins/pasteLink";
-import { mkKeymapPlugin } from "../prosemirror/plugins/keymap";
-import "prosemirror-view/style/prosemirror.css";
-import { MathInlineKatex } from "../prosemirror/node-views/inlineMath";
-import "katex/dist/katex.css";
-import type { BlockWithLevel } from "@/context/blocks-provider/blocksManager";
-import { useTaskQueue } from "@/plugins/taskQueue";
+import type { BlockId, TextContent } from "@/common/types";
+import ProseMirror from "@/components/prosemirror/ProseMirror.vue";
 import type { BlockTree } from "@/context/blockTree";
 import BlocksContext from "@/context/blocks-provider/blocks";
+import type { Block } from "@/context/blocks-provider/app-state-layer/blocksManager";
+import { useTaskQueue } from "@/plugins/taskQueue";
+import "katex/dist/katex.css";
+import { inputRules } from "prosemirror-inputrules";
+import type { EditorProps, EditorView } from "prosemirror-view";
+import "prosemirror-view/style/prosemirror.css";
+import { onBeforeUnmount, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { openRefSuggestions } from "../prosemirror/input-rules/openRefSuggestions";
 import { turnToCodeBlock } from "../prosemirror/input-rules/turn-to-code-block";
+import { MathInlineKatex } from "../prosemirror/node-views/inlineMath";
+import { mkKeymapPlugin } from "../prosemirror/plugins/keymap";
 import { mkPasteImagePlugin } from "../prosemirror/plugins/pasteImage";
-import { mkHighlightMatchesPlugin } from "../prosemirror/plugins/highlightMatches";
-import { mkHighlightRefsPlugin } from "../prosemirror/plugins/highlightRefs";
+import { mkPasteLinkPlugin } from "../prosemirror/plugins/pasteLink";
+import { mkPasteTextPlugin } from "../prosemirror/plugins/pasteText";
 
 const props = defineProps<{
   blockTree?: BlockTree;
-  block: BlockWithLevel;
+  block: Block;
   readonly?: boolean;
   highlightTerms?: string[];
   highlightRefs?: BlockId[];
@@ -59,7 +58,7 @@ const onDocChanged = ({ newDoc }: { newDoc: any }) => {
   docJson.value = newDoc;
   taskQueue.addTask(
     () => {
-      blockEditor.changeBlockContent(blockId, newBlockContent);
+      blockEditor.changeBlockContent({ blockId, content: newBlockContent });
     },
     {
       type: "updateBlockContent" + blockId,
@@ -84,6 +83,7 @@ const customPluginsGenerator = (getEditorView: () => EditorView | null, readonly
       mkKeymapPlugin(),
       mkPasteLinkPlugin(),
       mkPasteImagePlugin(),
+      // mkPasteTextPlugin(),
     ];
   }
 };
@@ -92,7 +92,14 @@ watch(
   () => props.block.content,
   (content) => {
     if (content[0] != BLOCK_CONTENT_TYPES.TEXT) return;
-    if (JSON.stringify(docJson.value) === JSON.stringify(content[1])) return;
+    // 如果 origin 是 local 且 changeSources 包含当前块，则不更新
+    const origin = props.block.origin;
+    if (
+      origin.type === "ui" &&
+      origin.changeSources?.includes(props.block.id) &&
+      docJson.value !== null
+    )
+      return;
     docJson.value = content[1];
   },
   { immediate: true },
@@ -107,12 +114,13 @@ onMounted(() => {
   }
 });
 
-onBeforeUnmount(() => {
+onUnmounted(() => {
   // 卸载时，从 blockTree 注销 editorView
   const blockId = props.block.id;
   const editorView = pmWrapper.value?.getEditorView();
   if (editorView) {
     props.blockTree?.unregisterEditorView(blockId, editorView);
+    editorView.destroy();
   }
 });
 </script>
@@ -172,7 +180,7 @@ onBeforeUnmount(() => {
 
     // 链接与本地路径引用
     a,
-    span.local-path {
+    span.path-ref {
       color: var(--link-color);
       cursor: pointer;
       text-decoration: underline;
@@ -231,27 +239,27 @@ onBeforeUnmount(() => {
       text-decoration-thickness: 1px;
     }
 
-    span.local-path:before {
-      display: inline-block;
-      margin-bottom: -3px;
-      margin-right: 2px;
-      content: "";
-      height: 15px;
-      width: 15px;
-      background-color: var(--text-secondary-color);
-      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-file'%3E%3Cpath d='M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z'/%3E%3Cpath d='M14 2v4a2 2 0 0 0 2 2h4'/%3E%3C/svg%3E");
-    }
+    //span.local-path:before {
+    //  display: inline-block;
+    //  margin-bottom: -3px;
+    //  margin-right: 2px;
+    //  content: "";
+    //  height: 15px;
+    //  width: 15px;
+    //  background-color: var(--text-secondary-color);
+    //  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-file'%3E%3Cpath d='M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z'/%3E%3Cpath d='M14 2v4a2 2 0 0 0 2 2h4'/%3E%3C/svg%3E");
+    //}
 
-    a:before {
-      display: inline-block;
-      margin-bottom: -3px;
-      margin-right: 2px;
-      content: "";
-      height: 15px;
-      width: 15px;
-      background-color: var(--link-color);
-      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-link'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E");
-    }
+    // a:before {
+    //   display: inline-block;
+    //   margin-bottom: -3px;
+    //   margin-right: 2px;
+    //   content: "";
+    //   height: 15px;
+    //   width: 15px;
+    //  background-color: var(--link-color);
+    //  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='lucide lucide-link'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E");
+    //}
 
     .trailing-hint {
       font-style: italic;

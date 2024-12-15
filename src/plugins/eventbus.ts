@@ -1,14 +1,20 @@
 import mitt, { type Emitter } from "mitt";
 import { inject, ref, type App, type Ref } from "vue";
-import type { BlockTransaction } from "../context/blocks-provider/blocksManager";
+import type {
+  BlockTransaction,
+  TransactionEnvInfo,
+} from "../context/blocks-provider/app-state-layer/blocksManager";
 
 type Events = {
-  afterBlocksTrCommit: BlockTransaction;
+  afterBlocksTrCommit: [
+    tr: BlockTransaction,
+    beforeInfo: TransactionEnvInfo,
+    afterInfo: TransactionEnvInfo,
+  ];
+  blocksDestroy: void;
 };
 
-const EVENTS: (keyof Events)[] = [
-  "afterBlocksTrCommit",
-] as const;
+const EVENTS: (keyof Events)[] = ["afterBlocksTrCommit", "blocksDestroy"] as const;
 
 type EventRefs = { [key in keyof Events]: Ref<Events[key] | null> };
 

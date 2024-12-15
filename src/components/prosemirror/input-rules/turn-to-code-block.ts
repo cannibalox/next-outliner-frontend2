@@ -17,14 +17,13 @@ export const turnToCodeBlock = (
     setTimeout(() => {
       taskQueue.addTask(async () => {
         console.log("turn to code block", blockId);
-        blockEditor.changeBlockContent(blockId, [
-          BLOCK_CONTENT_TYPES.CODE,
-          "",
-          match[1],
-        ]);
+        blockEditor.changeBlockContent({
+          blockId,
+          content: [BLOCK_CONTENT_TYPES.CODE, "", match[1]],
+        });
         if (blockTree) {
-         await blockTree.nextUpdate();
-         blockTree.focusBlock(blockId);
+          await blockTree.nextUpdate();
+          blockTree.focusBlock(blockId);
         }
       });
     });

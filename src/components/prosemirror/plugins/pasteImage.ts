@@ -37,10 +37,7 @@ export const mkPasteImagePlugin = () => {
 
         // save image
         if (imageExt && imageFile) {
-          const imagePath = joinPathSegments([
-            attachmentsBasePath.value,
-            `${imageFile.name}__${nanoid()}.${imageExt}`,
-          ]);
+          const imagePath = `${imageFile.name}__${nanoid()}.${imageExt}`;
           const imageContent: ImageContent = [
             BLOCK_CONTENT_TYPES.IMAGE,
             imagePath,
@@ -54,19 +51,19 @@ export const mkPasteImagePlugin = () => {
             // 当前块为空, 直接将当前块变成图片块
             imageBlockId = blockId;
             taskQueue.addTask(() => {
-              blockEditor.changeBlockContent(blockId, imageContent);
+              blockEditor.changeBlockContent({ blockId, content: imageContent });
             });
           } else {
             // 当前块不为空, 在下方插入图片块
             taskQueue.addTask(() => {
               const { newNormalBlockId } =
-                blockEditor.insertNormalBlock(
-                  {
+                blockEditor.insertNormalBlock({
+                  pos: {
                     baseBlockId: blockId,
                     offset: 1,
                   },
-                  imageContent,
-                ) ?? {};
+                  content: imageContent,
+                }) ?? {};
               imageBlockId = newNormalBlockId ?? null;
             });
           }

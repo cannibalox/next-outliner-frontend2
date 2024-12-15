@@ -55,16 +55,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { computed, ref } from "vue";
-import { useI18n } from 'vue-i18n';
+import { useI18n } from "vue-i18n";
 import { z } from "zod";
 import { X, Loader2, Check } from "lucide-vue-next";
 import { adminLogin } from "@/common/api/auth";
 import { RESP_CODES } from "@/common/constants";
 import { timeout } from "@/utils/time";
 import router from "@/router";
-import AxiosContext from "@/context/axios";
+import ServerInfoContext from "@/context/serverInfo";
 
-const { serverUrl } = AxiosContext.useContext();
+const { serverUrl } = ServerInfoContext.useContext();
 const password = ref("");
 const { t } = useI18n();
 const loginStatus = ref<
@@ -77,8 +77,7 @@ const loginStatus = ref<
   | "maxAttempts"
 >("idle");
 const errMsg = computed(() => {
-  if (["idle", "loggingIn", "loginSuccess"].includes(loginStatus.value))
-    return null;
+  if (["idle", "loggingIn", "loginSuccess"].includes(loginStatus.value)) return null;
   return t(`login.adminLogin.loginStatus.${loginStatus.value}`);
 });
 
@@ -99,7 +98,8 @@ const login = async () => {
   ]);
   if (resp.success) {
     loginStatus.value = "loginSuccess";
-    setTimeout(() => { // 2s 后跳转到 dashboard
+    setTimeout(() => {
+      // 2s 后跳转到 dashboard
       router.push("/admin/dashboard");
     }, 2000);
   }

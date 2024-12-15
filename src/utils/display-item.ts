@@ -1,11 +1,11 @@
 import type { BlockId } from "@/common/types";
 import type {
+  Block,
   BlocksManager,
-  BlockWithLevel,
   ForDescendantsOptions,
 } from "@/context/blocks-provider/blocksManager";
 
-export type DisplayItem = { itemId: string } & { type: "block"; block: BlockWithLevel };
+export type DisplayItem = { itemId: string } & { type: "block"; level: number; block: Block };
 
 export type DisplayItemGenerator = (params: {
   rootBlockIds?: BlockId[];
@@ -19,8 +19,8 @@ const defaultDfsOptions = (resultCollector: DisplayItem[]) => {
   dfsOptions.nonFoldOnly = true;
   dfsOptions.includeSelf = true;
 
-  dfsOptions.onEachBlock = (block, ignore) => {
-    resultCollector.push({ type: "block", itemId: `block-${block.id}`, block });
+  dfsOptions.onEachBlock = (block, level, ignore) => {
+    resultCollector.push({ type: "block", itemId: `block-${block.id}`, block, level });
   };
 
   return dfsOptions;

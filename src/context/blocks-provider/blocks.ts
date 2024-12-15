@@ -1,19 +1,17 @@
 import { createContext } from "@/utils/createContext";
-import { createYjsLayer } from "./yjsLayer";
-import { createBlocksManager } from "./blocksManager";
-import { createBlocksEditor } from "./blocksEditor";
-import { createFulltextSearch } from "./fulltextsearch";
+import { createYjsLayer } from "./sync-layer/yjsLayer";
+import { createBlocksManager } from "./app-state-layer/blocksManager";
+import { createBlocksEditor } from "./app-state-layer/blocksEditor";
 import { useRouterParams } from "@/utils/routerParams";
 import { watch } from "vue";
-import TokenContext from "../token";
+import ServerInfoContext from "../serverInfo";
 
 export const BlocksContext = createContext(() => {
   const params = useRouterParams();
-  const { token } = TokenContext.useContext();
+  const { token } = ServerInfoContext.useContext();
   const yjsLayer = createYjsLayer();
   const blocksManager = createBlocksManager(yjsLayer);
   const blockEditor = createBlocksEditor(blocksManager);
-  const fulltextSearch = createFulltextSearch(blocksManager);
 
   watch(
     params,
@@ -29,7 +27,6 @@ export const BlocksContext = createContext(() => {
   const ctx = {
     blocksManager,
     blockEditor,
-    fulltextSearch,
     yjsLayer,
     synced: yjsLayer.allSyncedRef,
   };

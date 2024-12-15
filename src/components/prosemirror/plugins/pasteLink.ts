@@ -17,6 +17,7 @@ export const mkPasteLinkPlugin = () => {
       transformPasted(slice) {
         const links: string[] = [];
         const linkified = linkify(slice.content, links);
+
         // replace links' display text with their titles
         if (links.length > 0) {
           setTimeout(async () => {
@@ -28,21 +29,29 @@ export const mkPasteLinkPlugin = () => {
               if (!title) return;
               const mark = pmSchema.marks.link.create({ href: link });
               const newNode = pmSchema.text(title, [mark]);
+
+              let linkNodeInfo: any = null;
               editorView.state.doc.descendants((node, pos) => {
-                // is marked with link
-                if (!(editorView instanceof EditorView)) return;
-                if (node.marks.some((mark) => mark.type.name == "link")) {
-                  const tr = editorView!.state.tr.replaceRangeWith(
-                    pos,
-                    pos + node.nodeSize,
-                    newNode,
-                  );
-                  editorView.dispatch(tr);
+                if (linkNodeInfo) return false;
+                const linkMark = pmSchema.marks.link.isInSet(node.marks);
+                if (linkMark && linkMark.attrs.href === link) {
+                  linkNodeInfo = { node, pos };
+                  return false;
                 }
               });
+
+              if (linkNodeInfo) {
+                const tr = editorView.state.tr.replaceWith(
+                  linkNodeInfo.pos,
+                  linkNodeInfo.pos + linkNodeInfo.node.nodeSize,
+                  newNode,
+                );
+                editorView.dispatch(tr);
+              }
             }
           });
         }
+
         return new Slice(linkified, slice.openStart, slice.openEnd);
       },
     },

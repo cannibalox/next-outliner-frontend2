@@ -52,10 +52,14 @@
               v-model:model-value="selectedKbLocation"
             >
               <SelectTrigger>
-                {{ selectedKbLocation ? kbList[selectedKbLocation].name : "-" }}
+                {{ selectedKbLocation ? kbs[selectedKbLocation].name : "-" }}
               </SelectTrigger>
               <SelectContent>
-                <SelectItem v-for="kb in kbList" :key="kb.location" :value="kb.location">
+                <SelectItem
+                  v-for="kb in Object.values(kbs)"
+                  :key="kb.location"
+                  :value="kb.location"
+                >
                   <div>
                     {{ kb.name }}
                     <div class="text-xs text-gray-500">{{ kb.location }}</div>
@@ -67,7 +71,7 @@
             <Button
               variant="outline"
               :disabled="serverStatus !== 'connSuccess'"
-              @click="refreshKbList(true)"
+              @click="handleRefreshKbList(true)"
               class="size-10 p-2"
               :tooltip="$t('login.kbEditorLogin.refreshKbListTooltip')"
             >
@@ -85,7 +89,9 @@
             @input="loginStatus = 'idle'"
           />
           <div
-            v-if="loginStatus === 'loginFailed_InvalidPassword' || loginStatus === 'loginFailed_Unknown'"
+            v-if="
+              loginStatus === 'loginFailed_InvalidPassword' || loginStatus === 'loginFailed_Unknown'
+            "
             class="text-red-500 text-sm flex items-center"
           >
             <X class="size-4 mr-2" />
@@ -118,7 +124,6 @@
 
 <script setup lang="ts">
 import { kbEditorLogin } from "@/common/api/auth";
-import { getAllKbInfo } from "@/common/api/kb";
 import { ping } from "@/common/api/misc";
 import { RESP_CODES } from "@/common/constants";
 import { Button } from "@/components/ui/button";
@@ -134,20 +139,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import AxiosContext from "@/context/axios";
-import TokenContext from "@/context/token";
+import { KbInfoContext } from "@/context/kbinfo";
+import ServerInfoContext from "@/context/serverInfo";
 import router from "@/router";
 import { useDebounceFn } from "@vueuse/core";
-import { Check, X, CircleCheck, Loader2, LoaderCircle, RefreshCcw } from "lucide-vue-next";
+import { Check, CircleCheck, Loader2, LoaderCircle, RefreshCcw, X } from "lucide-vue-next";
 import { ref } from "vue";
 import { z } from "zod";
 
-const { token } = TokenContext.useContext();
-const { serverUrl } = AxiosContext.useContext();
+const { token } = ServerInfoContext.useContext();
+const { serverUrl } = ServerInfoContext.useContext();
 const password = ref<string>("");
 const selectedKbLocation = ref<string | undefined>(undefined);
-const kbList = ref<Record<string, { name: string; location: string }>>({});
+const { kbs, refreshKbList } = KbInfoContext.useContext();
 const serverStatus = ref<"invalidURL" | "connFailed" | "connecting" | "connSuccess" | "noKbServer">(
   "invalidURL",
 );
@@ -172,42 +176,37 @@ const testConn = useDebounceFn(async () => {
   if (url !== serverUrl.value) return; // 失序响应，丢弃
   if (resp.success) {
     serverStatus.value = "connSuccess";
-    refreshKbList(); // 连接成功后更新知识库列表
+    handleRefreshKbList(); // 连接成功后更新知识库列表
   } else {
     serverStatus.value = "connFailed";
   }
 });
 
-const refreshKbList = async (showToast = false) => {
+const handleRefreshKbList = (showToast = false) => {
   const url = serverUrl.value;
-  const resp = await getAllKbInfo({});
-  if (url !== serverUrl.value) return; // 失序响应
-  if (!resp.success) {
-    serverStatus.value = "connFailed";
-    return;
-  }
-  kbList.value = (resp.data ?? []).reduce(
-    (acc, kb) => {
-      acc[kb.location] = {
-        name: kb.name,
-        location: kb.location,
-      };
-      return acc;
+  refreshKbList(
+    url,
+    () => {
+      if (url !== serverUrl.value) return; // 失序响应
+      if (Object.keys(kbs.value).length > 0) {
+        // 有知识库，默认选第一个
+        selectedKbLocation.value = Object.keys(kbs.value)[0];
+      } else {
+        // 这个服务器上没有知识库
+        serverStatus.value = "noKbServer";
+      }
+      if (showToast) {
+        const kbCount = Object.keys(kbs.value).length;
+        toast({
+          title: "刷新知识库列表成功",
+          description: `服务器 ${serverUrl.value} 上有 ${kbCount} 个知识库`,
+        });
+      }
     },
-    {} as Record<string, { name: string; location: string }>,
+    () => {
+      serverStatus.value = "connFailed";
+    },
   );
-  // 默认选第一个
-  if (Object.keys(kbList.value).length > 0) {
-    selectedKbLocation.value = Object.keys(kbList.value)[0];
-  } else {
-    serverStatus.value = "noKbServer";
-  }
-  if (showToast) {
-    toast({
-      title: "刷新知识库列表成功",
-      description: `服务器 ${serverUrl.value} 上有 ${resp.data?.length} 个知识库`,
-    });
-  }
 };
 
 const login = async () => {
@@ -218,7 +217,6 @@ const login = async () => {
     password: password.value,
     serverUrl: serverUrl.value,
   });
-  console.log(res);
   if (res.success) {
     loginStatus.value = "loginSuccess";
     token.value = res.data!.token;

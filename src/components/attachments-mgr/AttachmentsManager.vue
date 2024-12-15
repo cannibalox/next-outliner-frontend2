@@ -1,6 +1,8 @@
 <template>
   <Dialog v-model:open="open">
-    <DialogContent class="flex flex-row max-w-[80vw] max-h-[80vh] w-[800px] h-[600px] p-0 !outline-none">
+    <DialogContent
+      class="flex flex-row max-w-[80vw] max-h-[80vh] w-[800px] h-[600px] p-0 !outline-none"
+    >
       <DialogHeader class="hidden">
         <DialogTitle>
           {{ $t("kbView.attachmentsManager.title") }}
@@ -35,19 +37,6 @@ const {
 } = AttachmentsManagerContext.useContext();
 
 const pendingFiles = ref<File[]>([]);
-
-const onFileChange = (e: Event) => {
-  const newFiles = Array.from((e.target as HTMLInputElement).files ?? [])
-    // 剔除重复文件
-    .filter((newFile) => !pendingFiles.value.some((f) => f.name === newFile.name));
-  pendingFiles.value.push(...newFiles);
-};
-
-const handleSubmit = async () => {
-  const targetPath = dbBasePath.value + "\\" + pendingFiles.value[0].name;
-  const res = await fsUpload([[targetPath, pendingFiles.value[0]]]);
-  console.log(res);
-};
 
 onMounted(async () => {
   await fsEnsureAttachmentsDir({});

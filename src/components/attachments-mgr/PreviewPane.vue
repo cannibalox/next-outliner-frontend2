@@ -2,84 +2,39 @@
   <div class="flex items-center justify-center flex-grow">
     <div v-if="activeDirent" class="flex flex-col items-center text-muted-foreground gap-y-6">
       <!-- Preview -->
-      <template v-if="activeDirent.isPreview && activeDirentExtname">
+      <template v-if="activePathInfo && activePathInfo.isPreview">
         <!-- Image preview -->
-        <template v-if="previewingImage">
-          <div v-if="previewingImage.status === 'fetching'" class="flex items-center">
-            <Loader2 class="size-4 mr-2 animate-spin" />
-            {{ $t("kbView.attachmentsManager.previewPane.fetchingImage") }}
-          </div>
-          <div
-            v-else-if="previewingImage.status === 'synced'"
-            class="flex flex-col items-center gap-y-4"
-          >
-            <img :src="previewingImage.url" class="max-w-full max-h-full" />
-            <div class="flex items-center gap-x-2">
-              <Button variant="outline" size="sm" @click="activeDirent.isPreview = false">
-                <X class="size-4 mr-2" />
-                {{ $t("kbView.attachmentsManager.previewPane.closePreview") }}
-              </Button>
-              <Button variant="outline" size="sm" @click="activeDirent.isPreview = false">
-                <ImageIcon class="size-4 mr-2" />
-                {{ $t("kbView.attachmentsManager.previewPane.insertImage") }}
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger as-child>
-                  <Button variant="outline" size="sm" class="size-9 p-0">
-                    <MoreHorizontal class="size-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem>
-                    <Download class="size-4 mr-2" />
-                    {{ $t("kbView.attachmentsManager.previewPane.download") }}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Link2 class="size-4 mr-2" />
-                    {{ $t("kbView.attachmentsManager.previewPane.reference") }}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem class="!text-red-500">
-                    <Trash2 class="size-4 mr-2" />
-                    {{ $t("kbView.attachmentsManager.previewPane.delete") }}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-          <!-- todo styles -->
-          <div v-else-if="previewingImage.status === 'fetchError'">
-            {{ previewingImage.msg }}
-          </div>
+        <template v-if="activePathInfo.isImage && previewingImage">
+          <ImagePreviewPane
+            :image="previewingImage"
+            @close="handleTogglePreview"
+            @insertImage="handleInsertImage(activePathInfo.relativePath)"
+            @download="handleDownload(activePathInfo.absolutePath)"
+            @reference="handleInsertPathRef(activePathInfo.relativePath)"
+            @delete="handleDelete(activePathInfo.absolutePath)"
+          />
         </template>
       </template>
 
       <!-- Dirent basic info and actions -->
-      <template v-else>
+      <template v-else-if="activePathInfo">
         <component :is="icon" class="size-20" />
         <div class="text-sm break-all px-8">
-          {{ activeFileNameAndExtname }}
+          {{ activePathInfo.fileNameAndExtname }}
         </div>
         <div class="flex items-center justify-center flex-wrap gap-2">
           <!-- For image, only show preview and insert image button, hide other buttons in dropdown -->
-          <template v-if="activeDirentExtname && imageExtnames.includes(activeDirentExtname)">
-            <Button
-              variant="outline"
-              size="sm"
-              :disabled="!canPreview"
-              @click="activeDirent.isPreview = true"
-            >
+          <template v-if="activePathInfo.isImage">
+            <Button variant="outline" size="sm" @click="handleTogglePreview">
               <Eye class="size-4 mr-2" />
               {{ $t("kbView.attachmentsManager.previewPane.openPreview") }}
             </Button>
-            <Button
-              v-if="canInsertImage"
-              variant="outline"
-              size="sm"
-              @click="handleInsertImage(activeDirent.path)"
-            >
+
+            <Button variant="outline" size="sm" @click="handleInsertImage(activeDirent.path)">
               <ImageIcon class="size-4 mr-2" />
               {{ $t("kbView.attachmentsManager.previewPane.insertImage") }}
             </Button>
+
             <DropdownMenu>
               <DropdownMenuTrigger as-child>
                 <Button variant="outline" size="sm" class="size-9 p-0">
@@ -109,19 +64,25 @@
 
           <!-- For other previewable files, only show preview and download button, hide other buttons in dropdown -->
           <template v-else-if="canPreview">
-            <Button
-              variant="outline"
-              size="sm"
-              :disabled="!canPreview"
-              @click="activeDirent.isPreview = true"
-            >
+            <Button variant="outline" size="sm" @click="handleTogglePreview">
               <Eye class="size-4 mr-2" />
               {{ $t("kbView.attachmentsManager.previewPane.openPreview") }}
             </Button>
+
             <Button variant="outline" size="sm" @click="handleDownload(activeDirent.path)">
               <Download class="size-4 mr-2" />
               {{ $t("kbView.attachmentsManager.previewPane.download") }}
             </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              @click="handleInsertPathRef(activePathInfo.relativePath)"
+            >
+              <Link2 class="size-4 mr-2" />
+              {{ $t("kbView.attachmentsManager.previewPane.pathReference") }}
+            </Button>
+
             <DropdownMenu>
               <DropdownMenuTrigger as-child>
                 <Button variant="outline" size="sm" class="size-9 p-0">
@@ -143,6 +104,17 @@
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+          </template>
+
+          <template v-else>
+            <Button
+              variant="outline"
+              size="sm"
+              @click="handleInsertPathRef(activePathInfo.relativePath)"
+            >
+              <Link2 class="size-4 mr-2" />
+              {{ $t("kbView.attachmentsManager.previewPane.pathReference") }}
+            </Button>
           </template>
         </div>
       </template>
@@ -178,11 +150,11 @@ import { EditorView as PMEditorView } from "prosemirror-view";
 import { EditorView as CMEditorView } from "@codemirror/view";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import { useTaskQueue } from "@/plugins/taskQueue";
-import type { BlockPosSiblingOffset } from "@/context/blocks-provider/blocksEditor";
+import type { BlockPosSiblingOffset } from "@/context/blocks-provider/app-state-layer/blocksEditor";
 import type { ImageContent } from "@/common/types";
 import { autoRetryGet } from "@/utils/auto-retry";
 import { fsGetAttachmentSignedUrl } from "@/common/api/fs";
-import AxiosContext from "@/context/axios";
+import ServerInfoContext from "@/context/serverInfo";
 import ImagesContext from "@/context/images";
 import {
   DropdownMenu,
@@ -191,38 +163,47 @@ import {
   DropdownMenuItem,
 } from "../ui/dropdown-menu";
 import { getSeperator } from "@/common/path";
+import { pmSchema } from "../prosemirror/pmSchema";
+import ImagePreviewPane from "./ImagePreviewPane.vue";
+import { isImage, isAudio, isVideo } from "@/utils/fileType";
 
 const { blockEditor } = BlocksContext.useContext();
 const tasakQueue = useTaskQueue();
-const { serverUrl } = AxiosContext.useContext();
+const { serverUrl } = ServerInfoContext.useContext();
 const { useImage } = ImagesContext.useContext();
 const { lastFocusedBlockId, lastFocusedEditorView } = LastFocusContext.useContext();
 const { attachmentsBasePath, activeDirent, open } = AttachmentsManagerContext.useContext();
-const activeFileRelativePath = computed(() => {
+
+const activePathInfo = computed(() => {
   const rootPath = attachmentsBasePath.value;
-  const activePath = activeDirent.value?.path;
-  if (!activePath) return null;
-  return activePath.slice(rootPath.length + 1);
-});
-const activeFileNameAndExtname = computed(() => {
-  if (!activeDirent.value || activeDirent.value.isDirectory) return null;
-  const seperator = getSeperator();
-  return activeDirent.value.path.split(seperator).pop();
-});
-const activeDirentExtname = computed(() => {
-  if (!activeDirent.value || activeDirent.value.isDirectory) return null;
-  return activeDirent.value.path.split(".").pop();
-});
-
-const imageExtnames = ["png", "jpg", "jpeg", "gif", "bmp", "webp"];
-const audioExtnames = ["mp3", "wav", "m4a"];
-const videoExtnames = ["mp4", "webm", "ogg"];
-
-const previewingImage = computed(() => {
   if (!activeDirent.value) return null;
-  if (!activeDirentExtname.value) return null;
-  if (!imageExtnames.includes(activeDirentExtname.value)) return null;
-  return useImage(activeDirent.value.path).value;
+  const activePath = activeDirent.value.path;
+  const seperator = getSeperator();
+
+  const extname = activeDirent.value.isDirectory
+    ? undefined
+    : activeDirent.value.path.split(".").pop();
+
+  const fileNameAndExtname = activeDirent.value.isDirectory
+    ? undefined
+    : activePath.split(seperator).pop();
+
+  return {
+    isDirectory: activeDirent.value.isDirectory,
+    isPreview: activeDirent.value.isPreview,
+    absolutePath: activePath,
+    relativePath: activePath.slice(rootPath.length + 1),
+    extname,
+    fileNameAndExtname,
+    isImage: extname && isImage(extname),
+    isAudio: extname && isAudio(extname),
+    isVideo: extname && isVideo(extname),
+  };
+});
+
+const previewingImage = useImage(() => {
+  if (!activePathInfo.value?.isImage) return null;
+  return activePathInfo.value.relativePath;
 });
 
 const icon = computed(() => {
@@ -246,22 +227,19 @@ const icon = computed(() => {
 });
 
 const canPreview = computed(() => {
-  if (!activeDirent.value) return false;
-  if (activeDirent.value.isDirectory) return false;
-  const extname = activeDirent.value.path.split(".").pop();
-  if (extname === "mp3" || extname === "wav" || extname === "m4a") return true;
-  else if (extname === "pdf") return true;
-  else if (extname === "png" || extname === "jpg" || extname === "jpeg") return true;
-  return false;
+  if (!activePathInfo.value || !activePathInfo.value.extname) return false;
+  return (
+    activePathInfo.value.isAudio ||
+    activePathInfo.value.isVideo ||
+    activePathInfo.value.isImage ||
+    ["pdf", "doc", "docx"].includes(activePathInfo.value.extname)
+  );
 });
 
-const canInsertImage = computed(() => {
-  if (!activeDirent.value) return false;
-  if (activeDirent.value.isDirectory) return false;
-  const extname = activeDirent.value.path.split(".").pop();
-  if (extname === "png" || extname === "jpg" || extname === "jpeg") return true;
-  return false;
-});
+const handleTogglePreview = () => {
+  if (!activeDirent.value) return;
+  activeDirent.value.isPreview = !activeDirent.value.isPreview;
+};
 
 const handleInsertImage = (relativePath: string) => {
   const blockId = lastFocusedBlockId.value;
@@ -281,7 +259,7 @@ const handleInsertImage = (relativePath: string) => {
   // 如果当前块是空文本或代码块，则将这个空块变为图片块
   if (isEmptyTextBlock || isEmptyCodeBlock) {
     tasakQueue.addTask(() => {
-      blockEditor.changeBlockContent(blockId, imageContent);
+      blockEditor.changeBlockContent({ blockId, content: imageContent });
       open.value = false;
     });
   } else {
@@ -291,7 +269,7 @@ const handleInsertImage = (relativePath: string) => {
         baseBlockId: blockId,
         offset: 1,
       };
-      blockEditor.insertNormalBlock(pos, imageContent);
+      blockEditor.insertNormalBlock({ pos, content: imageContent });
     });
   }
 };
@@ -311,5 +289,14 @@ const handleDelete = async (path: string) => {
   // const res = await fsDeleteAttachment({ path });
   // if (!res.success) return;
   // open.value = false;
+};
+
+const handleInsertPathRef = (path: string | undefined) => {
+  if (!path) return;
+  const view = lastFocusedEditorView.value;
+  if (!(view instanceof PMEditorView)) return;
+  const pathRefNode = pmSchema.nodes.pathRef.create({ path });
+  const tr = view.state.tr.replaceSelectionWith(pathRefNode);
+  view.dispatch(tr);
 };
 </script>

@@ -1,25 +1,35 @@
 <template>
   <Popover v-model:open="open">
     <PopoverTrigger> </PopoverTrigger>
-    <PopoverContent class="ref-suggestions-content p-2 pb-1"
+    <PopoverContent
+      class="ref-suggestions-content p-2 pb-1"
       @pointer-down-outside="() => onDirectClose?.()"
-      trap-focus tabindex="-1">
-      <CodeMirror v-model:src="src" class="flex-grow" ref="codeMirror" :theme="theme" lang="latex"
-        :extensions-generator="extensionsGenerator" :on-src-changed="onChange ?? undefined"></CodeMirror>
-      <Label class="text-muted-foreground text-[.8em] font-normal text-right mr-2">Press "Esc" to close</Label>
+      trap-focus
+      tabindex="-1"
+    >
+      <CodeMirror
+        v-model:src="src"
+        class="flex-grow"
+        ref="codeMirror"
+        lang="latex"
+        :extensions-generator="extensionsGenerator"
+        :on-src-changed="onChange ?? undefined"
+      ></CodeMirror>
+      <Label class="text-muted-foreground text-[.8em] font-normal text-right mr-2"
+        >Press "Esc" to close</Label
+      >
     </PopoverContent>
   </Popover>
 </template>
 
 <script setup lang="ts">
+import FloatingMathInputContext from "@/context/floatingMathInput";
+import { calcPopoverPos } from "@/utils/popover";
+import { EditorView, keymap } from "@codemirror/view";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import CodeMirror from "./codemirror/CodeMirror.vue";
-import { EditorView, keymap } from "@codemirror/view";
 import Label from "./ui/label/Label.vue";
-import ThemeContext from "@/context/theme";
-import FloatingMathInputContext from "@/context/floatingMathInput";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { calcPopoverPos } from "@/utils/popover";
 
 const showPos = ref<{ x: number; y: number } | null>(null);
 const open = computed({
@@ -28,7 +38,6 @@ const open = computed({
 });
 const src = ref("");
 const codeMirror = ref<InstanceType<typeof CodeMirror> | null>(null);
-const { theme } = ThemeContext.useContext();
 const { registerFloatingMathInput } = FloatingMathInputContext.useContext();
 
 // context
@@ -138,8 +147,8 @@ watch(showPos, async () => {
     // 为了防止遮挡当前行，如果是向上方弹出，应该向上偏移 mathEl 的高度，再加 10px 的余量
     // 向下弹出时，向下偏移 10px
     offset: (pos) => {
-      pos.leftUp.y -= (mathElRect.height + 10);
-      pos.rightUp.y -= (mathElRect.height + 10);
+      pos.leftUp.y -= mathElRect.height + 10;
+      pos.rightUp.y -= mathElRect.height + 10;
       pos.leftDown.y += 10;
       pos.rightDown.y += 10;
       return pos;
@@ -165,7 +174,7 @@ watch(showPos, async () => {
   // 只能这样去覆盖
   document.body.style.setProperty("--popover-x", `${popoverPos.rightDown.x}px`);
   document.body.style.setProperty("--popover-y", `${popoverPos.rightDown.y}px`);
-})
+});
 
 onMounted(() => {
   registerFloatingMathInput(

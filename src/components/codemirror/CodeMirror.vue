@@ -3,8 +3,8 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { EditorView } from "@codemirror/view";
+import { onBeforeUnmount, onMounted, onUnmounted, ref, watch } from "vue";
+import { EditorView, keymap, type KeyBinding } from "@codemirror/view";
 import { Compartment, EditorSelection, EditorState, type Extension } from "@codemirror/state";
 import { LanguageDescription } from "@codemirror/language";
 import { mkContentChangePlugin } from "./plugins/content-change";
@@ -12,14 +12,17 @@ import { languages } from "@codemirror/language-data";
 import { basicLight } from "./themes/basicLight";
 import { basicDark } from "./themes/basicDark";
 import { updateHighlightTerms } from "./plugins/highlight-matches";
+import ThemeContext from "@/context/theme";
+import { minimalSetup } from "codemirror";
 
 const props = defineProps<{
-  theme: string;
+  theme?: string;
   readonly?: boolean;
   lang: string;
   extensionsGenerator?: () => Extension[];
   highlightTerms?: string[];
   onSrcChanged?: (newSrc: string, oldSrc?: string) => void;
+  keymap?: { [key: string]: KeyBinding };
 }>();
 
 defineExpose({
@@ -33,6 +36,8 @@ let editorView: EditorView | null = null;
 const $wrapper = ref<HTMLElement | null>(null);
 const languageCompartment = new Compartment();
 const themeCompartment = new Compartment();
+const keymapCompartment = new Compartment();
+const { theme: globalTheme } = ThemeContext.useContext();
 
 const registeredThemes = {
   light: basicLight,
@@ -83,8 +88,9 @@ const configureLanguage = async (lang: string) => {
 // lang 改变时更新代码块语言
 watch(() => props.lang, configureLanguage);
 
-const configureTheme = (theme: string) => {
+const configureTheme = (themeName: string | undefined) => {
   if (!editorView) return;
+  const theme = themeName ?? globalTheme.value;
   const themePlugin = (registeredThemes as any)[theme];
   if (themePlugin) {
     editorView.dispatch({
@@ -94,6 +100,16 @@ const configureTheme = (theme: string) => {
 };
 // props.theme 改变时更新主题
 watch(() => props.theme, configureTheme);
+
+const configureKeymap = (keymapObj: { [key: string]: KeyBinding } | undefined) => {
+  if (!editorView) return;
+  const keymapArr = Object.values(keymapObj ?? {});
+  editorView.dispatch({
+    effects: keymapCompartment.reconfigure(keymap.of(keymapArr)),
+  });
+};
+// props.keymap 改变时更新 keymap
+watch(() => props.keymap, configureKeymap);
 
 const mkExtensions = () => {
   const customExtension = props.extensionsGenerator?.() ?? [];
@@ -107,12 +123,16 @@ const mkExtensions = () => {
     ];
   else
     return [
+      minimalSetup,
       languageCompartment.of([]),
       themeCompartment.of([]),
+      keymapCompartment.of([]),
       mkContentChangePlugin(
         (newSrc, oldSrc) => {
           if (props.onSrcChanged) props.onSrcChanged(newSrc, oldSrc);
-          else src.value = newSrc;
+          else {
+            src.value = newSrc;
+          }
         },
         () => true,
       ),
@@ -129,11 +149,15 @@ onMounted(() => {
   });
 
   configureLanguage(props.lang ?? "");
-  configureTheme(props.theme ?? "light");
+  configureTheme(props.theme ?? globalTheme.value);
+  configureKeymap(props.keymap ?? {});
 });
 
-onBeforeUnmount(() => {
-  editorView && editorView.destroy();
+// 延迟销毁 editorView，以确保动画完成
+onUnmounted(() => {
+  setTimeout(() => {
+    editorView && editorView.destroy();
+  }, 1000);
 });
 </script>
 
