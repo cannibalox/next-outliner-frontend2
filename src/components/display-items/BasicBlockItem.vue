@@ -1,6 +1,7 @@
 <template>
   <div
     class="block-item"
+    data-item-type="basic-block"
     :class="{ hasChildren, fold, selected }"
     :blockId="block.id"
     @focusin="handleFocusIn"

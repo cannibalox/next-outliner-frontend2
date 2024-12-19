@@ -60,10 +60,11 @@
               @mouseover="!suppressMouseOver && (focusIndex = index)"
               @click="gotoFocused()"
             >
+              <!-- as unknown is error? -->
               <BlockContent
                 :key="block.id"
                 :readonly="true"
-                :block="block as Block"
+                :block="block as unknown as Block"
                 :highlight-terms="queryTerms"
               ></BlockContent>
             </div>
@@ -107,7 +108,7 @@ import BlocksContext from "@/context/blocks-provider/blocks";
 import BlockTreeContext from "@/context/blockTree";
 import FusionCommandContext from "@/context/fusionCommand";
 import { generateKeydownHandlerSimple } from "@/context/keymap";
-import { simpleTokenize } from "@/utils/tokenize";
+import { cjkNgramTokenize } from "@/utils/tokenize";
 import BlockContent from "../block-contents/BlockContent.vue";
 import IndexContext from "@/context";
 
@@ -126,7 +127,7 @@ const allowedBlockTypes = ref<boolean[]>([true, false, false, false, false]); //
 
 const queryTerms = computed(() => {
   if (inputText.value.length == 0) return [];
-  return simpleTokenize(inputText.value, false, 1) ?? [];
+  return cjkNgramTokenize(inputText.value, false, 1) ?? [];
 });
 
 const updateBlockSearchResult = () => {

@@ -148,7 +148,7 @@ import { watch } from "vue";
 import { syncRef } from "@vueuse/core";
 import { generateKeydownHandlerSimple } from "@/context/keymap";
 import type { BlockPos } from "@/context/blocks-provider/app-state-layer/blocksEditor";
-import { textContentFromString } from "@/utils/pm";
+import { plainTextToTextContent } from "@/utils/pm";
 import type { Block } from "@/context/blocks-provider/app-state-layer/blocksManager";
 
 const props = defineProps<{
@@ -185,7 +185,7 @@ const handleKeydownOnCursorContainer = generateKeydownHandlerSimple({
         };
         const tree = props.blockTree;
         const { focusNext } =
-          blockEditor.insertNormalBlock({ pos, content: textContentFromString("") }) ?? {};
+          blockEditor.insertNormalBlock({ pos, content: plainTextToTextContent("") }) ?? {};
         if (tree && focusNext) {
           await tree.nextUpdate();
           tree.focusBlock(focusNext);

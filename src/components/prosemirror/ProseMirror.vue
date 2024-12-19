@@ -20,7 +20,13 @@ const props = defineProps<{
   disableSpellcheckWhenBlur?: boolean;
   nodeViews?: EditorProps["nodeViews"];
   pluginsGenerator?: (getEditorView: () => EditorView | null, readonly: boolean) => Plugin[];
-  onDocChanged?: (event: { newDoc: any; oldDoc: any; view: EditorView }) => void;
+  onDocChanged?: (event: {
+    newDoc: any;
+    oldDoc: any;
+    view: EditorView;
+    oldSelection: any;
+    newSelection: any;
+  }) => void;
   highlightTerms?: string[];
   highlightRefs?: BlockId[];
 }>();

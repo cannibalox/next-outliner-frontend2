@@ -184,7 +184,14 @@ export const createBlocksEditor = (blocksManager: BlocksManager) => {
 
   const insertNormalBlocks = (params: {
     pos: BlockPos;
-    blocks: { content: BlockContent; meta?: Record<string, any> }[];
+    blocks: {
+      // 普通块的 id，如果为空，则自动生成
+      id?: BlockId;
+      content: BlockContent;
+      // 如果为空，则默认没有孩子
+      childrenIds?: BlockId[];
+      meta?: Record<string, any>;
+    }[];
     tr?: BlockTransaction;
     commit?: boolean;
   }) => {
@@ -208,17 +215,17 @@ export const createBlocksEditor = (blocksManager: BlocksManager) => {
     if (!parentSrcBlock) return;
 
     // 创建所有新块的ID
-    const newBlockIds = blocks.map(() => nanoid());
+    const newBlockIds = blocks.map((b) => b.id ?? nanoid());
 
     // 批量添加普通块
-    blocks.forEach(({ content, meta }, index) => {
+    blocks.forEach(({ content, meta, childrenIds }, index) => {
       const id = newBlockIds[index];
       tr!.addBlock({
         id,
         type: "normalBlock",
         parentId,
-        childrenIds: [],
-        fold: true,
+        childrenIds: childrenIds ?? [],
+        fold: false, // 新插入的普通块默认不折叠
         content,
         metadata: meta ?? {},
       });
@@ -249,6 +256,8 @@ export const createBlocksEditor = (blocksManager: BlocksManager) => {
         tr!.addBlock({
           id: newId,
           type: "virtualBlock",
+          // 虚拟块都先不创建孩子，这不会造成问题
+          // 因为我们这里创建的虚拟块都是折叠的，并且标记了 childrenCreated = false
           childrenIds: [],
           fold: true,
           parentId: occurBlock.id,

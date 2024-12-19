@@ -11,7 +11,7 @@ import { EditorView as PmEditorView } from "prosemirror-view";
 import { Node } from "prosemirror-model";
 import { pmSchema } from "@/components/prosemirror/pmSchema";
 import type { BlockId } from "@/common/types";
-import { textContentFromBlockRef, textContentFromString } from "@/utils/pm";
+import { blockRefToTextContent, plainTextToTextContent } from "@/utils/pm";
 import type { BlockPos } from "./blocks-provider/app-state-layer/blocksEditor";
 import dayjs from "dayjs";
 import { useToast } from "@/components/ui/toast";
@@ -400,7 +400,7 @@ const GtdContext = createContext(() => {
     if (!recordsParentBlock) return;
 
     const timestamp = dayjs(record.timestamp).format(timestampFormat.value);
-    const recordContent = textContentFromString(
+    const recordContent = plainTextToTextContent(
       `${timestamp} - from \"${record.from}\" to \"${record.to}\"`,
     );
 
@@ -431,7 +431,7 @@ const GtdContext = createContext(() => {
       const { newNormalBlockId } =
         blockEditor.insertNormalBlock({
           pos: pos1,
-          content: textContentFromBlockRef(recordsParentBlock.id),
+          content: blockRefToTextContent(recordsParentBlock.id),
         }) ?? {};
       if (!newNormalBlockId) return;
       const pos2: BlockPos = {

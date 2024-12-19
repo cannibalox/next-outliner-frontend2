@@ -14,7 +14,8 @@ export type SettingComponentType =
   | { type: "switch" }
   | { type: "colorPicker" }
   | { type: "slider"; min?: number; max?: number }
-  | { type: "keybindingInput" };
+  | { type: "keybindingInput" }
+  | { type: "fontSelector" };
 
 export type SettingGroupItem = {
   key: string;

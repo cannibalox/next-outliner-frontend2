@@ -73,6 +73,7 @@ export const pmSchemaSpec: SchemaSpec = {
         if (node.attrs.tag) span.classList.add("tag"); // 是标签
 
         span.setAttribute("to-block-id", toBlockId);
+
         // 点击块引用，跳转到对应块
         span.addEventListener("click", async (e) => {
           e.preventDefault();
@@ -82,6 +83,22 @@ export const pmSchemaSpec: SchemaSpec = {
           if (mainTree == null) return;
           await mainTree.focusBlock(toBlockId, { highlight: true, expandIfFold: true });
         });
+
+        // 鼠标悬浮时，尝试打开浮动编辑器
+        span.addEventListener("mouseenter", (e) => {
+          const ctx = globalThis.getFloatingEditorContext();
+          if (ctx == null || ctx.open.value) return; // 如果浮动编辑器已经打开，则不处理
+          const rect = span.getBoundingClientRect();
+          ctx.openFloatingEditor(toBlockId, { x: rect.left, y: rect.bottom });
+        });
+
+        span.addEventListener("mouseleave", (e) => {
+          const ctx = globalThis.getFloatingEditorContext();
+          if (ctx == null || !ctx.open.value) return; // 如果浮动编辑器没有打开，则不处理
+          ctx.showPos.value = null; // 仅将 showPos 设置为 null，不关闭浮动编辑器
+          ctx.openedBlockId.value = null;
+        });
+
         // 当源块 ctext 更新时，更新引用锚文本
         const blockRef = blocksContext.blocksManager.getBlockRef(toBlockId);
         watch(

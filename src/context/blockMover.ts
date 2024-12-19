@@ -12,7 +12,7 @@ import { useToast } from "@/components/ui/toast";
 import { useI18n } from "vue-i18n";
 import ToastAction from "@/components/ui/toast/ToastAction.vue";
 import { generateKeydownHandlerSimple } from "./keymap";
-import { textContentFromBlockRef } from "@/utils/pm";
+import { blockRefToTextContent } from "@/utils/pm";
 import IndexContext from ".";
 
 const BlockMoverContext = createContext(() => {
@@ -77,7 +77,7 @@ const BlockMoverContext = createContext(() => {
             baseBlockId: movedBlockId,
             offset: 0,
           },
-          content: textContentFromBlockRef(movedBlockId),
+          content: blockRefToTextContent(movedBlockId),
         });
       }
       // leave mirror TODO

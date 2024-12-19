@@ -5,7 +5,9 @@ import {
   type AddBlockParams,
   type Block,
   type BlockOrigin,
+  type BlockPatch,
   type BlockTransaction,
+  type BlockTransactionMeta,
   type MirrorBlock,
   type NormalBlock,
   type TransactionEnvInfo,
@@ -40,6 +42,12 @@ function useBlockTransaction(context: BlockTransactionContext) {
         isUndoRedo: false,
         autoAddUndoPoint: true,
         canUndo: true,
+        envUndoStrategy: "beforeCommit",
+      },
+      envInfo: {
+        onCreate: captureEnvInfo(), // 创建事务时，捕获环境信息
+        beforeCommit: null,
+        afterCommit: null,
       },
       addBlock: <T extends AddBlockParams>(block: T) => {
         tr.patches.push({ op: "add", block });
@@ -68,8 +76,9 @@ function useBlockTransaction(context: BlockTransactionContext) {
         return tr;
       },
       commit: () => {
-        // TODO
+        tr.envInfo.beforeCommit = captureEnvInfo(); // 提交事务前，捕获环境信息
         commitBlockTransaction(tr);
+        tr.envInfo.afterCommit = captureEnvInfo(); // 提交事务后，捕获环境信息
       },
       setMeta: (key: string, value: any) => {
         tr.meta[key] = value;
@@ -107,8 +116,6 @@ function useBlockTransaction(context: BlockTransactionContext) {
     const { origin, patches } = transaction;
     console.debug("Committing transaction with origin:", origin, "and patches:", patches);
 
-    const beforeInfo = captureEnvInfo(); // 事务开始时的环境信息
-
     // 所有对 yjs 层的操作通过 yjs 事务进行
     const yjsTr = yjsLayer.createYjsLayerTransaction(transaction.origin);
 
@@ -134,8 +141,7 @@ function useBlockTransaction(context: BlockTransactionContext) {
     // 提交 yjs 层事务
     yjsTr.commit();
 
-    const afterInfo = captureEnvInfo(); // 事务结束时的环境信息
-    eventBus.emit("afterBlocksTrCommit", [transaction, beforeInfo, afterInfo]);
+    eventBus.emit("afterBlocksTrCommit", [transaction]);
   };
 
   const _toBlockParams = <T extends AddBlockParams>(block: T): AddBlockParams => {

@@ -22,21 +22,6 @@
       </BreadcrumbList>
     </Breadcrumb>
 
-    <!-- 刷新状态图标 -->
-    <div
-      v-if="status !== 'idle'"
-      class="flex justify-center items-center mb-2 text-muted-foreground"
-    >
-      <template v-if="status === 'loading'">
-        <Loader2 class="size-4 animate-spin mr-2" />
-        {{ $t("kbView.attachmentsManager.refreshing") }}
-      </template>
-      <template v-else-if="status === 'updated'">
-        <Check class="size-4 mr-2" />
-        {{ $t("kbView.attachmentsManager.refreshed") }}
-      </template>
-    </div>
-
     <!-- 当前路径下的所有文件 -->
     <div class="flex-1 overflow-auto pr-1 mb-2">
       <FileTreeItem
@@ -55,8 +40,13 @@
 
     <!-- 上传按钮 -->
     <div class="mr-1 flex gap-x-1">
-      <Button variant="outline" class="size-9 flex-shrink-0 p-0" @click="handleRefetchFiles">
-        <RefreshCw class="size-4" />
+      <Button
+        variant="outline"
+        class="size-9 flex-shrink-0 p-0"
+        :disabled="status === 'loading'"
+        @click="handleRefetchFiles"
+      >
+        <RefreshCw class="size-4" :class="{ 'animate-spin': status === 'loading' }" />
       </Button>
       <Button variant="outline" size="sm" class="w-full">
         <Upload class="size-4 mr-2" />

@@ -23,7 +23,7 @@ import type { Block } from "@/context/blocks-provider/app-state-layer/blocksMana
 import { useTaskQueue } from "@/plugins/taskQueue";
 import "katex/dist/katex.css";
 import { inputRules } from "prosemirror-inputrules";
-import type { EditorProps, EditorView } from "prosemirror-view";
+import type { EditorProps, EditorView, EditorViewCustomEvents } from "prosemirror-view";
 import "prosemirror-view/style/prosemirror.css";
 import { onBeforeUnmount, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { openRefSuggestions } from "../prosemirror/input-rules/openRefSuggestions";
@@ -42,7 +42,7 @@ const props = defineProps<{
   highlightRefs?: BlockId[];
 }>();
 
-const { blockEditor } = BlocksContext.useContext();
+const { blockEditor, blocksManager } = BlocksContext.useContext();
 const taskQueue = useTaskQueue();
 const docJson = shallowRef<any | null>(null);
 const pmWrapper = ref<InstanceType<typeof ProseMirror> | null>(null);
@@ -52,19 +52,42 @@ const nodeViews: EditorProps["nodeViews"] = {
   },
 };
 
-const onDocChanged = ({ newDoc }: { newDoc: any }) => {
+const onDocChanged = ({
+  newDoc,
+  oldSelection,
+  newSelection,
+}: EditorViewCustomEvents["docChanged"]) => {
   const blockId = props.block.id;
   const newBlockContent: TextContent = [BLOCK_CONTENT_TYPES.TEXT, newDoc];
   docJson.value = newDoc;
+  // 说明：这里为了让 undo redo 时拿到正确的选区信息做了一些奇怪的事情
+  // 1. 由于这个更改是 prosemirror 里拿到的，我们只是创建 blockTransaction 去更新 blocks
+  //   创建事务时更改早就发生了，因此自动捕获的环境信息肯定是不正确的。我们需要手动将从 docChange
+  //   event listener 里拿到正确的选区信息，然后覆盖掉 tr.envInfo.onCreate 里错误的选区信息
+  // 2. 由于 blockUpdate 会 debounce，因此我们还需要将选区信息放到 task 的 meta 里
+  //    然后在 task 执行时，从 mergedTasks 里拿到之前所有被合并的 task，然后使用最早的
+  //    task 的 meta 里的选区信息，覆盖掉 tr.envInfo.onCreate 里错误的选区信息
   taskQueue.addTask(
-    () => {
-      blockEditor.changeBlockContent({ blockId, content: newBlockContent });
+    ({ mergedTasks }) => {
+      const fstTask = mergedTasks[0];
+      const tr = blocksManager.createBlockTransaction({ type: "ui" });
+      blockEditor.changeBlockContent({ blockId, content: newBlockContent, tr, commit: false });
+      tr.meta.envUndoStrategy = "create";
+      tr.envInfo.onCreate = {
+        ...tr.envInfo.onCreate,
+        selection: fstTask?.meta?.oldSelection ?? oldSelection,
+      };
+      tr.commit();
     },
     {
       type: "updateBlockContent" + blockId,
       delay: 500,
       debounce: true,
-      description: `update block ${blockId} content`,
+      // 将选区信息作为 meta 放到 task 里
+      meta: {
+        oldSelection,
+        newSelection,
+      },
     },
   );
 };
@@ -83,7 +106,7 @@ const customPluginsGenerator = (getEditorView: () => EditorView | null, readonly
       mkKeymapPlugin(),
       mkPasteLinkPlugin(),
       mkPasteImagePlugin(),
-      // mkPasteTextPlugin(),
+      mkPasteTextPlugin(),
     ];
   }
 };

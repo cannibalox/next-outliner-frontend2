@@ -50,6 +50,10 @@ export const messages = {
     },
     kbView: {
       loadingKb: "加载知识库中...",
+      backlinksPanel: {
+        nBacklinks: "{count} 个反向链接",
+        nPotentialLinks: "{count} 个潜在链接",
+      },
       keybindingInput: {
         empty: "点击设置快捷键",
       },
@@ -110,7 +114,7 @@ export const messages = {
         copyBlockMirror: "复制块镜像",
         addToFavorite: "添加到收藏",
         addToSidepane: "添加到侧边栏",
-        exportAs: "导出为...",
+        export: "导出",
         sortDirectChildren: "排序直接子块",
         sortDictAsc: "字典序升序",
         sortDictDesc: "字典序降序",
@@ -193,6 +197,15 @@ export const messages = {
         download: "下载图片",
         metadata: "详细信息",
         filter: "滤镜",
+      },
+      exporter: {
+        title: "导出",
+        description: "导出选中子树为 HTML, PDF, Markdown, Plain Text 等多种格式",
+        preview: "预览",
+        copyToClipboard: "复制到剪贴板",
+        exportToFile: "导出到文件",
+        cancel: "取消",
+        exportFormat: "导出格式",
       },
     },
   },

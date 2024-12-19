@@ -26,7 +26,7 @@ const RefSuggestionsContext = createContext(() => {
       suggestions.value = [];
       return;
     }
-    const result = search(query.value, { prefix: true });
+    const result = search(query.value);
     suggestions.value = result
       .slice(0, 100)
       .map((item) => blocksManager.getBlockRef(item.id))

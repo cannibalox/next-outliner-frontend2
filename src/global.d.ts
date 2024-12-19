@@ -18,6 +18,8 @@ import type PowerupManagerContext from "./context/powerupManager";
 import type BacklinksContext from "./context/backlinks";
 import type PasteDialogContext from "./context/pasteDialog";
 import type CreateNewTreeDialogContext from "./context/createNewTreeDialog";
+import type FloatingEditorContext from "./context/floatingEditor";
+import type ExporterContext from "./context/exporter";
 
 export declare global {
   var getAxios: () => AxiosInstance | undefined;
@@ -50,4 +52,8 @@ export declare global {
   var getCreateNewTreeDialogContext: () =>
     | ReturnType<typeof CreateNewTreeDialogContext.useContext>
     | undefined;
+  var getFloatingEditorContext: () =>
+    | ReturnType<typeof FloatingEditorContext.useContext>
+    | undefined;
+  var getExporterContext: () => ReturnType<typeof ExporterContext.useContext> | undefined;
 }

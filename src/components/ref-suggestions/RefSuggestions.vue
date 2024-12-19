@@ -53,7 +53,7 @@ import { computed, nextTick, watch } from "vue";
 import TextContent from "../block-contents/TextContent.vue";
 import { Input } from "../ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { simpleTokenize } from "@/utils/tokenize";
+import { cjkNgramTokenize } from "@/utils/tokenize";
 import BlockContent from "../block-contents/BlockContent.vue";
 
 const {
@@ -70,7 +70,7 @@ const {
 
 const queryTerms = computed(() => {
   if (query.value.length == 0) return [];
-  return simpleTokenize(query.value, false, 1) ?? [];
+  return cjkNgramTokenize(query.value, false, 1) ?? [];
 });
 
 watch(showPos, async () => {

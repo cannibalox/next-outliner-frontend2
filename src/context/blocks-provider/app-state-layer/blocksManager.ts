@@ -1,7 +1,7 @@
 import { calcBlockStatus, extractBlockStatus } from "@/common/block";
 import { type BlockContent, type BlockId, type BlockData, type BlockInfo } from "@/common/types";
 import { autoRetryGet } from "@/utils/auto-retry";
-import { textContentFromString } from "@/utils/pm";
+import { plainTextToTextContent } from "@/utils/pm";
 import { nanoid } from "nanoid";
 import { ref, type Ref, shallowReactive, type ShallowRef, shallowRef, toRaw, watch } from "vue";
 import * as Y from "yjs";
@@ -103,18 +103,27 @@ export type BlockPatch =
   | { op: "update"; block: AddBlockParams }
   | { op: "delete"; blockId: BlockId; docId?: number };
 
+export type BlockTransactionMeta = {
+  // 这个事务是否是撤销或重做事务
+  isUndoRedo: boolean;
+  // 这个事务是否需要自动添加撤销点
+  autoAddUndoPoint: boolean;
+  // 这个事务是否可以撤销
+  canUndo: boolean;
+  // 事务 undo 时，是将环境信息恢复到哪个阶段，默认为 beforeCommit
+  envUndoStrategy: "create" | "beforeCommit";
+  [key: string]: any;
+};
+
 export type BlockTransaction = {
   origin: BlockOrigin;
   patches: BlockPatch[];
   reversePatches: BlockPatch[];
-  meta: {
-    // 这个事务是否是撤销或重做事务
-    isUndoRedo: boolean;
-    // 这个事务是否需要自动添加撤销点
-    autoAddUndoPoint: boolean;
-    // 这个事务是否可以撤销
-    canUndo: boolean;
-    [key: string]: any;
+  meta: BlockTransactionMeta;
+  envInfo: {
+    onCreate: TransactionEnvInfo;
+    beforeCommit: TransactionEnvInfo | null;
+    afterCommit: TransactionEnvInfo | null;
   };
   addBlock: <T extends AddBlockParams>(block: T) => BlockTransaction;
   updateBlock: <T extends AddBlockParams>(block: T) => BlockTransaction;
@@ -655,7 +664,7 @@ export const createBlocksManager = (yjsLayer: YjsLayer) => {
         fold: false,
         parentId: "root",
         childrenIds: [],
-        content: textContentFromString(""),
+        content: plainTextToTextContent(""),
         metadata: {},
       })
       .addBlock({
@@ -664,7 +673,7 @@ export const createBlocksManager = (yjsLayer: YjsLayer) => {
         fold: false,
         parentId: "root",
         childrenIds: [fstChildId],
-        content: textContentFromString(""),
+        content: plainTextToTextContent(""),
         metadata: {},
       })
       .commit();

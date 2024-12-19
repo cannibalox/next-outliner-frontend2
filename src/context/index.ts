@@ -4,7 +4,8 @@ import { createContext } from "@/utils/createContext";
 import { ref, shallowReactive } from "vue";
 import BlocksContext from "./blocks-provider/blocks";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
-import MiniSearch, { type SearchOptions } from "minisearch";
+import MiniSearch, { type Query, type SearchOptions } from "minisearch";
+import { ngramSplit, tokenize } from "@/utils/tokenize";
 
 const IndexContext = createContext(() => {
   const eventBus = useEventBus();
@@ -144,9 +145,19 @@ const IndexContext = createContext(() => {
 
   /////////// Fulltext Search ///////////
 
+  const NGRAMS_CJK = [1, 2, 3, 4, 5];
+  const NGRAM_MAP = NGRAMS_CJK.reduce(
+    (acc, ngram) => {
+      acc[`cjk${ngram}`] = ngram;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+
   const fulltextIndex = new MiniSearch({
-    fields: ["ctext", "mtext"],
-    storeFields: ["id"],
+    fields: ["nonCjk", ...NGRAMS_CJK.map((ngram) => `cjk${ngram}`)],
+    storeFields: ["id", "nTokens"],
+    tokenize: (text) => [text], // 插入时就是分好词的，不用再分词了
   });
   const dirtySet = new Set<BlockId>();
 
@@ -174,18 +185,71 @@ const IndexContext = createContext(() => {
         fulltextIndex.discard(blockId);
       } else if (block && block.type === "normalBlock") {
         if (fulltextIndex.has(blockId)) fulltextIndex.discard(blockId);
-        fulltextIndex.add(block);
+        const ctextAndMtext = block.ctext + " " + block.mtext;
+        const { nonCjkTokens, cjkTokens } = tokenize(ctextAndMtext);
+        const obj = {
+          id: blockId,
+          nonCjk: nonCjkTokens,
+          nTokens: nonCjkTokens.length + cjkTokens.length,
+        } as any;
+        for (const ngram of NGRAMS_CJK) {
+          obj[`cjk${ngram}`] = cjkTokens.flatMap((t) => ngramSplit(t, ngram));
+        }
+        fulltextIndex.add(obj);
       }
     }
     dirtySet.clear();
   };
 
-  const search = (query: string, opts: SearchOptions = { prefix: true }) => {
+  const search = (query: string, limit: number = 50) => {
     _updateIndex();
-    return fulltextIndex.search(query, opts);
+
+    const { nonCjkTokens, cjkTokens } = tokenize(query);
+
+    // 计算 query 有哪些 ngram
+    // 比如：query = "你好 世界" 只有 ngram=2
+    // 比如：query = "你好 阿根廷" 有 ngram=2 和 ngram=3
+    // 比如：query = "北京奥运会" 有 ngram=5
+    const queryNgrams = new Set(cjkTokens.map((t) => t.length));
+    const queries: Query[] = [];
+
+    // 搜索非中文字符时启用前缀搜索
+    if (nonCjkTokens.length > 0) {
+      queries.push({ combineWith: "AND", queries: nonCjkTokens, fields: ["nonCjk"], prefix: true });
+    }
+
+    // 搜索中文字符时不启用前缀搜索，因为已经按 ngram 划分了
+    for (const ngram of queryNgrams) {
+      queries.push({
+        combineWith: "AND",
+        queries: cjkTokens.filter((t) => t.length === ngram),
+        fields: [`cjk${ngram}`],
+      });
+    }
+
+    let results = fulltextIndex
+      .search(
+        {
+          combineWith: "AND",
+          queries,
+        },
+        {
+          tokenize: (text) => [text], // 不需要再分词
+        },
+      )
+      .slice(0, limit);
+
+    results = results.sort((a, b) => {
+      const scoreA = Object.keys(a.match).length / a.nTokens;
+      const scoreB = Object.keys(b.match).length / b.nTokens;
+      return scoreB - scoreA;
+    });
+
+    return results;
   };
 
   const ctx = {
+    fulltextIndex,
     backlinksIndex,
     search,
     getMirrors,

@@ -60,7 +60,8 @@ export const mkPasteLinkPlugin = () => {
 
 const HTTP_LINK_REGEX =
   /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/g;
-const linkify = function (fragment: Fragment, links: string[]): Fragment {
+
+export const linkify = function (fragment: Fragment, links: string[]): Fragment {
   const linkified: Node[] = [];
 
   fragment.forEach((child: Node) => {
@@ -82,9 +83,7 @@ const linkify = function (fragment: Fragment, links: string[]): Fragment {
 
         const urlText = text.slice(start, end);
         const linkMark = linkMarkType.create({ href: urlText });
-        linkified.push(
-          child.cut(start, end).mark(linkMark.addToSet(child.marks)),
-        );
+        linkified.push(child.cut(start, end).mark(linkMark.addToSet(child.marks)));
         links.push(urlText);
         pos = end;
       }

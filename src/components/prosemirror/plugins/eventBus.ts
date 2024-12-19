@@ -5,12 +5,18 @@ import type { EditorViewCustomEvents } from "prosemirror-view";
 export const eventBus: unique symbol = Symbol("event bus");
 
 declare module "prosemirror-view" {
-  type EditorViewCustomEvents = {
-    docChanged: { newDoc: any; oldDoc: any, view: EditorView };
+  export type EditorViewCustomEvents = {
+    docChanged: {
+      newDoc: any;
+      oldDoc: any;
+      view: EditorView;
+      oldSelection: any;
+      newSelection: any;
+    };
   };
 
   interface EditorView {
-    [eventBus]: true,
+    [eventBus]: true;
     on?: Emitter<EditorViewCustomEvents>["on"];
     off?: Emitter<EditorViewCustomEvents>["off"];
     emit?: Emitter<EditorViewCustomEvents>["emit"];

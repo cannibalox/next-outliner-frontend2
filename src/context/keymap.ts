@@ -3,7 +3,7 @@ import { EditorView, EditorView as PmEditorView } from "prosemirror-view";
 import { base, keyName } from "w3c-keyname";
 import type { KeyBinding as CmKeyBinding } from "@codemirror/view";
 import { AllSelection, EditorState, NodeSelection, TextSelection } from "prosemirror-state";
-import { textContentFromString } from "@/utils/pm";
+import { plainTextToTextContent } from "@/utils/pm";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import { Node } from "prosemirror-model";
 import { pmSchema } from "@/components/prosemirror/pmSchema";
@@ -165,99 +165,96 @@ const KeymapContext = createContext(() => {
     },
     Enter: {
       run: () => {
-        taskQueue.addTask(
-          async () => {
-            const block = lastFocusedBlock.value;
-            const tree = lastFocusedBlockTree.value;
-            const view = lastFocusedEditorView.value;
-            if (!block || !tree || !(view instanceof PmEditorView)) return;
+        taskQueue.addTask(async () => {
+          const block = lastFocusedBlock.value;
+          const tree = lastFocusedBlockTree.value;
+          const view = lastFocusedEditorView.value;
+          if (!block || !tree || !(view instanceof PmEditorView)) return;
 
-            const sel = view.state.selection;
-            const docEnd = AllSelection.atEnd(view.state.doc);
-            const rootBlockIds = tree.getRootBlockIds();
-            const onRoot = rootBlockIds.includes(block.id);
+          const sel = view.state.selection;
+          const docEnd = AllSelection.atEnd(view.state.doc);
+          const rootBlockIds = tree.getRootBlockIds();
+          const onRoot = rootBlockIds.includes(block.id);
 
-            // 1. 在块末尾按 Enter，则在下方创建空块
-            if (sel.eq(docEnd)) {
-              const pos = onRoot
-                ? blockEditor.normalizePos({
-                    parentId: block.id,
-                    childIndex: "last-space",
-                  })
-                : blockEditor.normalizePos({
-                    baseBlockId: block.id,
-                    offset: 1,
-                  });
-              if (!pos) return;
-              (document.activeElement as HTMLElement).blur(); // 操作前先失去焦点，防止闪烁
-              const { focusNext } =
-                blockEditor.insertNormalBlock({
-                  pos,
-                  content: textContentFromString(""),
-                }) ?? {};
-              if (focusNext && tree) {
-                await tree.nextUpdate();
-                await tree.focusBlock(focusNext);
-              }
-            } else if (sel.head == 0) {
-              // 2. 在块开头按 Enter，则在上方创建空块
-              if (onRoot) return; // 不处理根块的情况
-              const pos = blockEditor.normalizePos({
-                baseBlockId: block.id,
-                offset: 0,
-              });
-              if (!pos) return;
-              (document.activeElement as HTMLElement).blur(); // 操作前先失去焦点，防止闪烁
-              const { focusNext } =
-                blockEditor.insertNormalBlock({ pos, content: textContentFromString("") }) ?? {};
-              if (focusNext && tree) {
-                await tree.nextUpdate();
-                await tree.focusBlock(focusNext);
-              }
-            } else {
-              // 3. 中间按 Enter，上面创建一个新块，将光标左边的内容挪到新块中
-              if (onRoot) return; // 不处理根块的情况
-              const curSel = view.state.selection;
-              const docAbove = view.state.doc.cut(0, curSel.anchor);
-              const newThisDoc = view.state.doc.cut(curSel.anchor);
-              // 删去挪移到新块中的内容
-              const tr = blocksManager.createBlockTransaction({ type: "ui" });
-              blockEditor.changeBlockContent({
-                blockId: block.id,
-                content: [BLOCK_CONTENT_TYPES.TEXT, newThisDoc.toJSON()],
-                tr,
-                commit: false,
-              });
-              // 上方插入块
-              const pos = blockEditor.normalizePos({
-                baseBlockId: block.id,
-                offset: 0,
-              });
-              if (!pos) return;
+          // 1. 在块末尾按 Enter，则在下方创建空块
+          if (sel.eq(docEnd)) {
+            const pos = onRoot
+              ? blockEditor.normalizePos({
+                  parentId: block.id,
+                  childIndex: "last-space",
+                })
+              : blockEditor.normalizePos({
+                  baseBlockId: block.id,
+                  offset: 1,
+                });
+            if (!pos) return;
+            (document.activeElement as HTMLElement).blur(); // 操作前先失去焦点，防止闪烁
+            const { focusNext } =
               blockEditor.insertNormalBlock({
                 pos,
-                content: [BLOCK_CONTENT_TYPES.TEXT, docAbove.toJSON()],
-                tr,
-                commit: false,
-              });
-              (document.activeElement as HTMLElement).blur(); // 操作前先失去焦点，防止闪烁
-              tr.commit();
+                content: plainTextToTextContent(""),
+              }) ?? {};
+            if (focusNext && tree) {
+              await tree.nextUpdate();
+              await tree.focusBlock(focusNext);
+            }
+          } else if (sel.head == 0) {
+            // 2. 在块开头按 Enter，则在上方创建空块
+            if (onRoot) return; // 不处理根块的情况
+            const pos = blockEditor.normalizePos({
+              baseBlockId: block.id,
+              offset: 0,
+            });
+            if (!pos) return;
+            (document.activeElement as HTMLElement).blur(); // 操作前先失去焦点，防止闪烁
+            const { focusNext } =
+              blockEditor.insertNormalBlock({ pos, content: plainTextToTextContent("") }) ?? {};
+            if (focusNext && tree) {
+              await tree.nextUpdate();
+              await tree.focusBlock(focusNext);
+            }
+          } else {
+            // 3. 中间按 Enter，上面创建一个新块，将光标左边的内容挪到新块中
+            if (onRoot) return; // 不处理根块的情况
+            const curSel = view.state.selection;
+            const docAbove = view.state.doc.cut(0, curSel.anchor);
+            const newThisDoc = view.state.doc.cut(curSel.anchor);
+            // 删去挪移到新块中的内容
+            const tr = blocksManager.createBlockTransaction({ type: "ui" });
+            blockEditor.changeBlockContent({
+              blockId: block.id,
+              content: [BLOCK_CONTENT_TYPES.TEXT, newThisDoc.toJSON()],
+              tr,
+              commit: false,
+            });
+            // 上方插入块
+            const pos = blockEditor.normalizePos({
+              baseBlockId: block.id,
+              offset: 0,
+            });
+            if (!pos) return;
+            blockEditor.insertNormalBlock({
+              pos,
+              content: [BLOCK_CONTENT_TYPES.TEXT, docAbove.toJSON()],
+              tr,
+              commit: false,
+            });
+            (document.activeElement as HTMLElement).blur(); // 操作前先失去焦点，防止闪烁
+            tr.commit();
 
-              if (tree) {
-                await tree.nextUpdate();
-                await tree.focusBlock(block.id);
-                // 将光标移至开头
-                const view = tree.getEditorView(block.id);
-                if (view instanceof PmEditorView) {
-                  const sel = AllSelection.atStart(view.state.doc);
-                  const tr = view.state.tr.setSelection(sel);
-                  view.dispatch(tr);
-                }
+            if (tree) {
+              await tree.nextUpdate();
+              await tree.focusBlock(block.id);
+              // 将光标移至开头
+              const view = tree.getEditorView(block.id);
+              if (view instanceof PmEditorView) {
+                const sel = AllSelection.atStart(view.state.doc);
+                const tr = view.state.tr.setSelection(sel);
+                view.dispatch(tr);
               }
             }
-          },
-          { description: `Enter handler` },
-        );
+          }
+        });
         return true;
       },
       stopPropagation: true,
@@ -275,77 +272,74 @@ const KeymapContext = createContext(() => {
       run: (state, dispatch) => {
         deleteUfeffBeforeCursor(state, dispatch!);
 
-        taskQueue.addTask(
-          async () => {
-            const block = lastFocusedBlock.value;
-            const tree = lastFocusedBlockTree.value;
-            const view = lastFocusedEditorView.value;
-            if (!block || !tree || !(view instanceof PmEditorView)) return;
+        taskQueue.addTask(async () => {
+          const block = lastFocusedBlock.value;
+          const tree = lastFocusedBlockTree.value;
+          const view = lastFocusedEditorView.value;
+          if (!block || !tree || !(view instanceof PmEditorView)) return;
 
-            const blockAbove = tree.getBlockAbove(block.id);
-            const blockBelow = tree.getBlockBelow(block.id);
-            const focusNext = blockAbove?.id || blockBelow?.id;
+          const blockAbove = tree.getBlockAbove(block.id);
+          const blockBelow = tree.getBlockBelow(block.id);
+          const focusNext = blockAbove?.id || blockBelow?.id;
 
-            const sel = view.state.selection;
-            // 1. 如果选中了东西，则执行默认逻辑（删除选区）
-            if (!sel.empty) return;
+          const sel = view.state.selection;
+          // 1. 如果选中了东西，则执行默认逻辑（删除选区）
+          if (!sel.empty) return;
 
-            // 2. 当前块为空，直接删掉这个块
-            if (view.state.doc.content.size == 0) {
-              (document.activeElement as HTMLElement).blur(); // 操作前先失去焦点，防止闪烁
-              blockEditor.deleteBlock({ blockId: block.id });
-              if (focusNext && tree) {
-                await tree.nextUpdate();
-                await tree.focusBlock(focusNext);
-                // 删掉这个块后，将光标移至 focusNext 末尾？
-                const view = tree.getEditorView(focusNext);
-                if (view instanceof PmEditorView) {
-                  const sel = AllSelection.atEnd(view.state.doc);
-                  const tr = view.state.tr.setSelection(sel);
-                  view.dispatch(tr);
-                }
+          // 2. 当前块为空，直接删掉这个块
+          if (view.state.doc.content.size == 0) {
+            (document.activeElement as HTMLElement).blur(); // 操作前先失去焦点，防止闪烁
+            blockEditor.deleteBlock({ blockId: block.id });
+            if (focusNext && tree) {
+              await tree.nextUpdate();
+              await tree.focusBlock(focusNext);
+              // 删掉这个块后，将光标移至 focusNext 末尾？
+              const view = tree.getEditorView(focusNext);
+              if (view instanceof PmEditorView) {
+                const sel = AllSelection.atEnd(view.state.doc);
+                const tr = view.state.tr.setSelection(sel);
+                view.dispatch(tr);
               }
-              return;
-            } else if (sel.from == 0 && blockAbove) {
-              // 3. 尝试将这个块与上一个块合并
-              // 仅当上一个块也是文本块，与自己同级，并且没有孩子时允许合并
-              if (
-                blockAbove.content[0] != BLOCK_CONTENT_TYPES.TEXT ||
-                blockAbove.childrenIds.length > 0 ||
-                block.parentId != blockAbove.parentId
-              )
-                return;
-              if (blockAbove.content[0] != BLOCK_CONTENT_TYPES.TEXT) return;
-              (document.activeElement as HTMLElement).blur(); // 操作前先失去焦点，防止闪烁
-              const aboveDoc = Node.fromJSON(pmSchema, blockAbove.content[1]);
-              const thisDoc = view.state.doc;
-              const newThisContent = aboveDoc.content.append(thisDoc.content);
-              const newThisDoc = pmSchema.nodes.doc.create(null, newThisContent);
-              const tr = blocksManager.createBlockTransaction({ type: "ui" });
-              blockEditor.changeBlockContent({
-                blockId: block.id,
-                content: [BLOCK_CONTENT_TYPES.TEXT, newThisDoc.toJSON()],
-                tr,
-                commit: false,
-              });
-              blockEditor.deleteBlock({ blockId: blockAbove.id, tr, commit: false });
-              tr.commit();
-              if (tree) {
-                await tree.nextUpdate();
-                // 将光标移至正确位置
-                const view = tree.getEditorView(block.id);
-                if (view instanceof PmEditorView) {
-                  const sel = TextSelection.create(view.state.doc, aboveDoc.content.size);
-                  const tr = view.state.tr.setSelection(sel);
-                  view.dispatch(tr);
-                  view.focus();
-                }
-              }
-              return;
             }
-          },
-          { description: `Backspace handler` },
-        );
+            return;
+          } else if (sel.from == 0 && blockAbove) {
+            // 3. 尝试将这个块与上一个块合并
+            // 仅当上一个块也是文本块，与自己同级，并且没有孩子时允许合并
+            if (
+              blockAbove.content[0] != BLOCK_CONTENT_TYPES.TEXT ||
+              blockAbove.childrenIds.length > 0 ||
+              block.parentId != blockAbove.parentId
+            )
+              return;
+            if (blockAbove.content[0] != BLOCK_CONTENT_TYPES.TEXT) return;
+            (document.activeElement as HTMLElement).blur(); // 操作前先失去焦点，防止闪烁
+            const aboveDoc = Node.fromJSON(pmSchema, blockAbove.content[1]);
+            const thisDoc = view.state.doc;
+            const newThisContent = aboveDoc.content.append(thisDoc.content);
+            const newThisDoc = pmSchema.nodes.doc.create(null, newThisContent);
+            const tr = blocksManager.createBlockTransaction({ type: "ui" });
+            blockEditor.changeBlockContent({
+              blockId: block.id,
+              content: [BLOCK_CONTENT_TYPES.TEXT, newThisDoc.toJSON()],
+              tr,
+              commit: false,
+            });
+            blockEditor.deleteBlock({ blockId: blockAbove.id, tr, commit: false });
+            tr.commit();
+            if (tree) {
+              await tree.nextUpdate();
+              // 将光标移至正确位置
+              const view = tree.getEditorView(block.id);
+              if (view instanceof PmEditorView) {
+                const sel = TextSelection.create(view.state.doc, aboveDoc.content.size);
+                const tr = view.state.tr.setSelection(sel);
+                view.dispatch(tr);
+                view.focus();
+              }
+            }
+            return;
+          }
+        });
         return false;
       },
       preventDefault: true,
@@ -522,20 +516,17 @@ const KeymapContext = createContext(() => {
     },
     Tab: {
       run: () => {
-        taskQueue.addTask(
-          async () => {
-            const block = lastFocusedBlock.value;
-            const tree = lastFocusedBlockTree.value;
-            if (!block || !tree) return;
+        taskQueue.addTask(async () => {
+          const block = lastFocusedBlock.value;
+          const tree = lastFocusedBlockTree.value;
+          if (!block || !tree) return;
 
-            blockEditor.promoteBlock({ blockId: block.id });
-            if (tree) {
-              await tree.nextUpdate();
-              tree.focusBlock(block.id);
-            }
-          },
-          { description: `Tab handler` },
-        );
+          blockEditor.promoteBlock({ blockId: block.id });
+          if (tree) {
+            await tree.nextUpdate();
+            tree.focusBlock(block.id);
+          }
+        });
         return true;
       },
       preventDefault: true,
@@ -543,20 +534,17 @@ const KeymapContext = createContext(() => {
     },
     "Shift-Tab": {
       run: () => {
-        taskQueue.addTask(
-          async () => {
-            const block = lastFocusedBlock.value;
-            const tree = lastFocusedBlockTree.value;
-            if (!block || !tree) return;
+        taskQueue.addTask(async () => {
+          const block = lastFocusedBlock.value;
+          const tree = lastFocusedBlockTree.value;
+          if (!block || !tree) return;
 
-            blockEditor.demoteBlock({ blockId: block.id });
-            if (tree) {
-              await tree.nextUpdate();
-              tree.focusBlock(block.id);
-            }
-          },
-          { description: `Shift-Tab handler` },
-        );
+          blockEditor.demoteBlock({ blockId: block.id });
+          if (tree) {
+            await tree.nextUpdate();
+            tree.focusBlock(block.id);
+          }
+        });
         return true;
       },
       preventDefault: true,

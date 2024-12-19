@@ -13,57 +13,93 @@ const BasicSettingsContext = createContext(() => {
     },
   });
 
-  const blockIdValidator = (value: string) => {
-    const { blocksManager } = globalThis.getBlocksContext() ?? {};
-    if (!blocksManager) return undefined;
-    const block = blocksManager.getBlock(value);
-    return block ? undefined : "无效的块 ID";
-  };
-
-  const showBacklinksCounterKey = "basic.showBacklinksCounter";
-  const showBacklinksCounterDefaultValue = true;
-  const showBacklinksCounter = useLocalStorage(
-    showBacklinksCounterKey,
-    showBacklinksCounterDefaultValue,
-  );
+  const textFontFamilyKey = "basic.textFontFamily";
+  const textFontFamilyDefaultValue = "";
+  const textFontFamily = useLocalStorage(textFontFamilyKey, textFontFamilyDefaultValue);
   registerSettingItem({
-    id: showBacklinksCounterKey,
+    id: textFontFamilyKey,
     groupKey: "basic",
     label: {
-      zh: "是否在块右侧显示引用计数",
+      zh: "正文字体",
     },
     desc: {
-      zh: "启用后，如果一个块有被其他块引用，则会在这个块右侧显示引用计数，点击计数会弹出一个浮窗以查看所有引用。",
+      zh: "指定笔记正文的字体。",
     },
-    defaultValue: showBacklinksCounterDefaultValue,
-    value: useWritableComputedRef(showBacklinksCounter),
+    defaultValue: textFontFamilyDefaultValue,
+    value: useWritableComputedRef(textFontFamily),
+    componentType: {
+      type: "fontSelector",
+    },
+  });
+
+  const uiFontFamilyKey = "basic.uiFontFamily";
+  const uiFontFamilyDefaultValue = "";
+  const uiFontFamily = useLocalStorage(uiFontFamilyKey, uiFontFamilyDefaultValue);
+  registerSettingItem({
+    id: uiFontFamilyKey,
+    groupKey: "basic",
+    label: {
+      zh: "界面字体",
+    },
+    desc: {
+      zh: "指定软件界面字体。在不指定其他字体的情况下，该字体将成为软件的基础字体。",
+    },
+    defaultValue: uiFontFamilyDefaultValue,
+    value: useWritableComputedRef(uiFontFamily),
+    componentType: {
+      type: "fontSelector",
+    },
+  });
+
+  const monospaceFontFamilyKey = "basic.monospaceFontFamily";
+  const monospaceFontFamilyDefaultValue = "";
+  const monospaceFontFamily = useLocalStorage(
+    monospaceFontFamilyKey,
+    monospaceFontFamilyDefaultValue,
+  );
+  registerSettingItem({
+    id: monospaceFontFamilyKey,
+    groupKey: "basic",
+    label: {
+      zh: "代码块字体",
+    },
+    desc: {
+      zh: "指定行内代码、代码块等需要等宽字体的场景使用的字体。",
+    },
+    defaultValue: monospaceFontFamilyDefaultValue,
+    value: useWritableComputedRef(monospaceFontFamily),
+    componentType: {
+      type: "fontSelector",
+    },
+  });
+
+  const enableFloatingEditorKey = "basic.enableFloatingEditor";
+  const enableFloatingEditorDefaultValue = false;
+  const enableFloatingEditor = useLocalStorage(
+    enableFloatingEditorKey,
+    enableFloatingEditorDefaultValue,
+  );
+  registerSettingItem({
+    id: enableFloatingEditorKey,
+    groupKey: "basic",
+    label: {
+      zh: "启用浮动编辑器",
+    },
+    desc: {
+      zh: "启用后，在块引用块上按 Ctrl / Command 键时，会弹出浮动编辑器。",
+    },
+    defaultValue: enableFloatingEditorDefaultValue,
+    value: useWritableComputedRef(enableFloatingEditor),
     componentType: {
       type: "switch",
     },
   });
 
-  const aliasBlockIdKey = "basic.aliasBlockId";
-  const aliasBlockIdDefaultValue = "";
-  const aliasBlockId = useLocalStorage(aliasBlockIdKey, aliasBlockIdDefaultValue);
-  registerSettingItem({
-    id: aliasBlockIdKey,
-    groupKey: "basic",
-    label: {
-      zh: "别名块 ID",
-    },
-    desc: {
-      zh: "指定别名块 ID。别名块用于指定块的别名，用法如下:\n- 一个块\n    - {{别名块引用}}\n        - 别名 1\n        - 别名 2",
-    },
-    defaultValue: aliasBlockIdDefaultValue,
-    value: useWritableComputedRef(aliasBlockId),
-    componentType: {
-      type: "textInput",
-      validator: blockIdValidator,
-    },
-  });
-
   const ctx = {
-    aliasBlockId,
+    textFontFamily,
+    uiFontFamily,
+    monospaceFontFamily,
+    enableFloatingEditor,
   };
   globalThis.getBasicSettingsContext = () => ctx;
   return ctx;

@@ -51,7 +51,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import BlockMoverContext from "@/context/blockMover";
 import { calcPopoverPos } from "@/utils/popover";
-import { simpleTokenize } from "@/utils/tokenize";
+import { cjkNgramTokenize } from "@/utils/tokenize";
 import { Search } from "lucide-vue-next";
 import { computed, nextTick, watch } from "vue";
 
@@ -70,7 +70,7 @@ const {
 
 const queryTerms = computed(() => {
   if (query.value.length == 0) return [];
-  return simpleTokenize(query.value, false, 1) ?? [];
+  return cjkNgramTokenize(query.value, false, 1) ?? [];
 });
 
 watch(showPos, async () => {

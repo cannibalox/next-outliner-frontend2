@@ -6,11 +6,7 @@ import type {
 } from "../context/blocks-provider/app-state-layer/blocksManager";
 
 type Events = {
-  afterBlocksTrCommit: [
-    tr: BlockTransaction,
-    beforeInfo: TransactionEnvInfo,
-    afterInfo: TransactionEnvInfo,
-  ];
+  afterBlocksTrCommit: [tr: BlockTransaction];
   blocksDestroy: void;
 };
 

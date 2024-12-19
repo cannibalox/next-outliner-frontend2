@@ -11,7 +11,7 @@ import {
 } from "../ui/alert-dialog";
 import { Check, Loader2, X } from "lucide-vue-next";
 import BlocksContext from "@/context/blocks-provider/blocks";
-import { textContentFromString } from "@/utils/pm";
+import { plainTextToTextContent } from "@/utils/pm";
 import LastFocusContext from "@/context/lastFocus";
 import PasteDialogContext from "@/context/pasteDialog";
 import { useTaskQueue } from "@/plugins/taskQueue";
@@ -43,11 +43,11 @@ const paste = async () => {
 
     // 处理第一行
     await taskQueue.addTask(() => {
-      const tr = blocksManager.createBlockTransaction();
+      const tr = blocksManager.createBlockTransaction({ type: "ui" });
       const blockId = lastFocusedBlockId.value!;
       blockEditor.changeBlockContent({
         blockId,
-        content: textContentFromString(lines[0]),
+        content: plainTextToTextContent(lines[0]),
         tr,
         commit: false,
       });
@@ -58,14 +58,14 @@ const paste = async () => {
     if (lines.length > 1) {
       const remainingLines = lines.slice(1);
       await taskQueue.addTask(() => {
-        const tr = blocksManager.createBlockTransaction();
+        const tr = blocksManager.createBlockTransaction({ type: "ui" });
         blockEditor.insertNormalBlocks({
           pos: {
             baseBlockId: lastFocusedBlockId.value!,
             offset: 1, // 从第一行后开始插入
           },
           blocks: remainingLines.map((line) => ({
-            content: textContentFromString(line),
+            content: plainTextToTextContent(line),
           })),
           tr,
           commit: false,

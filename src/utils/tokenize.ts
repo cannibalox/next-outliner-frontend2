@@ -4,7 +4,7 @@ const SPACE_OR_PUNCTUATION =
 const CAMEL_CASE_SPLIT_REG = /(?<!(?:^|[A-Z]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])/;
 const CJK = /[\u4E00-\u9FA5]/;
 
-const ngramSplit = (str: string, n: number) => {
+export const ngramSplit = (str: string, n: number) => {
   const result = [];
   for (let i = 0; i < str.length - n + 1; i++) {
     result.push(str.slice(i < 0 ? 0 : i, i + n));
@@ -12,10 +12,40 @@ const ngramSplit = (str: string, n: number) => {
   return result;
 };
 
+export function tokenize(str: string, ngrams: number[] = [1, 2, 3]) {
+  const nonCjkTokens: string[] = [];
+  const cjkTokens: string[] = [];
+
+  let currentToken = "";
+  let isCjk = false;
+
+  const addToken = () => {
+    if (currentToken) {
+      if (isCjk) cjkTokens.push(currentToken);
+      else nonCjkTokens.push(currentToken);
+      currentToken = "";
+    }
+  };
+
+  for (const char of str) {
+    if (SPACE_OR_PUNCTUATION.test(char)) {
+      addToken();
+    } else {
+      const charIsCjk = CJK.test(char);
+      if (currentToken && charIsCjk !== isCjk) addToken();
+      currentToken += char;
+      isCjk = charIsCjk;
+    }
+  }
+  addToken();
+
+  return { nonCjkTokens, cjkTokens };
+}
+
 // 简单的分词方法
 // 如果 cjkNGram == 2，则 tokenize("大家好，我是信息！Hello, world! 这是中国大陆, This is china 大陆很美 mainland")
 // 结果为 ["大家", "家好", "我是", "是信", "信息", "hello", "world", "这是", "是中", "中国", "国大", "大陆", "this", "is", "china", "大陆", "陆很", "很美", "mainland"]
-export const simpleTokenize = (
+export const cjkNgramTokenize = (
   str: string,
   caseSensitive: boolean = false,
   cjkNGram: number = 2,

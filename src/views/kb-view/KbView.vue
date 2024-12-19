@@ -10,41 +10,45 @@
                   <TimeMachineContext.Provider>
                     <FloatingMathInputContext.Provider>
                       <BlocksContext.Provider>
-                        <CreateNewTreeDialogContext.Provider>
-                          <IndexContext.Provider>
-                            <BacklinksContext.Provider>
-                              <SidebarContext.Provider>
-                                <LastFocusContext.Provider>
-                                  <KeymapContext.Provider>
-                                    <RefSuggestionsContext.Provider>
-                                      <BlockMoverContext.Provider>
-                                        <AttachmentsManagerContext.Provider>
-                                          <ImagesContext.Provider>
-                                            <MainTreeContext.Provider>
-                                              <PomodoroContext.Provider>
-                                                <BlockSelectContext.Provider>
-                                                  <GtdContext.Provider>
-                                                    <SettingsPanelContext.Provider>
-                                                      <FavoriteContext.Provider>
-                                                        <PowerupManagerContext.Provider>
-                                                          <KbViewContent />
-                                                        </PowerupManagerContext.Provider>
-                                                      </FavoriteContext.Provider>
-                                                    </SettingsPanelContext.Provider>
-                                                  </GtdContext.Provider>
-                                                </BlockSelectContext.Provider>
-                                              </PomodoroContext.Provider>
-                                            </MainTreeContext.Provider>
-                                          </ImagesContext.Provider>
-                                        </AttachmentsManagerContext.Provider>
-                                      </BlockMoverContext.Provider>
-                                    </RefSuggestionsContext.Provider>
-                                  </KeymapContext.Provider>
-                                </LastFocusContext.Provider>
-                              </SidebarContext.Provider>
-                            </BacklinksContext.Provider>
-                          </IndexContext.Provider>
-                        </CreateNewTreeDialogContext.Provider>
+                        <ExporterContext.Provider>
+                          <CreateNewTreeDialogContext.Provider>
+                            <IndexContext.Provider>
+                              <BacklinksContext.Provider>
+                                <SidebarContext.Provider>
+                                  <LastFocusContext.Provider>
+                                    <KeymapContext.Provider>
+                                      <RefSuggestionsContext.Provider>
+                                        <BlockMoverContext.Provider>
+                                          <AttachmentsManagerContext.Provider>
+                                            <ImagesContext.Provider>
+                                              <MainTreeContext.Provider>
+                                                <PomodoroContext.Provider>
+                                                  <BlockSelectContext.Provider>
+                                                    <GtdContext.Provider>
+                                                      <SettingsPanelContext.Provider>
+                                                        <FavoriteContext.Provider>
+                                                          <PowerupManagerContext.Provider>
+                                                            <FloatingEditorContext.Provider>
+                                                              <KbViewContent />
+                                                            </FloatingEditorContext.Provider>
+                                                          </PowerupManagerContext.Provider>
+                                                        </FavoriteContext.Provider>
+                                                      </SettingsPanelContext.Provider>
+                                                    </GtdContext.Provider>
+                                                  </BlockSelectContext.Provider>
+                                                </PomodoroContext.Provider>
+                                              </MainTreeContext.Provider>
+                                            </ImagesContext.Provider>
+                                          </AttachmentsManagerContext.Provider>
+                                        </BlockMoverContext.Provider>
+                                      </RefSuggestionsContext.Provider>
+                                    </KeymapContext.Provider>
+                                  </LastFocusContext.Provider>
+                                </SidebarContext.Provider>
+                              </BacklinksContext.Provider>
+                            </IndexContext.Provider>
+                          </CreateNewTreeDialogContext.Provider>
+                        </ExporterContext.Provider>
                       </BlocksContext.Provider>
                     </FloatingMathInputContext.Provider>
                   </TimeMachineContext.Provider>
@@ -88,4 +92,6 @@ import PowerupManagerContext from "@/context/powerupManager";
 import BacklinksContext from "@/context/backlinks";
 import PasteDialogContext from "@/context/pasteDialog";
 import CreateNewTreeDialogContext from "@/context/createNewTreeDialog";
+import FloatingEditorContext from "@/context/floatingEditor";
+import ExporterContext from "@/context/exporter";
 </script>

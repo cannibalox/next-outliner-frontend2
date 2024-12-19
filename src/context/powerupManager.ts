@@ -3,7 +3,7 @@ import BlocksContext from "./blocks-provider/blocks";
 import { ref, shallowRef } from "vue";
 import type { BlockId } from "@/common/types";
 import { useEventBus } from "@/plugins/eventbus";
-import { textContentFromString } from "@/utils/pm";
+import { plainTextToTextContent } from "@/utils/pm";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import type { Block } from "./blocks-provider/app-state-layer/blocksManager";
 import { type Fragment, Node } from "prosemirror-model";
@@ -122,7 +122,7 @@ const PowerupManagerContext = createContext(() => {
     blocksManager.addBlock({
       id: name,
       type: "normalBlock",
-      content: textContentFromString(name),
+      content: plainTextToTextContent(name),
       fold: true,
       parentId: "root",
       childrenIds: [],

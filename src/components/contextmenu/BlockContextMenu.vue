@@ -98,18 +98,13 @@
           </DropdownMenuItem>
         </DropdownMenuSubContent>
       </DropdownMenuSub>
-      <DropdownMenuSub>
-        <DropdownMenuSubTrigger>
-          <Download class="size-4 mr-2" />
-          {{ $t("kbView.command.exportAs") }}
-        </DropdownMenuSubTrigger>
-        <DropdownMenuSubContent>
-          <DropdownMenuItem>Markdown</DropdownMenuItem>
-          <DropdownMenuItem>HTML</DropdownMenuItem>
-          <DropdownMenuItem>PDF</DropdownMenuItem>
-          <DropdownMenuItem>TXT</DropdownMenuItem>
-        </DropdownMenuSubContent>
-      </DropdownMenuSub>
+      <DropdownMenuItem
+        :disabled="!exportBlock(true, blockId, undefined)"
+        @click="exportBlock(false, blockId, $event)"
+      >
+        <Download class="size-4 mr-2" />
+        {{ $t("kbView.command.export") }}
+      </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
 </template>
@@ -150,6 +145,7 @@ import FavoriteContext from "@/context/favorite";
 import SidebarContext from "@/context/sidebar";
 import type { BlockPos } from "@/context/blocks-provider/app-state-layer/blocksEditor";
 import LastFocusContext from "@/context/lastFocus";
+import ExporterContext from "@/context/exporter";
 
 type CommandExec = (
   test: boolean,
@@ -162,11 +158,12 @@ defineProps<{
 }>();
 
 const taskQueue = useTaskQueue();
-const { blockEditor } = BlocksDropdown.useContext();
+const { blockEditor, blocksManager } = BlocksDropdown.useContext();
 const { openBlockMover } = BlockMoverContext.useContext();
 const { favoriteBlockIds } = FavoriteContext.useContext();
 const { sidePaneBlockIds } = SidebarContext.useContext();
 const { lastFocusedBlockTree } = LastFocusContext.useContext();
+const { openExporter } = ExporterContext.useContext();
 
 const deleteBlock: CommandExec = (test, blockId) => {
   if (!test && blockId) {
@@ -227,6 +224,13 @@ const insertMirrorBelow: CommandExec = (test, blockId) => {
         tree.focusBlock(focusNext);
       }
     });
+  }
+  return !!blockId;
+};
+
+const exportBlock: CommandExec = (test, blockId, event) => {
+  if (!test && blockId) {
+    openExporter(blockId);
   }
   return !!blockId;
 };

@@ -62,6 +62,10 @@
   <BlockMover />
   <!-- 粘贴对话框 -->
   <PasteDialog />
+  <!-- 浮动编辑器 -->
+  <FloatingEditor />
+  <!-- 导出器 -->
+  <Exporter />
 </template>
 
 <script setup lang="ts">
@@ -83,6 +87,8 @@ import BlockMover from "@/block-mover/BlockMover.vue";
 import MenuPane from "@/components/menu-pane/MenuPane.vue";
 import PasteDialog from "@/components/paste-dialog/PasteDialog.vue";
 import CreateNewTreeDialogContext from "@/context/createNewTreeDialog";
+import FloatingEditor from "@/components/floating-editor/FloatingEditor.vue";
+import Exporter from "@/components/exporter/Exporter.vue";
 
 const { sidePaneOpen, sidePaneDir, sidePaneWidth, sidePaneHeight, enableSidePaneAnimation } =
   SidebarContext.useContext();
@@ -103,8 +109,15 @@ watch(synced, () => {
         // 找到根块时
         () => {
           closeCreateNewTreeDialog();
+          // 提交一个空更改，修复 undo 无法 undo 到初始 state 的问题
+          const tr = blocksManager.createBlockTransaction({ type: "ui" });
+          tr.commit();
         },
       );
+    } else {
+      // 提交一个空更改，修复 undo 无法 undo 到初始 state 的问题
+      const tr = blocksManager.createBlockTransaction({ type: "ui" });
+      tr.commit();
     }
   }
 });

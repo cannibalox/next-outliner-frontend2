@@ -22,13 +22,39 @@
       <template #header> </template>
       <template #default="{ itemData }">
         <BasicBlockItem
-          v-if="itemData.type == 'block'"
+          v-if="itemData.type == 'basic-block'"
           :key="itemData.block.id"
           :block-tree="controller"
           :block="itemData.block"
           :level="itemData.level"
           :force-fold="forceFold"
         ></BasicBlockItem>
+        <BacklinksBlockItem
+          v-if="itemData.type == 'backlink-block'"
+          :key="itemData.block.id"
+          :block-tree="controller"
+          :block="itemData.block"
+          :ref-block-id="itemData.refBlockId"
+        ></BacklinksBlockItem>
+        <BacklinksHeaderItem
+          v-if="itemData.type == 'backlink-header'"
+          :key="itemData.blockId"
+          :block-id="itemData.blockId"
+          :backlinks="itemData.backlinks"
+        ></BacklinksHeaderItem>
+        <PotentialLinksHeaderItem
+          v-if="itemData.type == 'potential-links-header'"
+          :key="itemData.blockId"
+          :block-id="itemData.blockId"
+          :potential-links="itemData.potentialLinks"
+        ></PotentialLinksHeaderItem>
+        <PotentialLinksBlockItem
+          v-if="itemData.type == 'potential-links-block'"
+          :key="itemData.blockId"
+          :block-tree="controller"
+          :block="itemData.block"
+          :ref-block-id="itemData.refBlockId"
+        ></PotentialLinksBlockItem>
       </template>
       <template #footer> </template>
     </virt-list>
@@ -58,6 +84,10 @@ import { nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { VirtList } from "vue-virt-list";
 import BasicBlockItem from "./display-items/BasicBlockItem.vue";
 import { timeout } from "@/utils/time";
+import BacklinksBlockItem from "./display-items/BacklinksBlockItem.vue";
+import BacklinksHeaderItem from "./display-items/BacklinksHeaderItem.vue";
+import PotentialLinksBlockItem from "./display-items/PotentialLinksBlockItem.vue";
+import PotentialLinksHeaderItem from "./display-items/PotentialLinksHeaderItem.vue";
 
 const props = defineProps<BlockTreeProps>();
 const eventBus = useEventBus();
@@ -75,7 +105,7 @@ let fixedOffset: number | null = null;
 const tempExpanded = ref(new Set<BlockId>());
 
 const updateDisplayItems = () => {
-  const diGenerator = props.diGenerator ?? getDefaultDiGenerator(blocksManager);
+  const diGenerator = props.diGenerator ?? getDefaultDiGenerator(blocksManager, true); // TODO
 
   // 计算 displayItems
   const blockTreeId = props.id;
@@ -124,10 +154,10 @@ const getBlockBelow = (blockId: BlockId): Block | null => {
 const getPredecessorBlock = (blockId: BlockId): Block | null => {
   for (let i = 0; i < displayItems.value!.length; i++) {
     const itemI = displayItems.value![i];
-    if (itemI.type == "block" && itemI.block.id == blockId) {
+    if (itemI.type == "basic-block" && itemI.block.id == blockId) {
       for (let j = i - 1; j >= 0; j--) {
         const itemJ = displayItems.value![j];
-        if (itemJ.type == "block") {
+        if (itemJ.type == "basic-block") {
           return itemJ.block;
         }
       }
@@ -140,10 +170,10 @@ const getPredecessorBlock = (blockId: BlockId): Block | null => {
 const getSuccessorBlock = (blockId: BlockId): Block | null => {
   for (let i = 0; i < displayItems.value!.length; i++) {
     const itemI = displayItems.value![i];
-    if (itemI.type == "block" && itemI.block.id == blockId) {
+    if (itemI.type == "basic-block" && itemI.block.id == blockId) {
       for (let j = i + 1; j < displayItems.value!.length; j++) {
         const itemJ = displayItems.value![j];
-        if (itemJ.type == "block") {
+        if (itemJ.type == "basic-block") {
           return itemJ.block;
         }
       }
@@ -161,7 +191,7 @@ const scrollBlockIntoView = (blockId: BlockId) => {
   if (blockDom && inViewport(blockDom)) return;
   // 滚动到该块
   const index = displayItems.value!.findIndex(
-    (item) => item.type == "block" && item.block.id == blockId,
+    (item) => item.type == "basic-block" && item.block.id == blockId,
   );
   if (index != null && index >= 0) {
     const pos = $vlist.value?.getItemPosByIndex(index);
@@ -263,7 +293,7 @@ const moveCursorToBegin = (blockId: BlockId) => {
 const findBelongingDi = (blockId: BlockId): DisplayItem | null => {
   if (!displayItems.value) return null;
   for (const item of displayItems.value) {
-    if (item.type == "block" && item.block.id == blockId) {
+    if (item.type == "basic-block" && item.block.id == blockId) {
       return item;
     }
   }
@@ -275,7 +305,7 @@ const indexOfBelongingDi = (blockId: BlockId): number => {
   if (!displayItems.value) return -1;
   for (let i = 0; i < displayItems.value.length; i++) {
     const item = displayItems.value[i];
-    if (item.type == "block" && item.block.id == blockId) {
+    if (item.type == "basic-block" && item.block.id == blockId) {
       return i;
     }
   }

@@ -24,15 +24,7 @@ function createUndoManager(ctx: UndoManagerCtx) {
   const { createBlockTransaction } = ctx;
   const eventBus = useEventBus();
   // 记录所有事务，以及事务开始和结束时的一些状态
-  const blockTransactions = shallowReactive(
-    <
-      {
-        tr: BlockTransaction;
-        beforeInfo: TransactionEnvInfo;
-        afterInfo: TransactionEnvInfo;
-      }[]
-    >[],
-  );
+  const blockTransactions = shallowReactive(<BlockTransaction[]>[]);
   // 每个撤销点是一个下标，指向 blockTransactions 中的一个 “空位”
   // | tr1 | tr2 | tr3 tr4 | tr5 tr6 tr7 |
   // 上例中，撤销点是 0, 1 ,2 ,4, 7
@@ -53,19 +45,10 @@ function createUndoManager(ctx: UndoManagerCtx) {
     undoPoints.push(index);
   };
 
-  eventBus.on("afterBlocksTrCommit", ([tr, beforeInfo, afterInfo]) => {
+  eventBus.on("afterBlocksTrCommit", ([tr]) => {
     if (!tr.meta.isUndoRedo && tr.meta.canUndo) {
       blockTransactions.length = currPoint; // 新的事务会使 currPoint 后面的所有事务失效
-      blockTransactions.push({
-        tr,
-        beforeInfo,
-        afterInfo,
-      });
-      console.log("addUndoPoint", {
-        tr,
-        beforeInfo,
-        afterInfo,
-      });
+      blockTransactions.push(tr);
       currPoint = blockTransactions.length;
 
       // 如果事务需要添加到 undoPoints，则添加
@@ -102,7 +85,7 @@ function createUndoManager(ctx: UndoManagerCtx) {
 
     // 将之前要撤销的事务合并为一个块事务
     const undoTr = createBlockTransaction({ type: "ui" }).setMeta("isUndoRedo", true);
-    for (const { tr } of trsToApply) {
+    for (const tr of trsToApply) {
       undoTr.addReverseTransaction(tr);
     }
     undoTr.commit();
@@ -111,7 +94,11 @@ function createUndoManager(ctx: UndoManagerCtx) {
     const lastFocusContext = getLastFocusContext()!;
     const tree = lastFocusContext.lastFocusedBlockTree.value;
     // 恢复到第一个事务之前的状态
-    const { rootBlockId, focusedBlockId, selection } = trsToApply[0].beforeInfo;
+    const targetEnvInfo =
+      trsToApply[0].meta.envUndoStrategy === "beforeCommit"
+        ? trsToApply[0].envInfo.beforeCommit
+        : trsToApply[0].envInfo.onCreate;
+    const { rootBlockId, focusedBlockId, selection } = targetEnvInfo ?? {};
 
     // 这里先让 ProseMirror 更新 state，然后恢复 focusedBlockId 和 selection
     setTimeout(() => {
@@ -159,7 +146,7 @@ function createUndoManager(ctx: UndoManagerCtx) {
 
     // 将之前要重做的事务合并为一个块事务
     const redoTr = createBlockTransaction({ type: "ui" }).setMeta("isUndoRedo", true);
-    for (const { tr } of trsToApply) {
+    for (const tr of trsToApply) {
       redoTr.addTransaction(tr);
     }
     redoTr.commit();
@@ -168,7 +155,9 @@ function createUndoManager(ctx: UndoManagerCtx) {
     const lastFocusContext = getLastFocusContext()!;
     const tree = lastFocusContext.lastFocusedBlockTree.value;
     // 恢复到最后一个事务结束时的状态
-    const { rootBlockId, focusedBlockId, selection } = trsToApply[trsToApply.length - 1].afterInfo;
+    console.log(trsToApply);
+    const { rootBlockId, focusedBlockId, selection } =
+      trsToApply[trsToApply.length - 1].envInfo.afterCommit ?? {};
 
     // 这里先让 ProseMirror 更新 state，然后恢复 focusedBlockId 和 selection
     setTimeout(() => {

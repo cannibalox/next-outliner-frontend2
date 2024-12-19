@@ -1,17 +1,33 @@
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import type { BlockContent, BlockId, TextContent } from "@/common/types";
+import { linkify } from "@/components/prosemirror/plugins/pasteLink";
 import { pmSchema } from "@/components/prosemirror/pmSchema";
+import { Fragment } from "prosemirror-model";
 
-export const textContentFromString = (str: string) =>
-  [
-    BLOCK_CONTENT_TYPES.TEXT,
-    {
-      type: "doc",
-      content: str.length == 0 ? [] : [pmSchema.text(str).toJSON()],
-    },
-  ] as TextContent;
+export const plainTextToPmNode = (str: string) => {
+  let content;
+  if (str.length === 0) {
+    content = Fragment.empty;
+  } else {
+    const textNode = pmSchema.text(str);
+    content = linkify(Fragment.from(textNode), []);
+  }
+  return pmSchema.nodes.doc.create({}, content);
+};
 
-export const textContentFromBlockRef = (blockRef: BlockId) =>
+export const plainTextToTextContent = (str: string) => {
+  let content;
+  if (str.length === 0) {
+    content = Fragment.empty;
+  } else {
+    const textNode = pmSchema.text(str);
+    content = linkify(Fragment.from(textNode), []);
+  }
+  const docNode = pmSchema.nodes.doc.create({}, content);
+  return [BLOCK_CONTENT_TYPES.TEXT, docNode.toJSON()] as TextContent;
+};
+
+export const blockRefToTextContent = (blockRef: BlockId) =>
   [
     BLOCK_CONTENT_TYPES.TEXT,
     {
@@ -27,22 +43,3 @@ export const textContentFromBlockRef = (blockRef: BlockId) =>
       ],
     },
   ] as TextContent;
-
-export const textContentFromNodes = (nodes: Node[]): TextContent => [
-  BLOCK_CONTENT_TYPES.TEXT,
-  {
-    type: "doc",
-    content: nodes.map((n) => {
-      if ("toJSON" in n && typeof n.toJSON === "function") {
-        return n.toJSON();
-      }
-      throw new Error("Node does not have a toJSON method");
-    }),
-  },
-];
-
-export const isEmptyBlockContent = (content: BlockContent) => {
-  if (content[0] === BLOCK_CONTENT_TYPES.TEXT) {
-    return content;
-  }
-};

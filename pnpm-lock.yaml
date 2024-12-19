@@ -50,6 +50,9 @@ importers:
       dayjs:
         specifier: ^1.11.13
         version: 1.11.13
+      html-prettify:
+        specifier: ^1.0.7
+        version: 1.0.7
       katex:
         specifier: ^0.16.15
         version: 0.16.15
@@ -1747,6 +1750,9 @@ packages:
   html-encoding-sniffer@4.0.0:
     resolution: {integrity: sha512-Y22oTqIU4uuPgEemfz7NDJz6OeKf12Lsu+QC+s3BVpda64lTiMYCyGwg5ki4vFxkMwQdeZDl2adZoqUgdFuTgQ==}
     engines: {node: '>=18'}
+
+  html-prettify@1.0.7:
+    resolution: {integrity: sha512-99pRsP2PV2DyWnrVibNyad7gNmzCP7AANO8jw7Z9yanWyXH9dPdqdMXGefySplroqCNdk95u7j5TLxfyJ1Cbbg==}
 
   html-tags@3.3.1:
     resolution: {integrity: sha512-ztqyC3kLto0e9WbNp0aeP+M3kTt+nbaIveGmUxAtZa+8iFgKLUOD4YKM5j+f3QD89bra7UeumolZHKuOXnTmeQ==}
@@ -5164,6 +5170,8 @@ snapshots:
   html-encoding-sniffer@4.0.0:
     dependencies:
       whatwg-encoding: 3.1.1
+
+  html-prettify@1.0.7: {}
 
   html-tags@3.3.1: {}
 

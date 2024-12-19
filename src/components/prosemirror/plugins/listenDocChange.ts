@@ -14,9 +14,17 @@ export const mkListenDocChangedPlugin = () => {
       apply: (tr, value, oldState, newState) => {
         if (!_view?.emit) return;
         if (tr.docChanged) {
+          const oldSelection = oldState.selection.toJSON();
+          const newSelection = newState.selection.toJSON();
           const newDoc = newState.doc.toJSON();
           const oldDoc = oldState.doc.toJSON();
-          _view.emit("docChanged", { newDoc, oldDoc, view: _view });
+          _view.emit("docChanged", {
+            newDoc,
+            oldDoc,
+            view: _view,
+            oldSelection,
+            newSelection,
+          });
         }
       },
     },

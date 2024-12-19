@@ -6,6 +6,17 @@
   :root {
     overflow: hidden;
 
+    --text-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+      "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", Arial, sans-serif;
+    --text-font-size: 1em;
+
+    --code-font: ui-monospace, Menlo, Monaco, "Cascadia Mono", "Segoe UI Mono", "Roboto Mono",
+      "Oxygen Mono", "Ubuntu Mono", "Source Code Pro", "Fira Mono", "Droid Sans Mono", "Consolas",
+      "Courier New", monospace;
+    --code-font-size: 0.9em;
+    --code-color: unset;
+    --code-background: unset;
+
     --tf: cubic-bezier(0.4, 0, 0.2, 1);
 
     --background: 0 0% 100%;
