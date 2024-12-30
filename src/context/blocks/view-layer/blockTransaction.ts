@@ -13,16 +13,20 @@ import {
   type TransactionEnvInfo,
   type VirtualBlock,
 } from "./blocksManager";
-import type { BlockContent, BlockData, BlockId, BlockInfo } from "@/common/types";
-import type { YjsLayer, YjsLayerTransaction } from "../sync-layer/yjsLayer";
+import type { BlockContent } from "@/common/type-and-schemas/block/block-content";
+import type { BlockData } from "@/common/type-and-schemas/block/block-data";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
+import type { BlockInfo } from "@/common/type-and-schemas/block/block-info";
+import type { SyncLayer, SyncLayerTransactionWrapper } from "../sync-layer/syncLayer";
 import { useEventBus } from "@/plugins/eventbus";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
-import { calcBlockStatus } from "@/common/block";
-import * as Y from "yjs";
+import { calcBlockStatus } from "@/common/helper-functions/block";
 
 type BlockTransactionContext = {
   blocks: Map<BlockId, ShallowRef<Block | null>>;
-  yjsLayer: YjsLayer;
+  latestBlockInfos: Map<BlockId, BlockInfo>;
+  latestBlockDatas: Map<BlockId, BlockData>;
+  yjsLayer: SyncLayer;
   getBlockRef: (blockId: BlockId) => ShallowRef<Block | null>;
   getCtext: (content: BlockContent, includeTags?: boolean) => string;
   getMtext: (metadata: any) => string;
@@ -30,7 +34,16 @@ type BlockTransactionContext = {
 };
 
 function useBlockTransaction(context: BlockTransactionContext) {
-  const { blocks, yjsLayer, getBlockRef, getCtext, getMtext, getOlinks } = context;
+  const {
+    blocks,
+    latestBlockInfos,
+    latestBlockDatas,
+    yjsLayer,
+    getBlockRef,
+    getCtext,
+    getMtext,
+    getOlinks,
+  } = context;
   const eventBus = useEventBus();
 
   const createBlockTransaction = (origin: BlockOrigin) => {
@@ -117,14 +130,13 @@ function useBlockTransaction(context: BlockTransactionContext) {
     console.debug("Committing transaction with origin:", origin, "and patches:", patches);
 
     // 所有对 yjs 层的操作通过 yjs 事务进行
-    const yjsTr = yjsLayer.createYjsLayerTransaction(transaction.origin);
+    // 只有来自 ui 的更改需要推送到 yjs 层！！！
+    const yjsTr = origin.type === "ui" ? yjsLayer.createSyncLayerTransaction(origin) : undefined;
 
-    if (!yjsLayer.blockInfoMap.value) return;
     for (const patch of patches) {
       const { op } = patch;
 
-      // 1. 新增块
-      // 2. 更新块
+      // 1. 新增块, 2. 更新块
       if (op == "add" || op == "update") {
         const blockParams = patch.block;
         const block = Object.assign({ origin }, _fromBlockParams(blockParams)) as Block;
@@ -139,7 +151,7 @@ function useBlockTransaction(context: BlockTransactionContext) {
     }
 
     // 提交 yjs 层事务
-    yjsTr.commit();
+    yjsTr?.commit();
 
     eventBus.emit("afterBlocksTrCommit", [transaction]);
   };
@@ -267,9 +279,11 @@ function useBlockTransaction(context: BlockTransactionContext) {
   };
 
   // Executors
-  const _upsertBlock = (blockId: BlockId, block: Block | null, yjsTr: YjsLayerTransaction) => {
-    if (!yjsLayer.blockInfoMap.value) return;
-
+  const _upsertBlock = (
+    blockId: BlockId,
+    block: Block | null,
+    yjsTr?: SyncLayerTransactionWrapper,
+  ) => {
     ///// 1. 更新 blocks
     const oldBlock = blocks.get(blockId)?.value;
     if (blocks.has(blockId)) {
@@ -280,8 +294,8 @@ function useBlockTransaction(context: BlockTransactionContext) {
     }
 
     ///// 2. 推送更新到 yjs 层
-    if (block) {
-      const oldBlockInfo = yjsLayer.blockInfoMap.value.get(blockId);
+    if (block && yjsTr) {
+      const oldBlockInfo = latestBlockInfos.get(blockId);
       const newBlockInfo: BlockInfo = [
         calcBlockStatus(block.type, block.fold),
         block.parentId,
@@ -296,34 +310,25 @@ function useBlockTransaction(context: BlockTransactionContext) {
 
       // 如果是 normal block，还需要更新块数据
       if (block.type == "normalBlock") {
-        const blockDataDoc = yjsLayer.getDataDoc(block.docId);
-        const blockDataMap = blockDataDoc?.getMap<BlockData>(BLOCK_DATA_MAP_NAME);
-        if (blockDataDoc && blockDataMap) {
-          const oldBlockData = blockDataMap.get(blockId);
-          const newBlockData: BlockData = [block.content, block.metadata] as const;
-          // 如果旧数据不存在，或者新旧数据不同，则更新
-          if (!oldBlockData || JSON.stringify(oldBlockData) != JSON.stringify(newBlockData)) {
-            yjsTr.upsertBlockData(block.docId, blockId, newBlockData);
-          }
+        const oldBlockData = latestBlockDatas.get(blockId);
+        const newBlockData: BlockData = [block.content, block.metadata] as const;
+        // 如果旧数据不存在，或者新旧数据不同，则更新
+        if (!oldBlockData || JSON.stringify(oldBlockData) != JSON.stringify(newBlockData)) {
+          yjsTr.upsertBlockData(block.docId, blockId, newBlockData);
         }
       }
 
       // 如果旧块是普通块，而新块不是普通块，则删除旧块数据
       if (oldBlock?.type == "normalBlock" && block.type != "normalBlock") {
-        const blockDataDoc = yjsLayer.getDataDoc(oldBlock.docId);
-        const blockDataMap = blockDataDoc?.getMap<BlockData>(BLOCK_DATA_MAP_NAME);
-        if (blockDataDoc && blockDataMap) {
-          yjsTr.deleteBlockData(oldBlock.docId, blockId);
-        }
+        yjsTr.deleteBlockData(oldBlock.docId, blockId);
       }
     }
   };
 
-  const _deleteBlock = (blockId: BlockId, yjsTr: YjsLayerTransaction) => {
-    if (!yjsLayer.blockInfoMap.value) return;
+  const _deleteBlock = (blockId: BlockId, yjsTr?: SyncLayerTransactionWrapper) => {
     const oldBlock = blocks.get(blockId)?.value;
 
-    if (oldBlock) {
+    if (oldBlock && yjsTr) {
       ///// 1. 更新 blocks
       oldBlock.deleted = true;
       blocks.delete(blockId);
@@ -333,11 +338,7 @@ function useBlockTransaction(context: BlockTransactionContext) {
       yjsTr.deleteBlockInfo(blockId);
       // 如果有关联的块数据，也一并删除
       if (oldBlock.type == "normalBlock") {
-        const blockDataDoc = yjsLayer.getDataDoc(oldBlock.docId);
-        const blockDataMap = blockDataDoc?.getMap<BlockData>(BLOCK_DATA_MAP_NAME);
-        if (blockDataMap) {
-          yjsTr.deleteBlockData(oldBlock.docId, blockId);
-        }
+        yjsTr.deleteBlockData(oldBlock.docId, blockId);
       }
     }
   };

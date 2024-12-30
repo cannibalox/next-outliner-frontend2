@@ -1,4 +1,4 @@
-import { getBasename, getSeperator } from "@/common/path";
+import { getBasename, getSeperator } from "@/common/helper-functions/path";
 import type { MarkSpec, NodeSpec, SchemaSpec } from "prosemirror-model";
 import { Schema } from "prosemirror-model";
 import { watch, watchEffect } from "vue";
@@ -72,8 +72,6 @@ export const pmSchemaSpec: SchemaSpec = {
         span.classList.add("block-ref-v2");
         if (node.attrs.tag) span.classList.add("tag"); // 是标签
 
-        span.setAttribute("to-block-id", toBlockId);
-
         // 点击块引用，跳转到对应块
         span.addEventListener("click", async (e) => {
           e.preventDefault();
@@ -107,7 +105,17 @@ export const pmSchemaSpec: SchemaSpec = {
             if (toBlock) {
               const ctext = toBlock.ctext ?? "";
               span.innerHTML = ctext.trim();
-              span.setAttribute("ctext", ctext);
+
+              span.dataset.blockId = toBlock.id;
+              span.dataset.ctext = ctext;
+
+              // 设置块引用颜色
+              if (toBlock.metadata?.blockRefColor) {
+                span.dataset.blockRefColor = toBlock.metadata?.blockRefColor;
+              } else {
+                delete span.dataset.blockRefColor;
+              }
+
               span.classList.remove("invalid");
             } else {
               span.innerHTML = "INVALID REF";
@@ -124,7 +132,7 @@ export const pmSchemaSpec: SchemaSpec = {
           getAttrs(node) {
             if (node instanceof HTMLElement) {
               return {
-                toBlockId: node.getAttribute("to-block-id"),
+                toBlockId: node.dataset.blockId,
                 tag: node.classList.contains("tag"),
               };
             } else return {};
@@ -136,8 +144,8 @@ export const pmSchemaSpec: SchemaSpec = {
         if (!blocksContext) return "";
         const { toBlockId } = node.attrs;
         if (!toBlockId) return "";
-        const blockRef = blocksContext.blocksManager.getBlockRef(toBlockId);
-        return blockRef.value?.ctext ?? "";
+        const block = blocksContext.blocksManager.getBlock(toBlockId);
+        return block?.ctext ?? "";
       },
     },
 

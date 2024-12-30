@@ -6,7 +6,6 @@
         v-if="openedBlockId"
         class="h-full"
         id="floating-editor"
-        :virtual="true"
         :root-block-ids="[openedBlockId]"
         :root-block-level="0"
         :padding-bottom="0"
@@ -18,13 +17,12 @@
 
 <script setup lang="ts">
 import FloatingEditorContext from "@/context/floatingEditor";
+import { calcPopoverPos } from "@/utils/popover";
+import { nextTick, watch } from "vue";
+import BlockTree from "../BlockTree.vue";
 import Popover from "../ui/popover/Popover.vue";
 import PopoverContent from "../ui/popover/PopoverContent.vue";
 import PopoverTrigger from "../ui/popover/PopoverTrigger.vue";
-import BlockTree from "../BlockTree.vue";
-import { nextTick, watch } from "vue";
-import { calcPopoverPos } from "@/utils/popover";
-import BasicSettingsContext from "@/context/basicSettings";
 
 const { showPos, open, openedBlockId } = FloatingEditorContext.useContext();
 

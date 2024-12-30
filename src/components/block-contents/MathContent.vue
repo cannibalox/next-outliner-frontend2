@@ -14,9 +14,9 @@ import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import { ScrollArea, ScrollBar } from "../ui/scroll-area";
 import type { BlockTree } from "@/context/blockTree";
 import { useTaskQueue } from "@/plugins/taskQueue";
-import BlocksContext from "@/context/blocks-provider/blocks";
+import BlocksContext from "@/context/blocks/blocks";
 import FloatingMathInputContext from "@/context/floatingMathInput";
-import type { Block } from "@/context/blocks-provider/blocksManager";
+import type { Block } from "@/context/blocks/view-layer/blocksManager";
 
 const props = defineProps<{
   blockTree?: BlockTree;

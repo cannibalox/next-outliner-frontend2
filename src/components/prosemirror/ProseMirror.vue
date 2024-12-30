@@ -3,14 +3,14 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, onUnmounted, ref, watch } from "vue";
+import { onMounted, onUnmounted, ref, watch } from "vue";
 import { type EditorProps, EditorView } from "prosemirror-view";
 import { EditorState, Plugin, Selection } from "prosemirror-state";
 import { Node } from "prosemirror-model";
 import { mkEventBusPlugin } from "./plugins/eventBus";
 import { mkListenDocChangedPlugin } from "./plugins/listenDocChange";
 import { pmSchema } from "./pmSchema";
-import type { BlockId } from "@/common/types";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import { mkHighlightMatchesPlugin } from "./plugins/highlightMatches";
 import { mkHighlightRefsPlugin } from "./plugins/highlightRefs";
 

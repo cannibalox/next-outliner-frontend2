@@ -1,6 +1,6 @@
 import { shallowReactive } from "vue";
 import type { BlockOrigin, BlockTransaction } from "./blocksManager";
-import type { BlockId } from "@/common/types";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import { useEventBus } from "@/plugins/eventbus";
 import { EditorView as PmEditorView } from "prosemirror-view";
 import { EditorView as CmEditorView } from "@codemirror/view";

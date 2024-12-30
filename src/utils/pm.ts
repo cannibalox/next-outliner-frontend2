@@ -1,8 +1,18 @@
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
-import type { BlockContent, BlockId, TextContent } from "@/common/types";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
+import type { TextContent } from "@/common/type-and-schemas/block/block-content";
 import { linkify } from "@/components/prosemirror/plugins/pasteLink";
 import { pmSchema } from "@/components/prosemirror/pmSchema";
-import { Fragment } from "prosemirror-model";
+import { Fragment, Node } from "prosemirror-model";
+
+export const contentNodesToPmNode = (nodes: Node[]) =>
+  [
+    BLOCK_CONTENT_TYPES.TEXT,
+    {
+      type: "doc",
+      content: nodes.map((n) => n.toJSON()),
+    },
+  ] as TextContent;
 
 export const plainTextToPmNode = (str: string) => {
   let content;

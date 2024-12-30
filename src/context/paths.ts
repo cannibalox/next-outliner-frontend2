@@ -2,7 +2,7 @@ import { createContext } from "@/utils/createContext";
 import ServerInfoContext from "./serverInfo";
 import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
-import { joinPathSegments } from "@/common/path";
+import { joinPathSegments } from "@/common/helper-functions/path";
 
 const PathsContext = createContext(() => {
   const { serverUrl } = ServerInfoContext.useContext();

@@ -142,14 +142,14 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { useTaskQueue } from "@/plugins/taskQueue";
-import BlocksContext from "@/context/blocks-provider/blocks";
+import BlocksContext from "@/context/blocks/blocks";
 import type { ImageContent } from "@/common/types";
 import { watch } from "vue";
 import { syncRef } from "@vueuse/core";
 import { generateKeydownHandlerSimple } from "@/context/keymap";
-import type { BlockPos } from "@/context/blocks-provider/app-state-layer/blocksEditor";
+import type { BlockPos } from "@/context/blocks/view-layer/blocksEditor";
 import { plainTextToTextContent } from "@/utils/pm";
-import type { Block } from "@/context/blocks-provider/app-state-layer/blocksManager";
+import type { Block } from "@/context/blocks/view-layer/blocksManager";
 
 const props = defineProps<{
   blockTree?: BlockTree;

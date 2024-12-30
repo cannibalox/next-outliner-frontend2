@@ -1,10 +1,10 @@
-import type { BlockId } from "@/common/types";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import { createContext } from "@/utils/createContext";
-import { computed, ref, type FunctionalComponent, type ShallowRef } from "vue";
-import BlocksContext from "./blocks-provider/blocks";
+import { computed, ref, type ShallowRef } from "vue";
+import BlocksContext from "./blocks/blocks";
 import { useDebounceFn } from "@vueuse/core";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
-import type { Block } from "./blocks-provider/app-state-layer/blocksManager";
+import type { Block } from "./blocks/view-layer/blocksManager";
 import IndexContext from ".";
 
 const RefSuggestionsContext = createContext(() => {

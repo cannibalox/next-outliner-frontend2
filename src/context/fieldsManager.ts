@@ -1,39 +1,15 @@
-import { createContext } from "@/utils/createContext";
-import BlocksContext from "./blocks-provider/blocks";
-import { ref, shallowRef } from "vue";
-import type { BlockId } from "@/common/types";
-import { useEventBus } from "@/plugins/eventbus";
-import { plainTextToTextContent } from "@/utils/pm";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
-import type { Block } from "./blocks-provider/app-state-layer/blocksManager";
-import { type Fragment, Node } from "prosemirror-model";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import { pmSchema } from "@/components/prosemirror/pmSchema";
+import { createContext } from "@/utils/createContext";
+import { plainTextToTextContent } from "@/utils/pm";
+import { type Fragment, Node } from "prosemirror-model";
+import { ref } from "vue";
 import { z } from "zod";
+import BlocksContext from "./blocks/blocks";
+import type { Block } from "./blocks/view-layer/blocksManager";
 
-const powerupValueTypeSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("richtext") }),
-  z.object({ type: z.literal("blockRef") }),
-  z.object({
-    type: z.literal("array"),
-    itemType: z.enum(["richtext", "blockRef", "block"]),
-  }),
-]);
-
-type PowerupValueType = z.infer<typeof powerupValueTypeSchema>;
-
-const powerupBlockMetadataSchema = z.object({
-  disabled: z.boolean().optional(),
-  buildIndex: z.boolean().optional(),
-  valueType: powerupValueTypeSchema,
-});
-
-type PowerupMetadata = z.infer<typeof powerupBlockMetadataSchema>;
-
-type Eater<CTX> = (content: Fragment | null, ctx?: CTX) => Fragment | null;
-
-////////////// Value Parser //////////////
-
-// Powerup 是一类特殊的块，主要用法是作为属性键
+// Field 是一类特殊的块，用作属性键
 //
 // 比如：
 // - 1984
@@ -42,41 +18,63 @@ type Eater<CTX> = (content: Fragment | null, ctx?: CTX) => Fragment | null;
 //   - [[Tags]]
 //     - [[Dystopia]]
 //     - [[Fiction]]
-// [[Author]], [[Year]], [[Tags]] 都是 powerup 块
-//
-// Powerup 块有唯一的 name，并且使用 name 作为 id 和块内容（文本块）
-// 因此可以直接通过 blocksManager.getBlock("Author") 获取到 Author 这个 powerup 块
-// 但是不推荐这样做，而是通过 powerupManager 提供的函数来访问和操作 powerup 块
+// [[Author]], [[Year]], [[Tags]] 都是 field
+// 可以使用 getFieldValues({{ blockId of 1984 }}) 获取到 1984 的属性值：
+// {
+//   "Author": "{{blockId of George Orwell}}",
+//   "Year": "1949",
+//   "Tags": ["{{blockId of Dystopia}}", "{{blockId of Fiction}}"]
+// }
 
-const PowerupManagerContext = createContext(() => {
+const fieldValueTypeSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("richtext") }),
+  z.object({ type: z.literal("blockRef") }),
+  z.object({
+    type: z.literal("array"),
+    itemType: z.enum(["richtext", "blockRef", "block"]),
+  }),
+]);
+
+type FieldValueType = z.infer<typeof fieldValueTypeSchema>;
+
+const fieldMetadataSchema = z.object({
+  buildIndex: z.boolean().optional(),
+  valueType: fieldValueTypeSchema,
+});
+
+type FieldMetadataType = z.infer<typeof fieldMetadataSchema>;
+
+type Eater<CTX> = (content: Fragment | null, ctx?: CTX) => Fragment | null;
+
+const FieldsManagerContext = createContext(() => {
   const { blocksManager } = BlocksContext.useContext();
   // const eventBus = useEventBus();
-  const allPowerupBlockNames = ref<Set<string> | null>(null);
+  const allFieldNames = ref<Set<string> | null>(null);
 
-  const initPowerupBlockNames = () => {
-    if (allPowerupBlockNames.value) return;
-    allPowerupBlockNames.value = new Set();
+  const initFieldNames = () => {
+    if (allFieldNames.value) return;
+    allFieldNames.value = new Set();
     for (const blockRef of blocksManager.loadedBlocks.values()) {
       const block = blockRef.value;
-      if (block && block.type === "normalBlock" && "powerup" in block.metadata) {
-        allPowerupBlockNames.value.add(block.id);
+      if (block && block.type === "normalBlock" && "field" in block.metadata) {
+        allFieldNames.value.add(block.id);
       }
     }
   };
 
-  const isPowerupBlock = (blockId: BlockId) => {
-    initPowerupBlockNames();
-    return allPowerupBlockNames.value!.has(blockId);
+  const isField = (blockId: BlockId) => {
+    initFieldNames();
+    return allFieldNames.value!.has(blockId);
   };
 
   ////////////////////////////// Parser /////////////////////////////////////
 
-  const eatPowerupAndSeparator: Eater<{ powerupName: string }> = (content, ctx) => {
+  const eatFieldAndSeparator: Eater<{ fieldName: string }> = (content, ctx) => {
     if (!content) return null;
     let fst = content.firstChild;
     if (!fst || fst.type.name !== "blockRef_v2") return null;
-    const powerupName = fst.attrs.toBlockId;
-    if (!isPowerupBlock(powerupName)) return null;
+    const fieldName = fst.attrs.toBlockId;
+    if (!isField(fieldName)) return null;
     content = content.cut(fst.nodeSize);
     fst = content.firstChild;
     if (fst && fst.isText) {
@@ -84,7 +82,7 @@ const PowerupManagerContext = createContext(() => {
       if (!text || (!text.startsWith(":") && !text.startsWith("："))) return null;
       content = content.cut(1);
     }
-    ctx && (ctx.powerupName = powerupName);
+    ctx && (ctx.fieldName = fieldName);
     return content;
   };
 
@@ -114,45 +112,51 @@ const PowerupManagerContext = createContext(() => {
 
   /////////////////////////////////////////////////////////////////////
 
-  const addPowerupBlock = (name: string, metadata: PowerupMetadata) => {
+  const addField = (name: string, fieldMetadata: FieldMetadataType) => {
     const existed = blocksManager.getBlock(name);
     if (existed) {
-      throw new Error(`Powerup block ${name} already exists`);
+      throw new Error(`Field ${name} already exists`);
     }
-    blocksManager.addBlock({
-      id: name,
-      type: "normalBlock",
-      content: plainTextToTextContent(name),
-      fold: true,
-      parentId: "root",
-      childrenIds: [],
-      metadata: {
-        powerup: metadata,
+    blocksManager.addBlock(
+      {
+        id: name,
+        type: "normalBlock",
+        content: plainTextToTextContent(name),
+        fold: true,
+        parentId: "root",
+        childrenIds: [],
+        metadata: {
+          field: fieldMetadata,
+        },
       },
-    });
-    initPowerupBlockNames();
-    allPowerupBlockNames.value!.add(name);
+      { type: "ui" },
+    );
+    initFieldNames();
+    allFieldNames.value!.add(name);
   };
 
-  const setPowerupBlockMetadata = (name: string, metadata: PowerupMetadata) => {
+  const setFieldMetadata = (name: string, metadata: FieldMetadataType) => {
     const block = blocksManager.getBlock(name);
     if (!block || block.type !== "normalBlock") {
-      throw new Error(`Powerup block ${name} not found`);
+      throw new Error(`Field ${name} not found`);
     }
-    blocksManager.updateBlock({
-      ...block,
-      metadata,
-    });
+    blocksManager.updateBlock(
+      {
+        ...block,
+        metadata,
+      },
+      { type: "ui" },
+    );
   };
 
-  const getPowerupBlockMetadata = (name: string): PowerupMetadata | null => {
+  const getFieldMetadata = (name: string): FieldMetadataType | null => {
     const block = blocksManager.getBlock(name);
     if (!block || block.content[0] !== BLOCK_CONTENT_TYPES.TEXT) return null;
-    const res = powerupBlockMetadataSchema.safeParse(block.metadata?.powerup);
+    const res = fieldMetadataSchema.safeParse(block.metadata?.field);
     return res.success ? res.data : null;
   };
 
-  const parsePowerupRecordBlock = (block: Block | null | undefined) => {
+  const parseFieldValues = (block: Block | null | undefined) => {
     if (!block || block.type !== "normalBlock" || block.content[0] !== BLOCK_CONTENT_TYPES.TEXT)
       return;
 
@@ -164,21 +168,21 @@ const PowerupManagerContext = createContext(() => {
 
     const ctx = {} as any;
 
-    content = eatPowerupAndSeparator(content, ctx);
-    if (!content || !ctx.powerupName || !isPowerupBlock(ctx.powerupName)) return;
+    content = eatFieldAndSeparator(content, ctx);
+    if (!content || !ctx.fieldName || !isField(ctx.fieldName)) return;
 
-    const metadata = getPowerupBlockMetadata(ctx.powerupName);
+    const metadata = getFieldMetadata(ctx.fieldName);
     if (!metadata) return;
 
     if (metadata.valueType.type === "richtext") {
-      return { powerupName: ctx.powerupName, metadata, value: content };
+      return { fieldName: ctx.fieldName, metadata, value: content };
     } else if (metadata.valueType.type === "blockRef") {
       const ctx = {} as any;
-      content = eatPowerupAndSeparator(content);
+      content = eatFieldAndSeparator(content);
       content = eatWhitespace(content);
       content = eatBlockRef(content, ctx);
       if (!content) return;
-      return { powerupName: ctx.powerupName, metadata, value: ctx.toBlockId };
+      return { fieldName: ctx.fieldName, metadata, value: ctx.toBlockId };
     } else {
       // array
       let arr: any[] = [];
@@ -209,7 +213,7 @@ const PowerupManagerContext = createContext(() => {
           arr.push(childBlock.id);
         }
       }
-      return { powerupName: ctx.powerupName, metadata, value: arr };
+      return { fieldName: ctx.fieldName, metadata, value: arr };
     }
   };
 
@@ -220,13 +224,13 @@ const PowerupManagerContext = createContext(() => {
   //   - [[Tags]]
   //     - [[Dystopia]]
   //     - [[Fiction]]
-  // getPowerupValues("{{blockId of 1984}}") 会返回
+  // getFieldValues("{{blockId of 1984}}") 会返回
   // {
   //   "Author": "George Orwell",
   //   "Year": "1949",
   //   "Tags": ["Dystopia", "Fiction"]
   // }
-  const getPowerupValues = (blockId: BlockId) => {
+  const getFieldValues = (blockId: BlockId) => {
     const block = blocksManager.getSrcBlock(blockId);
     if (!block) return null;
 
@@ -234,23 +238,23 @@ const PowerupManagerContext = createContext(() => {
     for (const childBlockRef of block.childrenRefs) {
       const childBlock = childBlockRef.value;
       if (!childBlock) continue;
-      const res = parsePowerupRecordBlock(childBlock);
+      const res = parseFieldValues(childBlock);
       if (!res) continue;
-      const { powerupName, metadata, value } = res;
-      ret[powerupName] = value;
+      const { fieldName, metadata, value } = res;
+      ret[fieldName] = value;
     }
 
     return ret;
   };
 
   const ctx = {
-    addPowerupBlock,
-    setPowerupBlockMetadata,
-    getPowerupBlockMetadata,
-    getPowerupValues,
+    addField,
+    setFieldMetadata,
+    getFieldMetadata,
+    getFieldValues,
   };
-  globalThis.getPowerupManagerContext = () => ctx;
+  globalThis.getFieldsManagerContext = () => ctx;
   return ctx;
 });
 
-export default PowerupManagerContext;
+export default FieldsManagerContext;

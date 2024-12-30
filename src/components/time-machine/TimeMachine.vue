@@ -91,7 +91,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { History, Plus, MoreHorizontal, RotateCcw, Trash, Eye, ChartPie } from "lucide-vue-next";
 import { ref } from "vue";
-import type { SavePoint } from "@/common/types";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   DropdownMenu,

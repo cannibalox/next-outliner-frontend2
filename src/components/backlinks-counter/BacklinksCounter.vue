@@ -29,30 +29,28 @@
 </template>
 
 <script setup lang="ts">
-import IndexContext from "@/context";
-import { Button } from "../ui/button";
+import BacklinksContext from "@/context/backlinks";
+import BlocksContext from "@/context/blocks/blocks";
+import type { Block } from "@/context/blocks/view-layer/blocksManager";
 import { computed } from "vue";
+import BlockContent from "../block-contents/BlockContent.vue";
+import BlockPath from "../BlockPath.vue";
+import { Button } from "../ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import BlockContent from "../block-contents/BlockContent.vue";
-import BlocksContext from "@/context/blocks-provider/blocks";
-import type { Block } from "@/context/blocks-provider/app-state-layer/blocksManager";
-import BlockPath from "../BlockPath.vue";
-import BacklinksContext from "@/context/backlinks";
-import { Fullscreen } from "lucide-vue-next";
 
 const props = defineProps<{
   blockId: string;
 }>();
 
 const { blocksManager } = BlocksContext.useContext();
-const { getBacklinks, getAllAliases } = BacklinksContext.useContext();
+const { getBacklinksConsideringAliases, getAllAliases } = BacklinksContext.useContext();
 
-const backlinks = computed(() => getBacklinks(props.blockId));
+const backlinks = computed(() => getBacklinksConsideringAliases(props.blockId));
 const aliases = computed(() => getAllAliases(props.blockId));
 const backlinkBlocks = computed(() => {
   return [...backlinks.value]

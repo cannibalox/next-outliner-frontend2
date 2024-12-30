@@ -31,10 +31,19 @@
       <!-- 同步状态 -->
       <Tooltip>
         <TooltipTrigger>
-          <Dot class="size-8" :class="synced ? 'stroke-green-500' : 'stroke-red-500'" />
+          <Dot
+            class="size-8"
+            :class="
+              allSyncStatus === 'synced'
+                ? 'stroke-green-500'
+                : allSyncStatus === 'syncing'
+                  ? 'stroke-blue-500'
+                  : 'stroke-red-500'
+            "
+          />
         </TooltipTrigger>
         <TooltipContent>
-          {{ synced ? "实时同步中" : "同步失败" }}
+          {{ t(`kbView.syncStatus.${allSyncStatus}`) }}
         </TooltipContent>
       </Tooltip>
 
@@ -85,6 +94,7 @@
 </template>
 
 <script setup lang="tsx">
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import Importer from "@/components/Importer.vue";
 import { Button } from "@/components/ui/button";
 import {
@@ -94,11 +104,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+// import AttachmentsManagerContext from "@/context/attachmentsManager";
+import BlocksContext from "@/context/blocks/blocks";
+import FocusModeContext from "@/context/focusMode";
+import FusionCommandContext from "@/context/fusionCommand";
+import MainTreeContext from "@/context/mainTree";
+// import MenubarContext from "@/context/menubar";
+import SettingsPanelContext from "@/context/settingsPanel";
+import SidebarContext from "@/context/sidebar";
+import ThemeContext from "@/context/theme";
+import TimeMachineContext from "@/context/timeMachine";
 import {
-  AlarmClock,
   ArrowLeft,
   ArrowRight,
   Bell,
+  CalendarDays,
   Dot,
   Download,
   Focus,
@@ -116,42 +136,22 @@ import {
   Sun,
 } from "lucide-vue-next";
 import { computed, ref } from "vue";
-import type { HeaderBarItemType } from ".";
-import HeaderBarItem from "./HeaderBarItem.vue";
-import SidebarContext from "@/context/sidebar";
-import MenubarContext from "@/context/menubar";
-import ThemeContext from "@/context/theme";
-import FocusModeContext from "@/context/focusMode";
-import TimeMachineContext from "@/context/timeMachine";
-import FusionCommandContext from "@/context/fusionCommand";
-import BlocksContext from "@/context/blocks-provider/blocks";
-import AttachmentsManagerContext from "@/context/attachmentsManager";
-import MainTreeContext from "@/context/mainTree";
-import { useElementSize } from "@vueuse/core";
-import {
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbItem,
-  BreadcrumbSeparator,
-  BreadcrumbLink,
-} from "../ui/breadcrumb";
-import type { BlockId } from "@/common/types";
-import type { Block } from "@/context/blocks-provider/app-state-layer/blocksManager";
 import { useI18n } from "vue-i18n";
-import Pomodoro from "../pomodoro/Pomodoro.vue";
-import SettingsPanelContext from "@/context/settingsPanel";
+import type { HeaderBarItemType } from ".";
 import BlockPath from "../BlockPath.vue";
+import DailynoteNavigator from "../dailynote-navigator/DailynoteNavigator.vue";
+import HeaderBarItem from "./HeaderBarItem.vue";
 
 const { sidePaneOpen, sidePaneDir, sidePaneWidth, enableSidePaneAnimation } =
   SidebarContext.useContext();
 const { open: openSettingsPanel } = SettingsPanelContext.useContext();
-const { open: openAttachmentsManager } = AttachmentsManagerContext.useContext();
-const { menuPaneOpen } = MenubarContext.useContext();
+// const { open: openAttachmentsManager } = AttachmentsManagerContext.useContext();
+// const { menuPaneOpen } = MenubarContext.useContext();
 const { theme, toggleTheme } = ThemeContext.useContext();
 const { focusModeEnabled } = FocusModeContext.useContext();
 const { timeMachineOpen } = TimeMachineContext.useContext();
 const { openFusionCommand } = FusionCommandContext.useContext();
-const { synced } = BlocksContext.useContext();
+const { allSyncStatus } = BlocksContext.useContext();
 const { mainRootBlockId } = MainTreeContext.useContext();
 const openImporter = ref(false);
 const { t } = useI18n();
@@ -178,15 +178,15 @@ const preventFocus = (e: FocusEvent) => {
 };
 
 const leftButtons: HeaderBarItemType[] = [
-  {
-    icon: Menu,
-    label: () => <>{menuPaneOpen.value ? "关闭菜单栏" : "打开菜单栏"}</>,
-    onClick: () => {
-      console.log("click menu", menuPaneOpen.value);
-      menuPaneOpen.value = !menuPaneOpen.value;
-    },
-    active: menuPaneOpen,
-  },
+  // {
+  //   icon: Menu,
+  //   label: () => <>{menuPaneOpen.value ? "关闭菜单栏" : "打开菜单栏"}</>,
+  //   onClick: () => {
+  //     console.log("click menu", menuPaneOpen.value);
+  //     menuPaneOpen.value = !menuPaneOpen.value;
+  //   },
+  //   active: menuPaneOpen,
+  // },
   {
     icon: ArrowLeft,
     label: () => <>后退</>,
@@ -202,11 +202,11 @@ const leftButtons: HeaderBarItemType[] = [
 const rightButtons: HeaderBarItemType[] = [
   {
     icon: () => (
-      <Pomodoro>
-        <AlarmClock class="size-5 stroke-[1.8]" />
-      </Pomodoro>
+      <DailynoteNavigator>
+        <CalendarDays class="size-5 stroke-[1.8]" />
+      </DailynoteNavigator>
     ),
-    label: () => <>{t("kbView.headerBar.pomodoro")}</>,
+    label: () => t("kbView.headerBar.dailynoteNavigator"),
     onClick: () => {},
   },
   {
@@ -266,11 +266,11 @@ const moreOptions: HeaderBarItemType[] = [
         : t("kbView.headerBar.enterFocusMode"),
     onClick: () => (focusModeEnabled.value = !focusModeEnabled.value),
   },
-  {
-    icon: FolderClosed,
-    label: () => t("kbView.headerBar.attachmentsManager"),
-    onClick: () => (openAttachmentsManager.value = true),
-  },
+  // {
+  //   icon: FolderClosed,
+  //   label: () => t("kbView.headerBar.attachmentsManager"),
+  //   onClick: () => (openAttachmentsManager.value = true),
+  // },
   {
     icon: History,
     label: () => t("kbView.headerBar.timeMachine"),

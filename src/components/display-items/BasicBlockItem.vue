@@ -1,13 +1,15 @@
 <template>
   <div
     class="block-item"
-    data-item-type="basic-block"
-    :class="{ hasChildren, fold, selected }"
-    :blockId="block.id"
+    :data-item-type="itemType"
+    :data-block-id="block.id"
+    :data-block-level="level"
+    :data-block-ref-color="block.metadata?.blockRefColor"
+    :class="{ hasChildren, fold, selected, [itemType]: true }"
     @focusin="handleFocusIn"
   >
     <div class="indent-lines">
-      <div class="indent-line" v-for="i in level" :key="i"></div>
+      <div class="indent-line" v-for="i in level" :key="i" :data-level="i"></div>
     </div>
     <div class="relative block-content-container">
       <div class="block-buttons">
@@ -21,7 +23,7 @@
         </div>
       </div>
 
-      <div class="bullet shrink-0" v-if="!hideBullet" draggable="true" @click="handleClickBullet">
+      <div class="bullet shrink-0" v-if="!hideBullet" @click="handleClickBullet">
         <Diamond class="diamond" v-if="hasOrIsMirrors" />
         <Circle class="circle" v-else />
       </div>
@@ -36,13 +38,20 @@
 
       <BacklinksCounter :block-id="block.id" />
     </div>
+
+    <!-- 拖拽时，显示拖拽指示线 -->
+    <div
+      v-if="draggingDropPos?.blockId === block.id"
+      class="absolute bottom-[-2px] left-0 h-[2px] rounded w-[40%] bg-blue-500"
+      :style="{ marginLeft: draggingDropPos.relIndent + 'px' }"
+    ></div>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { BlockId } from "@/common/types";
-import BlocksContext from "@/context/blocks-provider/blocks";
-import BlockSelectContext from "@/context/blockSelect";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
+import BlocksContext from "@/context/blocks/blocks";
+import BlockSelectDragContext from "@/context/blockSelect";
 import type { BlockTree } from "@/context/blockTree";
 import LastFocusContext from "@/context/lastFocus";
 import MainTreeContext from "@/context/mainTree";
@@ -50,41 +59,55 @@ import { useTaskQueue } from "@/plugins/taskQueue";
 import { Circle, Diamond, MoreHorizontal, Triangle } from "lucide-vue-next";
 import { computed } from "vue";
 
-import type { Block } from "@/context/blocks-provider/app-state-layer/blocksManager";
+import type { Block } from "@/context/blocks/view-layer/blocksManager";
 import BlockContent from "../block-contents/BlockContent.vue";
 import BlockContextMenu from "../contextmenu/BlockContextMenu.vue";
 import IndexContext from "@/context";
 import BacklinksCounter from "../backlinks-counter/BacklinksCounter.vue";
+import type { DisplayItem } from "@/utils/display-item";
 
-const props = defineProps<{
-  blockTree?: BlockTree;
-  block: Block;
-  level: number;
-  hideFoldButton?: boolean;
-  hideBullet?: boolean;
-  forceFold?: boolean;
-  showPath?: boolean;
-  readonly?: boolean;
-  highlightTerms?: string[];
-  highlightRefs?: BlockId[];
-}>();
+const props = withDefaults(
+  defineProps<{
+    blockTree?: BlockTree;
+    block: Block;
+    level: number;
+    hideFoldButton?: boolean;
+    hideBullet?: boolean;
+    readonly?: boolean;
+    highlightTerms?: string[];
+    highlightRefs?: BlockId[];
+    itemType?: DisplayItem["type"];
+    fold?: boolean;
+    handleClickFoldButton?: () => void;
+  }>(),
+  {
+    blockTree: undefined,
+    hideFoldButton: false,
+    hideBullet: false,
+    readonly: false,
+    highlightTerms: () => [],
+    highlightRefs: () => [],
+    itemType: "basic-block",
+    fold: undefined,
+    handleClickFoldButton: undefined,
+  },
+);
 
 const taskQueue = useTaskQueue();
-const { blocksManager, blockEditor } = BlocksContext.useContext();
+const { blockEditor } = BlocksContext.useContext();
 const { lastFocusedBlockId, lastFocusedBlockTreeId } = LastFocusContext.useContext();
 const { mainRootBlockId } = MainTreeContext.useContext();
-const { selectedBlockIds, selectedBlockTree } = BlockSelectContext.useContext();
-const { backlinksIndex, getMirrors } = IndexContext.useContext();
+const { selectedBlockIds, draggingDropPos } = BlockSelectDragContext.useContext();
+const { getMirrors } = IndexContext.useContext();
 
 // computed
 const mirrorIds = computed(() => getMirrors(props.block.id));
 const hasOrIsMirrors = computed(
   () => mirrorIds.value.size > 0 || props.block.type === "mirrorBlock",
 );
-const fold = computed(() => props.block.fold);
+const fold = computed(() => props.fold ?? props.block.fold);
 const hasChildren = computed(() => props.block.childrenIds.length > 0);
-const selected = computed(() => selectedBlockIds.value.includes(props.block.id));
-const backlinks = computed(() => backlinksIndex.value[props.block.id] ?? new Set());
+const selected = computed(() => selectedBlockIds.value.allNonFolded.includes(props.block.id));
 
 // handlers
 const handleFocusIn = () => {
@@ -93,13 +116,17 @@ const handleFocusIn = () => {
   lastFocusedBlockId.value = blockId;
   lastFocusedBlockTreeId.value = blockTreeId;
   // 一个块获得焦点时，清除块选择
-  selectedBlockIds.value = [];
-  selectedBlockTree.value = null;
+  selectedBlockIds.value = { topLevelOnly: [], allNonFolded: [] };
 };
 
 const handleClickFoldButton = () => {
-  const blockId = props.block.id;
-  taskQueue.addTask(() => blockEditor.toggleFold(blockId));
+  if (props.handleClickFoldButton) {
+    props.handleClickFoldButton();
+    return;
+  } else {
+    const blockId = props.block.id;
+    taskQueue.addTask(() => blockEditor.toggleFold(blockId));
+  }
 };
 
 const handleClickBullet = () => {
@@ -259,36 +286,64 @@ const handleClickBullet = () => {
     color: red;
   }
 
-  & > .block-content-container > .block-content:has(.tag[ctext~="later"]),
-  & > .block-content-container > .block-content:has(.tag[ctext~="abort"]) {
+  & > .block-content-container > .block-content:has(.tag[data-ctext~="later"]),
+  & > .block-content-container > .block-content:has(.tag[data-ctext~="abort"]) {
     color: hsl(var(--muted-foreground));
   }
 
-  & > .block-content-container > .block-content:has(.tag[ctext~="done"]) {
+  & > .block-content-container > .block-content:has(.tag[data-ctext~="done"]) {
     color: hsl(var(--muted-foreground));
     text-decoration-line: line-through;
     text-decoration-thickness: 1px;
   }
 
   ///// 标签颜色
-  .tag[ctext~="today"] {
+  .tag[data-ctext~="today"] {
     background-color: var(--highlight-3);
     color: var(--text-primary-color);
   }
 
-  .tag[ctext~="later"] {
+  .tag[data-ctext~="later"] {
     background-color: var(--highlight-1);
     color: var(--text-primary-color);
   }
 
-  .tag[ctext~="done"] {
+  .tag[data-ctext~="done"] {
     background-color: var(--highlight-2);
     color: var(--text-primary-color);
   }
 
-  .tag[ctext~="ongoing"] {
+  .tag[data-ctext~="ongoing"] {
     background-color: var(--highlight-4);
     color: var(--text-primary-color);
+  }
+
+  .block-ref-v2[data-block-ref-color="blue"] {
+    background-color: var(--highlight-blue);
+  }
+
+  .block-ref-v2[data-block-ref-color="green"] {
+    background-color: var(--highlight-green);
+  }
+
+  .block-ref-v2[data-block-ref-color="red"] {
+    background-color: var(--highlight-red);
+  }
+
+  .block-ref-v2[data-block-ref-color="yellow"] {
+    background-color: var(--highlight-yellow);
+  }
+
+  .block-ref-v2[data-block-ref-color="gray"] {
+    background-color: var(--highlight-gray);
+  }
+
+  .block-ref-v2[data-block-ref-color="orange"] {
+    background-color: var(--highlight-orange);
+  }
+
+  .block-ref-v2[data-block-ref-color="purple"] {
+    background-color: var(--highlight-purple);
   }
 
   &.paragraph {

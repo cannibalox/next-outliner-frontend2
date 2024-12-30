@@ -1,5 +1,5 @@
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
-import type { BlockId } from "@/common/types";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import type { BlockTree } from "@/context/blockTree";
 import { useTaskQueue } from "@/plugins/taskQueue";
 import { InputRule } from "prosemirror-inputrules";

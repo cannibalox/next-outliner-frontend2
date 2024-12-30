@@ -15,11 +15,11 @@
 
 <script setup lang="ts">
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
-import type { BlockId, TextContent } from "@/common/types";
+import type { TextContent } from "@/common/type-and-schemas/block/block-content";
 import ProseMirror from "@/components/prosemirror/ProseMirror.vue";
 import type { BlockTree } from "@/context/blockTree";
-import BlocksContext from "@/context/blocks-provider/blocks";
-import type { Block } from "@/context/blocks-provider/app-state-layer/blocksManager";
+import BlocksContext from "@/context/blocks/blocks";
+import type { Block } from "@/context/blocks/view-layer/blocksManager";
 import { useTaskQueue } from "@/plugins/taskQueue";
 import "katex/dist/katex.css";
 import { inputRules } from "prosemirror-inputrules";
@@ -33,6 +33,7 @@ import { mkKeymapPlugin } from "../prosemirror/plugins/keymap";
 import { mkPasteImagePlugin } from "../prosemirror/plugins/pasteImage";
 import { mkPasteLinkPlugin } from "../prosemirror/plugins/pasteLink";
 import { mkPasteTextPlugin } from "../prosemirror/plugins/pasteText";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 
 const props = defineProps<{
   blockTree?: BlockTree;
@@ -105,7 +106,7 @@ const customPluginsGenerator = (getEditorView: () => EditorView | null, readonly
       }),
       mkKeymapPlugin(),
       mkPasteLinkPlugin(),
-      mkPasteImagePlugin(),
+      // mkPasteImagePlugin(),
       mkPasteTextPlugin(),
     ];
   }

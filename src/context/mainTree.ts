@@ -1,8 +1,8 @@
 import { createContext } from "@/utils/createContext";
-import BlocksContext from "./blocks-provider/blocks";
+import BlocksContext from "./blocks/blocks";
 import { computed, readonly, ref, shallowRef, watch, type ShallowRef } from "vue";
-import type { BlockId } from "@/common/types";
-import type { Block } from "./blocks-provider/app-state-layer/blocksManager";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
+import type { Block } from "./blocks/view-layer/blocksManager";
 import { syncRef, useLocalStorage } from "@vueuse/core";
 import { useEventBus } from "@/plugins/eventbus";
 

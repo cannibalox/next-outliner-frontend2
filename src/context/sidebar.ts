@@ -1,9 +1,9 @@
 import { createContext } from "@/utils/createContext";
 import { useLocalStorage } from "@vueuse/core";
 import { computed, ref } from "vue";
-import BlocksContext from "./blocks-provider/blocks";
-import type { Block } from "./blocks-provider/app-state-layer/blocksManager";
-import type { BlockId } from "@/common/types";
+import BlocksContext from "./blocks/blocks";
+import type { Block } from "./blocks/view-layer/blocksManager";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import { watch } from "vue";
 
 export const SidebarContext = createContext(() => {

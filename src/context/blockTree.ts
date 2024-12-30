@@ -1,10 +1,10 @@
 import { createContext } from "@/utils/createContext";
-import type { BlockId } from "@/common/types";
-import type { DisplayItem, DisplayItemGenerator } from "@/utils/display-item";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
+import type { DisplayItem } from "@/utils/display-item";
 import type mitt from "@/utils/mitt";
 import type { EditorView as PmEditorView } from "prosemirror-view";
 import type { EditorView as CmEditorView } from "@codemirror/view";
-import type { Block } from "./blocks-provider/app-state-layer/blocksManager";
+import type { Block } from "./blocks/view-layer/blocksManager";
 import { ref } from "vue";
 
 export type BlockTreeId = string;
@@ -13,16 +13,16 @@ export type BlockTreeEventMap = {
   displayItemsUpdated: [DisplayItem[]];
 };
 
-export type BlockTreeProps = {
+export interface BlockTreeProps {
   id: string;
   virtual?: boolean;
   rootBlockIds: BlockId[];
   rootBlockLevel: number;
-  forceFold?: boolean;
-  diGenerator?: DisplayItemGenerator;
+  showBacklinks?: boolean;
+  showPotentialLinks?: boolean;
   paddingBottom?: number;
   paddingTop?: number;
-};
+}
 
 export type BlockTree = {
   getEditorViews: () => Map<BlockId, CmEditorView | PmEditorView>;
@@ -51,6 +51,9 @@ export type BlockTree = {
   getDomOfDi: (itemId: string) => HTMLElement | null;
   moveCursorToTheEnd: (blockId: BlockId) => void;
   moveCursorToBegin: (blockId: BlockId) => void;
+  addToExpandedBPBlockIds: (blockId: BlockId) => void;
+  removeFromExpandedBPBlockIds: (blockId: BlockId) => void;
+  getExpandedBPBlockIds: () => Record<BlockId, boolean>;
 };
 
 export const BlockTreeContext = createContext(() => {

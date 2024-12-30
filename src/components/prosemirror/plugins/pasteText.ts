@@ -16,6 +16,9 @@ export const mkPasteTextPlugin = () => {
   return new Plugin({
     props: {
       handlePaste(view: PmEditorView, event: ClipboardEvent) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
         const taskQueue = useTaskQueue();
         const blockId = lastFocusedBlockId.value;
         if (blockId == null) return false;

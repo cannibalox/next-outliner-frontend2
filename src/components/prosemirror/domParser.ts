@@ -1,4 +1,4 @@
-import type { BlockContent } from "@/common/types";
+import type { BlockContent } from "@/common/type-and-schemas/block/block-content";
 import { pmSchema } from "./pmSchema";
 import { DOMParser as ProsemirrorDOMParser, Slice } from "prosemirror-model";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";

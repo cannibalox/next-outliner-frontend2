@@ -10,7 +10,7 @@ import {
   AlertDialogAction,
 } from "../ui/alert-dialog";
 import { Check, Loader2, X } from "lucide-vue-next";
-import BlocksContext from "@/context/blocks-provider/blocks";
+import BlocksContext from "@/context/blocks/blocks";
 import { plainTextToTextContent } from "@/utils/pm";
 import LastFocusContext from "@/context/lastFocus";
 import PasteDialogContext from "@/context/pasteDialog";

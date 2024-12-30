@@ -8,7 +8,7 @@
             @click="emit('click-path-segment', block.id)"
           >
             <BlockContent
-              class="!max-w-[unset]"
+              class="!max-w-[unset] *:cursor-pointer"
               :block="block"
               :block-tree="undefined"
               :readonly="true"
@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import type { BlockId } from "@/common/types";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -30,7 +30,7 @@ import {
   BreadcrumbSeparator,
   BreadcrumbLink,
 } from "@/components/ui/breadcrumb";
-import BlocksContext from "@/context/blocks-provider/blocks";
+import BlocksContext from "@/context/blocks/blocks";
 import { computed } from "vue";
 import BlockContent from "./block-contents/BlockContent.vue";
 

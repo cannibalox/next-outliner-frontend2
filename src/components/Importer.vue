@@ -39,7 +39,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ref } from "vue";
 import { LoaderCircle, Check, X } from "lucide-vue-next";
-import BlocksContext from "@/context/blocks-provider/blocks";
+import BlocksContext from "@/context/blocks/blocks";
 import { importBlocks, parseV1Backup } from "@/utils/import";
 
 const file = ref<File | null>(null);

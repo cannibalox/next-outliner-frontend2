@@ -85,6 +85,14 @@
     --content-padding: 0px;
 
     --link-color: inherit;
+
+    --highlight-blue: rgb(186, 230, 253);
+    --highlight-green: rgb(188, 240, 218);
+    --highlight-red: rgb(251, 213, 213);
+    --highlight-yellow: rgb(255, 242, 157);
+    --highlight-gray: #e2e8f0;
+    --highlight-orange: #fcd9bd;
+    --highlight-purple: #dcd7fe;
   }
 
   .dark {
@@ -127,6 +135,14 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --highlight-blue: #385570;
+    --highlight-green: #294436;
+    --highlight-red: #5e3838;
+    --highlight-yellow: #515339;
+    --highlight-gray: #444444;
+    --highlight-orange: #704523;
+    --highlight-purple: #503466;
   }
 }
 

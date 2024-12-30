@@ -2,15 +2,15 @@ import { createContext } from "@/utils/createContext";
 import SettingsContext from "./settings";
 import { useLocalStorage } from "@vueuse/core";
 import useWritableComputedRef from "@/utils/useWritableComputedRef";
-import type { BlockId } from "@/common/types";
-import BlocksContext from "./blocks-provider/blocks";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
+import BlocksContext from "./blocks/blocks";
 import { z } from "zod";
 import IndexContext from ".";
 
 const BacklinksContext = createContext(() => {
   const { registerSettingGroup, registerSettingItem } = SettingsContext.useContext();
   const { blocksManager } = BlocksContext.useContext();
-  const { backlinksIndex } = IndexContext.useContext();
+  const { getBacklinks } = IndexContext.useContext();
 
   const blockIdValidator = (value: string) => {
     if (!value) return "没有指定块 ID";
@@ -77,15 +77,15 @@ const BacklinksContext = createContext(() => {
   // 这种阴间的情况
   const getAllAliases = (blockId: BlockId, includeSelf = true) => {
     const ret: BlockId[] = includeSelf ? [blockId] : [];
-    const powerupCtx = getPowerupManagerContext();
-    const powerupValues = powerupCtx?.getPowerupValues(blockId) ?? {};
+    const { getFieldValues } = getFieldsManagerContext()!;
+    const fieldValues = getFieldValues(blockId) ?? {};
     // 情况 1：
     // - this block
     //   - [[Alias]]
     //     - alias1
     //     - ...
-    if ("Alias" in powerupValues) {
-      const aliases = powerupValues.Alias;
+    if ("Alias" in fieldValues) {
+      const aliases = fieldValues.Alias;
       const res = z.array(z.string()).safeParse(aliases);
       if (res.success) {
         ret.push(...res.data);
@@ -102,9 +102,9 @@ const BacklinksContext = createContext(() => {
       const parentBlock = block.parentRef.value;
       const parentParentBlock = parentBlock?.parentRef.value;
       if (!parentParentBlock) return ret;
-      const powerupValues = powerupCtx?.getPowerupValues(parentParentBlock.id) ?? {};
-      if ("Alias" in powerupValues) {
-        const aliases = powerupValues.Alias;
+      const fieldValues = getFieldValues(parentParentBlock.id) ?? {};
+      if ("Alias" in fieldValues) {
+        const aliases = fieldValues.Alias;
         const res = z.array(z.string()).safeParse(aliases);
         if (res.success) {
           ret.push(...res.data);
@@ -115,11 +115,14 @@ const BacklinksContext = createContext(() => {
     return ret;
   };
 
-  const getBacklinks = (blockId: BlockId) => {
+  const getBacklinksConsideringAliases = (
+    blockId: BlockId,
+    type: "blockRef" | "tag" | "both" = "both",
+  ) => {
     const aliases = getAllAliases(blockId);
     const ret = new Set<BlockId>();
     for (const alias of aliases) {
-      const blockIds = backlinksIndex.value[alias];
+      const blockIds = getBacklinks(alias, type);
       for (const id of blockIds ?? []) {
         ret.add(id);
       }
@@ -130,7 +133,7 @@ const BacklinksContext = createContext(() => {
   const ctx = {
     showBacklinksCounter,
     getAllAliases,
-    getBacklinks,
+    getBacklinksConsideringAliases,
   };
   globalThis.getBacklinksContext = () => ctx;
   return ctx;

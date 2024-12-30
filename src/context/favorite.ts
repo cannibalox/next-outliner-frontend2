@@ -1,8 +1,8 @@
-import type { BlockId } from "@/common/types";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import { createContext } from "@/utils/createContext";
 import { computed, ref } from "vue";
-import BlocksContext from "./blocks-provider/blocks";
-import type { Block } from "./blocks-provider/app-state-layer/blocksManager";
+import BlocksContext from "./blocks/blocks";
+import type { Block } from "./blocks/view-layer/blocksManager";
 import { useLocalStorage } from "@vueuse/core";
 
 const FavoriteContext = createContext(() => {

@@ -3,7 +3,7 @@
   <HeaderBar />
   <!-- mr-1 是为了让滚动条和屏幕边缘留出一点空隙 -->
   <BlockTree
-    v-if="synced && mainRootBlockRef"
+    v-if="allSyncStatus !== 'disconnected' && mainRootBlockRef"
     class="h-[100vh] mr-1"
     id="main"
     :style="{
@@ -11,7 +11,6 @@
       paddingBottom: sidePaneOpen && sidePaneDir === 'bottom' ? `${sidePaneHeight}px` : '0px',
       transition: enableSidePaneAnimation ? 'padding 500ms var(--tf)' : 'none',
     }"
-    :virtual="true"
     :root-block-ids="[mainRootBlockRef.id]"
     :root-block-level="0"
     :padding-top="60"
@@ -46,16 +45,16 @@
     />
   </Transition>
   <!-- 菜单栏 -->
-  <MenuPane />
+  <!-- <MenuPane /> -->
   <!-- 浮动数学输入框 -->
   <FloatingMathInput />
   <!-- 融合命令 -->
   <FusionCommand />
   <!-- 时光机 -->
-  <TimeMachine />
+  <!-- <TimeMachine /> -->
   <RefSuggestions />
   <!-- 附件管理器 -->
-  <AttachmentsManager />
+  <!-- <AttachmentsManager /> -->
   <!-- 设置面板 -->
   <SettingsPanel />
   <!-- 块移动 popover -->
@@ -66,39 +65,40 @@
   <FloatingEditor />
   <!-- 导出器 -->
   <Exporter />
+  <!-- 属性检视器 -->
+  <FieldValueInspector />
 </template>
 
 <script setup lang="ts">
-import SidebarContext from "../../context/sidebar";
-import HeaderBar from "../../components/header-bar/HeaderBar.vue";
-import FusionCommand from "../../components/fusion-command/FusionCommand.vue";
-import SidePane from "../../components/side-pane/SidePane.vue";
-import TimeMachine from "../../components/time-machine/TimeMachine.vue";
-import FloatingMathInput from "../../components/FloatingMathInput.vue";
-import BlocksContext from "../../context/blocks-provider/blocks";
-import { Loader2 } from "lucide-vue-next";
-import BlockTree from "@/components/BlockTree.vue";
-import { watch } from "vue";
-import RefSuggestions from "@/components/ref-suggestions/RefSuggestions.vue";
-import AttachmentsManager from "@/components/attachments-mgr/AttachmentsManager.vue";
-import MainTreeContext from "@/context/mainTree";
-import SettingsPanel from "@/components/settings/SettingsPanel.vue";
 import BlockMover from "@/block-mover/BlockMover.vue";
-import MenuPane from "@/components/menu-pane/MenuPane.vue";
-import PasteDialog from "@/components/paste-dialog/PasteDialog.vue";
-import CreateNewTreeDialogContext from "@/context/createNewTreeDialog";
-import FloatingEditor from "@/components/floating-editor/FloatingEditor.vue";
+import BlockTree from "@/components/BlockTree.vue";
 import Exporter from "@/components/exporter/Exporter.vue";
+import FieldValueInspector from "@/components/field-values-inspector/FieldValueInspector.vue";
+import FloatingEditor from "@/components/floating-editor/FloatingEditor.vue";
+import PasteDialog from "@/components/paste-dialog/PasteDialog.vue";
+import RefSuggestions from "@/components/ref-suggestions/RefSuggestions.vue";
+import SettingsPanel from "@/components/settings/SettingsPanel.vue";
+import CreateNewTreeDialogContext from "@/context/createNewTreeDialog";
+import MainTreeContext from "@/context/mainTree";
+import { Loader2 } from "lucide-vue-next";
+import { watch } from "vue";
+import FloatingMathInput from "../../components/FloatingMathInput.vue";
+import FusionCommand from "../../components/fusion-command/FusionCommand.vue";
+import HeaderBar from "../../components/header-bar/HeaderBar.vue";
+import SidePane from "../../components/side-pane/SidePane.vue";
+import BlocksContext from "../../context/blocks/blocks";
+import SidebarContext from "../../context/sidebar";
 
 const { sidePaneOpen, sidePaneDir, sidePaneWidth, sidePaneHeight, enableSidePaneAnimation } =
   SidebarContext.useContext();
-const { synced, blocksManager } = BlocksContext.useContext();
+const { allSyncStatus, blocksManager } = BlocksContext.useContext();
 const { mainRootBlockRef } = MainTreeContext.useContext();
 const { openCreateNewTreeDialog, closeCreateNewTreeDialog } =
   CreateNewTreeDialogContext.useContext();
 
-watch(synced, () => {
-  if (synced.value) {
+watch(allSyncStatus, (newValue, oldValue) => {
+  if (oldValue === "disconnected" && newValue === "synced") {
+    // 由断开连接恢复到连接状态时，检查根块是否存在
     const rootBlockRef = blocksManager.getRootBlockRef();
     if (rootBlockRef.value == null) {
       blocksManager.ensureTree(

@@ -58,7 +58,7 @@ import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { z } from "zod";
 import { X, Loader2, Check } from "lucide-vue-next";
-import { adminLogin } from "@/common/api/auth";
+import { adminLogin } from "@/common/api-call/auth";
 import { RESP_CODES } from "@/common/constants";
 import { timeout } from "@/utils/time";
 import router from "@/router";

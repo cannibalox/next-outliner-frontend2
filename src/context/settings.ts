@@ -15,7 +15,8 @@ export type SettingComponentType =
   | { type: "colorPicker" }
   | { type: "slider"; min?: number; max?: number }
   | { type: "keybindingInput" }
-  | { type: "fontSelector" };
+  | { type: "fontSelector" }
+  | { type: "blockIdInput" };
 
 export type SettingGroupItem = {
   key: string;

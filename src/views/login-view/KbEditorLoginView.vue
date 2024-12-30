@@ -123,8 +123,8 @@
 </template>
 
 <script setup lang="ts">
-import { kbEditorLogin } from "@/common/api/auth";
-import { ping } from "@/common/api/misc";
+import { kbEditorLogin } from "@/common/api-call/auth";
+import { ping } from "@/common/api-call/misc";
 import { RESP_CODES } from "@/common/constants";
 import { Button } from "@/components/ui/button";
 import {

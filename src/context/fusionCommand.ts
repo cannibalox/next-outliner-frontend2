@@ -1,25 +1,67 @@
 import { createContext } from "@/utils/createContext";
-import { ref, type Ref } from "vue";
-
-type FusionCommand = {
-  open: (query: string) => void;
-};
+import { computed, ref, type Ref } from "vue";
+import type { Block } from "./blocks/view-layer/blocksManager";
+import { cjkNgramTokenize } from "@/utils/tokenize";
+import IndexContext from ".";
+import BlocksContext from "./blocks/blocks";
+import { nextTick } from "vue";
 
 export const FusionCommandContext = createContext(() => {
-  const _fusionCommand: Ref<FusionCommand | null> = ref(null);
+  const { blocksManager } = BlocksContext.useContext();
+  const { search } = IndexContext.useContext();
 
-  const registerFusionCommand = (inst: FusionCommand) => {
-    _fusionCommand.value = inst;
+  const inputText = ref("");
+  const mode = computed(() => (inputText.value.startsWith("/") ? "searchCommand" : "searchBlock"));
+  const blockSearchResult = ref<Block[]>([]);
+  const focusIndex = ref(-1); // -1: 没有选中项
+  const contentEl = ref<HTMLDivElement | null>(null);
+  const suppressMouseOver = ref(false);
+  const open = ref(false);
+  const allowedBlockTypes = ref<boolean[]>([true, false, false, false, false]); // 默认只允许文本块
+
+  const queryTerms = computed(() => {
+    if (inputText.value.length == 0) return [];
+    return cjkNgramTokenize(inputText.value, false, 1) ?? [];
+  });
+
+  const updateBlockSearchResult = () => {
+    const query = inputText.value.trim();
+    if (query === "") {
+      blockSearchResult.value = [];
+      return;
+    }
+    blockSearchResult.value = search(query)
+      .map((r) => blocksManager.getBlock(r.id))
+      .filter((b): b is Block => b !== null)
+      .filter((b) => b.type == "normalBlock" && allowedBlockTypes.value[b.content[0]]);
+    focusIndex.value = blockSearchResult.value.length > 0 ? 0 : -1;
   };
 
   const openFusionCommand = (query: string) => {
-    _fusionCommand.value?.open(query);
+    inputText.value = query;
+    open.value = true;
+    nextTick(() => {
+      const inputEl = contentEl.value?.querySelector("input");
+      if (!(inputEl instanceof HTMLElement)) return;
+      inputEl.focus();
+    });
   };
 
-  return {
-    registerFusionCommand,
+  const ctx = {
+    inputText,
+    mode,
+    blockSearchResult,
+    focusIndex,
+    contentEl,
+    suppressMouseOver,
+    open,
+    allowedBlockTypes,
+    queryTerms,
+    updateBlockSearchResult,
     openFusionCommand,
   };
+  globalThis.getFusionCommandContext = () => ctx;
+  return ctx;
 });
 
 export default FusionCommandContext;

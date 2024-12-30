@@ -1,11 +1,11 @@
 import { createContext } from "@/utils/createContext";
-import BlocksContext from "./blocks-provider/blocks";
+import BlocksContext from "./blocks/blocks";
 import { DOMSerializer, Node } from "prosemirror-model";
 import { pmSchema } from "@/components/prosemirror/pmSchema";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
-import type { Block } from "./blocks-provider/app-state-layer/blocksManager";
+import type { Block } from "./blocks/view-layer/blocksManager";
 import { ref, toRaw } from "vue";
-import type { BlockId } from "@/common/types";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import prettify from "html-prettify";
 
 const ExporterContext = createContext(() => {

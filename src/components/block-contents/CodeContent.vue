@@ -14,8 +14,8 @@
 
 <script setup lang="ts">
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
-import type { CodeContent } from "@/common/types";
-import BlocksContext from "@/context/blocks-provider/blocks";
+import type { CodeContent } from "@/common/type-and-schemas/block/block-content";
+import BlocksContext from "@/context/blocks/blocks";
 import type { BlockTree } from "@/context/blockTree";
 import KeymapContext from "@/context/keymap";
 import { useTaskQueue } from "@/plugins/taskQueue";
@@ -25,7 +25,7 @@ import type { Extension } from "@codemirror/state";
 import { keymap } from "@codemirror/view";
 import { onBeforeUnmount, onMounted, onUnmounted, ref, watch } from "vue";
 import CodeMirror from "../codemirror/CodeMirror.vue";
-import type { Block } from "@/context/blocks-provider/app-state-layer/blocksManager";
+import type { Block } from "@/context/blocks/view-layer/blocksManager";
 
 const props = defineProps<{
   blockTree?: BlockTree;

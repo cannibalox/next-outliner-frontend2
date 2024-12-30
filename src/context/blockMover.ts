@@ -1,12 +1,12 @@
 import { createContext } from "@/utils/createContext";
 import type { ShallowRef } from "vue";
 import { computed, h, ref } from "vue";
-import BlocksContext from "./blocks-provider/blocks";
-import type { Block } from "./blocks-provider/app-state-layer/blocksManager";
-import type { BlockId } from "@/common/types";
+import BlocksContext from "./blocks/blocks";
+import type { Block } from "./blocks/view-layer/blocksManager";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import { useDebounceFn } from "@vueuse/core";
-import type { BlockPos } from "./blocks-provider/app-state-layer/blocksEditor";
+import type { BlockPos } from "./blocks/view-layer/blocksEditor";
 import { useTaskQueue } from "@/plugins/taskQueue";
 import { useToast } from "@/components/ui/toast";
 import { useI18n } from "vue-i18n";
@@ -39,7 +39,7 @@ const BlockMoverContext = createContext(() => {
       suggestions.value = [];
       return;
     }
-    const result = search(query.value, { prefix: true });
+    const result = search(query.value);
     suggestions.value = result
       .slice(0, 100)
       .map((item) => blocksManager.getBlockRef(item.id))

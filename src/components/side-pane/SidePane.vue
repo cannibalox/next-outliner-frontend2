@@ -41,7 +41,6 @@
           :id="`side-pane-${sidePaneCurrentBlockId}`"
           :root-block-ids="[sidePaneCurrentBlockId]"
           :root-block-level="0"
-          :virtual="true"
           :paddingBottom="20"
         />
       </Transition>

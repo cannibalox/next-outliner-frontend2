@@ -30,7 +30,11 @@
               {{ $t("kbView.attachmentsManager.previewPane.openPreview") }}
             </Button>
 
-            <Button variant="outline" size="sm" @click="handleInsertImage(activeDirent.path)">
+            <Button
+              variant="outline"
+              size="sm"
+              @click="handleInsertImage(activePathInfo.relativePath)"
+            >
               <ImageIcon class="size-4 mr-2" />
               {{ $t("kbView.attachmentsManager.previewPane.insertImage") }}
             </Button>
@@ -144,13 +148,13 @@ import Image from "@/components/icons/Image.vue";
 import Pdf from "@/components/icons/Pdf.vue";
 import Word from "@/components/icons/Word.vue";
 import { Button } from "@/components/ui/button";
-import BlocksContext from "@/context/blocks-provider/blocks";
+import BlocksContext from "@/context/blocks/blocks";
 import LastFocusContext from "@/context/lastFocus";
 import { EditorView as PMEditorView } from "prosemirror-view";
 import { EditorView as CMEditorView } from "@codemirror/view";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import { useTaskQueue } from "@/plugins/taskQueue";
-import type { BlockPosSiblingOffset } from "@/context/blocks-provider/app-state-layer/blocksEditor";
+import type { BlockPosSiblingOffset } from "@/context/blocks/view-layer/blocksEditor";
 import type { ImageContent } from "@/common/types";
 import { autoRetryGet } from "@/utils/auto-retry";
 import { fsGetAttachmentSignedUrl } from "@/common/api/fs";

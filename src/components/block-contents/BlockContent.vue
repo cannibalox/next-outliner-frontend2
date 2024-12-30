@@ -19,22 +19,22 @@
     :block-tree="blockTree"
     :readonly="readonly"
   ></CodeContent>
-  <ImageContent
+  <!-- <ImageContent
     v-else-if="block.content[0] === BLOCK_CONTENT_TYPES.IMAGE"
     :block="block"
     :block-tree="blockTree"
-  ></ImageContent>
+  ></ImageContent> -->
 </template>
 
 <script setup lang="ts">
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
-import type { BlockId } from "@/common/types";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import type { BlockTree } from "@/context/blockTree";
 import CodeContent from "../block-contents/CodeContent.vue";
 import ImageContent from "../block-contents/ImageContent.vue";
 import MathContent from "@/components/block-contents/MathContent.vue";
 import TextContent from "@/components/block-contents/TextContent.vue";
-import type { Block } from "@/context/blocks-provider/app-state-layer/blocksManager";
+import type { Block } from "@/context/blocks/view-layer/blocksManager";
 
 defineProps<{
   block: Block;

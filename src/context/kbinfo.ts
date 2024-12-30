@@ -1,5 +1,5 @@
-import { getAllKbInfo } from "@/common/api/kb";
-import type { Resp } from "@/common/types";
+import { getAllKbInfo } from "@/common/api-call/kb";
+import type { Resp } from "@/common/type-and-schemas/resp";
 import { createContext } from "@/utils/createContext";
 import { useRouterParams } from "@/utils/routerParams";
 import { computed, ref, watch } from "vue";

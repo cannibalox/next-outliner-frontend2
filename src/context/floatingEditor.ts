@@ -1,6 +1,6 @@
-import { type BlockId } from "@/common/types";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import { createContext } from "@/utils/createContext";
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import BasicSettingsContext from "./basicSettings";
 
 const FloatingEditorContext = createContext(() => {

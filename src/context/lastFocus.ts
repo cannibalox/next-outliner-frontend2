@@ -1,15 +1,15 @@
-import type { BlockId } from "@/common/types";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import { createContext } from "@/utils/createContext";
 import { computed, ref } from "vue";
 import { BlockTreeContext, type BlockTreeId } from "./blockTree";
-import BlocksContext from "./blocks-provider/blocks";
+import BlocksContext from "./blocks/blocks";
 
 const LastFocusContext = createContext(() => {
   const blockTreeContext = BlockTreeContext.useContext();
   const { blocksManager } = BlocksContext.useContext();
   const lastFocusedBlockId = ref<BlockId | null>(null);
   const lastFocusedBlockTreeId = ref<BlockTreeId | null>(null);
-  
+
   const lastFocusedBlockTree = computed(() => {
     const treeId = lastFocusedBlockTreeId.value;
     if (!treeId) return null;
@@ -32,7 +32,7 @@ const LastFocusContext = createContext(() => {
     return tree.getEditorView(blockId);
   });
 
-  const ctx =  {
+  const ctx = {
     lastFocusedBlockId,
     lastFocusedBlockTreeId,
     lastFocusedBlock,

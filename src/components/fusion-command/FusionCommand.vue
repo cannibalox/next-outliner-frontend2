@@ -1,14 +1,24 @@
 <template>
-  <Dialog class="fusion-command" v-model:open="open">
-    <DialogContent
-      class="fusion-command-content p-0 [&>button]:hidden overflow-hidden gap-y-0"
-      trap-focus
+  <div class="fusion-command" v-if="open">
+    <div
+      class="fusion-command-content fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 bg-background border p-0 [&>button]:hidden overflow-hidden gap-y-0"
     >
+      <!-- <DialogHeader class="hidden">
+        <DialogTitle></DialogTitle>
+        <DialogDescription></DialogDescription>
+      </DialogHeader> -->
       <div ref="contentEl" @keydown="handleKeydown">
         <div class="relative border-b">
+          <Input
+            class="border-none relative focus-visible:ring-0 focus-visible:ring-offset-0 outline-none pl-10 pr-20"
+            v-model="inputText"
+            :placeholder="$t('kbView.fusionCommand.searchPlaceholder')"
+            @input.capture="handleInput"
+            @compositionend="handleInput"
+          />
           <div class="absolute left-3 top-1/2 -translate-y-1/2">
-            <Search class="size-4 text-muted-foreground" v-if="mode === 'searchBlock'" />
-            <Command class="size-4 text-muted-foreground" v-else />
+            <Search class="size-4" v-if="mode === 'searchBlock'" />
+            <Command class="size-4" v-else />
           </div>
           <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-x-2">
             <Popover v-if="mode === 'searchBlock'">
@@ -39,13 +49,6 @@
               @click="handleClear"
             />
           </div>
-          <Input
-            class="border-none focus-visible:ring-0 focus-visible:ring-offset-0 outline-none pl-10 pr-20"
-            v-model="inputText"
-            :placeholder="$t('kbView.fusionCommand.searchPlaceholder')"
-            @input="handleInput"
-            @compositionend="handleInput"
-          />
         </div>
         <template v-if="mode === 'searchBlock'">
           <div
@@ -88,60 +91,37 @@
           {{ $t("kbView.fusionCommand.commandHelp") }}
         </div>
       </div>
-    </DialogContent>
-  </Dialog>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { useDebounceFn } from "@vueuse/core";
-import { Command, Delete, Search, SlidersHorizontal } from "lucide-vue-next";
-import { computed, nextTick, onMounted, ref } from "vue";
-import BasicBlockItem from "../display-items/BasicBlockItem.vue";
-import { Dialog, DialogContent } from "../ui/dialog";
-import { Input } from "../ui/input";
-import ScrollArea from "../ui/scroll-area/ScrollArea.vue";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import Checkbox from "../ui/checkbox/Checkbox.vue";
 import { BLOCK_TYPE_ZH_NAMES } from "@/common/constants";
-import type { Block } from "@/context/blocks-provider/app-state-layer/blocksManager";
-import BlocksContext from "@/context/blocks-provider/blocks";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type { Block } from "@/context/blocks/view-layer/blocksManager";
 import BlockTreeContext from "@/context/blockTree";
 import FusionCommandContext from "@/context/fusionCommand";
 import { generateKeydownHandlerSimple } from "@/context/keymap";
-import { cjkNgramTokenize } from "@/utils/tokenize";
+import { useDebounceFn } from "@vueuse/core";
+import { Command, Delete, Search, SlidersHorizontal } from "lucide-vue-next";
 import BlockContent from "../block-contents/BlockContent.vue";
-import IndexContext from "@/context";
+import Checkbox from "../ui/checkbox/Checkbox.vue";
+import { Input } from "../ui/input";
+import ScrollArea from "../ui/scroll-area/ScrollArea.vue";
 
-const { blocksManager, blockEditor } = BlocksContext.useContext();
-const { search } = IndexContext.useContext();
 const blockTreeContext = BlockTreeContext.useContext();
-const fusionCommandContext = FusionCommandContext.useContext();
-const inputText = ref("");
-const mode = computed(() => (inputText.value.startsWith("/") ? "searchCommand" : "searchBlock"));
-const blockSearchResult = ref<Block[]>([]);
-const focusIndex = ref(-1); // -1: 没有选中项
-const contentEl = ref<HTMLDivElement | null>(null);
-const suppressMouseOver = ref(false);
-const open = ref(false);
-const allowedBlockTypes = ref<boolean[]>([true, false, false, false, false]); // 默认只允许文本块
-
-const queryTerms = computed(() => {
-  if (inputText.value.length == 0) return [];
-  return cjkNgramTokenize(inputText.value, false, 1) ?? [];
-});
-
-const updateBlockSearchResult = () => {
-  const query = inputText.value.trim();
-  if (query === "") {
-    blockSearchResult.value = [];
-    return;
-  }
-  blockSearchResult.value = search(query)
-    .map((r) => blocksManager.getBlock(r.id))
-    .filter((b): b is Block => b !== null)
-    .filter((b) => b.type == "normalBlock" && allowedBlockTypes.value[b.content[0]]);
-  focusIndex.value = blockSearchResult.value.length > 0 ? 0 : -1;
-};
+const {
+  inputText,
+  mode,
+  blockSearchResult,
+  focusIndex,
+  contentEl,
+  suppressMouseOver,
+  open,
+  allowedBlockTypes,
+  queryTerms,
+  updateBlockSearchResult,
+} = FusionCommandContext.useContext();
 
 const handleInput = useDebounceFn((e: any) => {
   if (e.isComposing) return;
@@ -248,20 +228,13 @@ const handleKeydown = generateKeydownHandlerSimple({
     stopPropagation: true,
     preventDefault: true,
   },
-});
-
-onMounted(() => {
-  fusionCommandContext.registerFusionCommand({
-    open: (query) => {
-      open.value = true;
-      inputText.value = query;
-      // 打开时，使输入框聚焦
-      setTimeout(() => {
-        const el = contentEl.value?.querySelector(".fusion-command-content input");
-        if (!(el instanceof HTMLInputElement)) return;
-        el.focus();
-      });
+  Escape: {
+    run: () => {
+      open.value = false;
+      return true;
     },
-  });
+    stopPropagation: true,
+    preventDefault: true,
+  },
 });
 </script>

@@ -1,8 +1,8 @@
-import type { BlockId } from "@/common/types";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import { useEventBus } from "@/plugins/eventbus";
 import { createContext } from "@/utils/createContext";
 import { ref, shallowReactive } from "vue";
-import BlocksContext from "./blocks-provider/blocks";
+import BlocksContext from "./blocks/blocks";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import MiniSearch, { type Query, type SearchOptions } from "minisearch";
 import { ngramSplit, tokenize } from "@/utils/tokenize";
@@ -101,47 +101,82 @@ const IndexContext = createContext(() => {
   });
 
   /////////// Backlinks ///////////
-  const backlinksIndex = ref<Record<BlockId, Set<BlockId>>>({});
+  const blockRefsIndex = ref<Record<BlockId, Set<BlockId>>>({});
+  const tagIndex = ref<Record<string, Set<BlockId>>>({});
 
   eventBus.on("afterBlocksTrCommit", ([tr]) => {
     for (let i = 0; i < tr.patches.length; i++) {
       const patch = tr.patches[i];
       const reversePatch = tr.reversePatches[i];
       if (patch.op === "delete") {
-        delete backlinksIndex.value[patch.blockId];
+        delete blockRefsIndex.value[patch.blockId];
+        delete tagIndex.value[patch.blockId];
         if (reversePatch.op !== "add") continue;
         const block = reversePatch.block;
         if (block.type !== "normalBlock" || block.content[0] !== BLOCK_CONTENT_TYPES.TEXT) continue;
         const olinks = blocksManager.getOlinks(block.content[1]);
         for (const olink of olinks) {
-          backlinksIndex.value[olink]?.delete(block.id);
+          blockRefsIndex.value[olink]?.delete(block.id);
+          tagIndex.value[olink]?.delete(block.id);
         }
       } else if (patch.op === "add" || patch.op === "update") {
         const block = patch.block;
-        const oldOlinks =
+        if (block.type !== "normalBlock" || block.content[0] !== BLOCK_CONTENT_TYPES.TEXT) continue;
+
+        const oldBlockRefs =
           reversePatch.op === "delete"
             ? []
             : reversePatch.block.type !== "normalBlock" ||
                 reversePatch.block.content[0] !== BLOCK_CONTENT_TYPES.TEXT
               ? []
-              : blocksManager.getOlinks(reversePatch.block.content[1]);
-        if (block.type !== "normalBlock" || block.content[0] !== BLOCK_CONTENT_TYPES.TEXT) continue;
-        const newOlinks = blocksManager.getOlinks(block.content[1]);
-        const addedOlinks = newOlinks.filter((olink) => !oldOlinks.includes(olink));
-        const removedOlinks = oldOlinks.filter((olink) => !newOlinks.includes(olink));
-        for (const olink of addedOlinks) {
-          backlinksIndex.value[olink] = (backlinksIndex.value[olink] ?? new Set()).add(block.id);
+              : blocksManager.getOlinks(reversePatch.block.content[1], "blockRef");
+        const oldTags =
+          reversePatch.op === "delete"
+            ? []
+            : reversePatch.block.type !== "normalBlock" ||
+                reversePatch.block.content[0] !== BLOCK_CONTENT_TYPES.TEXT
+              ? []
+              : blocksManager.getOlinks(reversePatch.block.content[1], "tag");
+        const newBlockRefs = blocksManager.getOlinks(block.content[1], "blockRef");
+        const newTags = blocksManager.getOlinks(block.content[1], "tag");
+
+        // 更新 blockRefsIndex
+        const addedBlockRefs = newBlockRefs.filter((olink) => !oldBlockRefs.includes(olink));
+        const removedBlockRefs = oldBlockRefs.filter((olink) => !newBlockRefs.includes(olink));
+        for (const olink of addedBlockRefs) {
+          blockRefsIndex.value[olink] = (blockRefsIndex.value[olink] ?? new Set()).add(block.id);
         }
-        for (const olink of removedOlinks) {
-          backlinksIndex.value[olink]?.delete(block.id);
+        for (const olink of removedBlockRefs) {
+          blockRefsIndex.value[olink]?.delete(block.id);
+        }
+
+        // 更新 tagIndex
+        const addedTags = newTags.filter((olink) => !oldTags.includes(olink));
+        const removedTags = oldTags.filter((olink) => !newTags.includes(olink));
+        for (const olink of addedTags) {
+          tagIndex.value[olink] = (tagIndex.value[olink] ?? new Set()).add(block.id);
+        }
+        for (const olink of removedTags) {
+          tagIndex.value[olink]?.delete(block.id);
         }
       }
     }
   });
 
   eventBus.on("blocksDestroy", () => {
-    backlinksIndex.value = {};
+    blockRefsIndex.value = {};
+    tagIndex.value = {};
   });
+
+  const getBacklinks = (blockId: BlockId, type: "blockRef" | "tag" | "both" = "both") => {
+    if (type === "blockRef") return blockRefsIndex.value[blockId] ?? new Set();
+    else if (type === "tag") return tagIndex.value[blockId] ?? new Set();
+    else {
+      const blockRefs = blockRefsIndex.value[blockId] ?? new Set();
+      const tags = tagIndex.value[blockId] ?? new Set();
+      return new Set([...blockRefs, ...tags]);
+    }
+  };
 
   /////////// Fulltext Search ///////////
 
@@ -250,11 +285,13 @@ const IndexContext = createContext(() => {
 
   const ctx = {
     fulltextIndex,
-    backlinksIndex,
+    blockRefsIndex,
+    tagIndex,
     search,
     getMirrors,
     getVirtuals,
     getOccurs,
+    getBacklinks,
   };
   globalThis.getIndexContext = () => ctx;
   return ctx;

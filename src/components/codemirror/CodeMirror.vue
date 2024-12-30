@@ -127,6 +127,7 @@ const mkExtensions = () => {
       languageCompartment.of([]),
       themeCompartment.of([]),
       keymapCompartment.of([]),
+      EditorState.readOnly.of(false),
       mkContentChangePlugin(
         (newSrc, oldSrc) => {
           if (props.onSrcChanged) props.onSrcChanged(newSrc, oldSrc);

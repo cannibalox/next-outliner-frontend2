@@ -30,10 +30,13 @@ export const TimeMachineContext = createContext(() => {
     weekly: 10 as number | null,
   };
   const autoBackupKeepNumberId = `timeMachine.autoBackupKeepNumber`;
-  const autoBackupKeepNumber = useLocalStorage(autoBackupKeepNumberId, autoBackupKeepNumberDefaultValue);
+  const autoBackupKeepNumber = useLocalStorage(
+    autoBackupKeepNumberId,
+    autoBackupKeepNumberDefaultValue,
+  );
 
   registerSettingItem({
-    id: autoBackupId + 'weekly',
+    id: autoBackupId + "weekly",
     groupKey: "timeMachine",
     label: {
       zh: "每几周自动生成存档",
@@ -41,15 +44,15 @@ export const TimeMachineContext = createContext(() => {
     defaultValue: autoBackupDefaultValue.weekly,
     value: computed({
       get: () => autoBackupInterval.value.weekly,
-      set: (value) => autoBackupInterval.value.weekly = value,
+      set: (value) => (autoBackupInterval.value.weekly = value),
     }),
     componentType: {
       type: "integerInput",
-    }
+    },
   });
 
   registerSettingItem({
-    id: autoBackupKeepNumberId + 'weekly',
+    id: autoBackupKeepNumberId + "weekly",
     groupKey: "timeMachine",
     label: {
       zh: "最多保留几份每周自动备份",
@@ -60,15 +63,15 @@ export const TimeMachineContext = createContext(() => {
     defaultValue: autoBackupKeepNumberDefaultValue.weekly,
     value: computed({
       get: () => autoBackupKeepNumber.value.hourly,
-      set: (value) => autoBackupKeepNumber.value.hourly = value,
+      set: (value) => (autoBackupKeepNumber.value.hourly = value),
     }),
     componentType: {
       type: "integerInput",
-    }
+    },
   });
 
   registerSettingItem({
-    id: autoBackupId + 'daily',
+    id: autoBackupId + "daily",
     groupKey: "timeMachine",
     label: {
       zh: "每几日自动生成存档",
@@ -76,15 +79,15 @@ export const TimeMachineContext = createContext(() => {
     defaultValue: autoBackupDefaultValue.daily,
     value: computed({
       get: () => autoBackupInterval.value.daily,
-      set: (value) => autoBackupInterval.value.daily = value,
+      set: (value) => (autoBackupInterval.value.daily = value),
     }),
     componentType: {
       type: "integerInput",
-    }
+    },
   });
 
   registerSettingItem({
-    id: autoBackupKeepNumberId + 'daily',
+    id: autoBackupKeepNumberId + "daily",
     groupKey: "timeMachine",
     label: {
       zh: "最多保留几份每日自动备份",
@@ -95,15 +98,15 @@ export const TimeMachineContext = createContext(() => {
     defaultValue: autoBackupKeepNumberDefaultValue.daily,
     value: computed({
       get: () => autoBackupKeepNumber.value.daily,
-      set: (value) => autoBackupKeepNumber.value.daily = value,
+      set: (value) => (autoBackupKeepNumber.value.daily = value),
     }),
     componentType: {
       type: "integerInput",
-    }
+    },
   });
 
   registerSettingItem({
-    id: autoBackupId + 'hourly',
+    id: autoBackupId + "hourly",
     groupKey: "timeMachine",
     label: {
       zh: "每几小时自动生成存档",
@@ -111,15 +114,15 @@ export const TimeMachineContext = createContext(() => {
     defaultValue: autoBackupDefaultValue.hourly,
     value: computed({
       get: () => autoBackupInterval.value.hourly,
-      set: (value) => autoBackupInterval.value.hourly = value,
+      set: (value) => (autoBackupInterval.value.hourly = value),
     }),
     componentType: {
       type: "integerInput",
-    }
+    },
   });
 
   registerSettingItem({
-    id: autoBackupKeepNumberId + 'hourly',
+    id: autoBackupKeepNumberId + "hourly",
     groupKey: "timeMachine",
     label: {
       zh: "最多保留几份每小时自动备份",
@@ -130,11 +133,11 @@ export const TimeMachineContext = createContext(() => {
     defaultValue: autoBackupKeepNumberDefaultValue.hourly,
     value: computed({
       get: () => autoBackupKeepNumber.value.hourly,
-      set: (value) => autoBackupKeepNumber.value.hourly = value,
+      set: (value) => (autoBackupKeepNumber.value.hourly = value),
     }),
     componentType: {
       type: "integerInput",
-    }
+    },
   });
 
   const inactiveThresholdDefaultValue = 30;
@@ -153,7 +156,7 @@ export const TimeMachineContext = createContext(() => {
     value: useWritableComputedRef(inactiveThreshold),
     componentType: {
       type: "integerInput",
-    }
+    },
   });
 
   return {

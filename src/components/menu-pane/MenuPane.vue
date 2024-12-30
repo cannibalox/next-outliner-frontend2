@@ -59,7 +59,7 @@ import { useRouterParams } from "@/utils/routerParams";
 import { KbInfoContext } from "@/context/kbinfo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { computed, ref } from "vue";
-import type { Block } from "@/context/blocks-provider/app-state-layer/blocksManager";
+import type { Block } from "@/context/blocks/view-layer/blocksManager";
 
 const { menuPaneOpen } = MenubarContext.useContext();
 const { favoriteBlocks, favoriteBlockIds } = FavoriteContext.useContext();

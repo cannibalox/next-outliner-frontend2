@@ -3,7 +3,7 @@ import { inject, ref, type App, type Ref } from "vue";
 import type {
   BlockTransaction,
   TransactionEnvInfo,
-} from "../context/blocks-provider/app-state-layer/blocksManager";
+} from "../context/blocks/view-layer/blocksManager";
 
 type Events = {
   afterBlocksTrCommit: [tr: BlockTransaction];

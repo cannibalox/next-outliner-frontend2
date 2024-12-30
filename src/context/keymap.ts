@@ -10,7 +10,7 @@ import { pmSchema } from "@/components/prosemirror/pmSchema";
 import { toggleMark } from "prosemirror-commands";
 import { useTaskQueue } from "@/plugins/taskQueue";
 import LastFocusContext from "./lastFocus";
-import BlocksContext from "./blocks-provider/blocks";
+import BlocksContext from "./blocks/blocks";
 import {
   cursorCharLeft,
   cursorCharRight,
@@ -246,12 +246,7 @@ const KeymapContext = createContext(() => {
               await tree.nextUpdate();
               await tree.focusBlock(block.id);
               // 将光标移至开头
-              const view = tree.getEditorView(block.id);
-              if (view instanceof PmEditorView) {
-                const sel = AllSelection.atStart(view.state.doc);
-                const tr = view.state.tr.setSelection(sel);
-                view.dispatch(tr);
-              }
+              tree.moveCursorToBegin(block.id);
             }
           }
         });
@@ -294,12 +289,7 @@ const KeymapContext = createContext(() => {
               await tree.nextUpdate();
               await tree.focusBlock(focusNext);
               // 删掉这个块后，将光标移至 focusNext 末尾？
-              const view = tree.getEditorView(focusNext);
-              if (view instanceof PmEditorView) {
-                const sel = AllSelection.atEnd(view.state.doc);
-                const tr = view.state.tr.setSelection(sel);
-                view.dispatch(tr);
-              }
+              tree.moveCursorToTheEnd(focusNext);
             }
             return;
           } else if (sel.from == 0 && blockAbove) {

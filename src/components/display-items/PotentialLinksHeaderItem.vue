@@ -9,7 +9,7 @@
 </template>
 
 <script setup lang="ts">
-import type { BlockId } from "@/common/types";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import { Link } from "lucide-vue-next";
 
 const props = defineProps<{

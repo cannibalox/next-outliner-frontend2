@@ -2,7 +2,7 @@ import { Plugin } from "prosemirror-state";
 import { Fragment, Node, Slice } from "prosemirror-model";
 import { EditorView } from "prosemirror-view";
 import { pmSchema } from "../pmSchema";
-import { fetchWebpageTitle } from "@/common/api/misc";
+// import { fetchWebpageTitle } from "@/common/api/misc";
 
 export const mkPasteLinkPlugin = () => {
   let editorView: EditorView | null = null;
@@ -20,36 +20,34 @@ export const mkPasteLinkPlugin = () => {
 
         // replace links' display text with their titles
         if (links.length > 0) {
-          setTimeout(async () => {
-            if (!(editorView instanceof EditorView)) return;
-            for (const link of links) {
-              const resp = await fetchWebpageTitle({ webpageUrl: link });
-              if (!resp.success) return;
-              const title = resp.data.title;
-              if (!title) return;
-              const mark = pmSchema.marks.link.create({ href: link });
-              const newNode = pmSchema.text(title, [mark]);
-
-              let linkNodeInfo: any = null;
-              editorView.state.doc.descendants((node, pos) => {
-                if (linkNodeInfo) return false;
-                const linkMark = pmSchema.marks.link.isInSet(node.marks);
-                if (linkMark && linkMark.attrs.href === link) {
-                  linkNodeInfo = { node, pos };
-                  return false;
-                }
-              });
-
-              if (linkNodeInfo) {
-                const tr = editorView.state.tr.replaceWith(
-                  linkNodeInfo.pos,
-                  linkNodeInfo.pos + linkNodeInfo.node.nodeSize,
-                  newNode,
-                );
-                editorView.dispatch(tr);
-              }
-            }
-          });
+          // setTimeout(async () => {
+          //   if (!(editorView instanceof EditorView)) return;
+          //   for (const link of links) {
+          //     const resp = await fetchWebpageTitle({ webpageUrl: link });
+          //     if (!resp.success) return;
+          //     const title = resp.data.title;
+          //     if (!title) return;
+          //     const mark = pmSchema.marks.link.create({ href: link });
+          //     const newNode = pmSchema.text(title, [mark]);
+          //     let linkNodeInfo: any = null;
+          //     editorView.state.doc.descendants((node, pos) => {
+          //       if (linkNodeInfo) return false;
+          //       const linkMark = pmSchema.marks.link.isInSet(node.marks);
+          //       if (linkMark && linkMark.attrs.href === link) {
+          //         linkNodeInfo = { node, pos };
+          //         return false;
+          //       }
+          //     });
+          //     if (linkNodeInfo) {
+          //       const tr = editorView.state.tr.replaceWith(
+          //         linkNodeInfo.pos,
+          //         linkNodeInfo.pos + linkNodeInfo.node.nodeSize,
+          //         newNode,
+          //       );
+          //       editorView.dispatch(tr);
+          //     }
+          //   }
+          // });
         }
 
         return new Slice(linkified, slice.openStart, slice.openEnd);

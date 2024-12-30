@@ -1,9 +1,9 @@
 import { Plugin } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
 import type { Slice } from "prosemirror-model";
-import { joinPathSegments } from "@/common/path";
 import { nanoid } from "nanoid";
-import type { BlockId, ImageContent } from "@/common/types";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
+import type { ImageContent } from "@/common/type-and-schemas/block/block-content";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import { useTaskQueue } from "@/plugins/taskQueue";
 
