@@ -19,11 +19,11 @@
     :block-tree="blockTree"
     :readonly="readonly"
   ></CodeContent>
-  <!-- <ImageContent
+  <ImageContent
     v-else-if="block.content[0] === BLOCK_CONTENT_TYPES.IMAGE"
     :block="block"
     :block-tree="blockTree"
-  ></ImageContent> -->
+  ></ImageContent>
 </template>
 
 <script setup lang="ts">

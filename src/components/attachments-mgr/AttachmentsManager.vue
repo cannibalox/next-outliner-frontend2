@@ -17,12 +17,10 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { fsEnsureAttachmentsDir } from "@/common/api-call/fs";
 import AttachmentsManagerContext from "@/context/attachmentsManager";
-import { fsEnsureAttachmentsDir, fsLs, fsUpload } from "@/common/api/fs";
-import { useRoute } from "vue-router";
-import { Button } from "../ui/button";
+import { onMounted, ref } from "vue";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import FileTree from "./FileTree.vue";
 import PreviewPane from "./PreviewPane.vue";
 

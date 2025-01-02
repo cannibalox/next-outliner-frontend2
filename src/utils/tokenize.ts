@@ -4,6 +4,8 @@ const SPACE_OR_PUNCTUATION =
 const CAMEL_CASE_SPLIT_REG = /(?<!(?:^|[A-Z]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])/;
 const CJK = /[\u4E00-\u9FA5]/;
 
+// 将字符串按 n-gram 分割
+// 例如 ngramSplit("hello", 2) 结果为 ["he", "el", "ll", "lo"]
 export const ngramSplit = (str: string, n: number) => {
   const result = [];
   for (let i = 0; i < str.length - n + 1; i++) {
@@ -12,59 +14,37 @@ export const ngramSplit = (str: string, n: number) => {
   return result;
 };
 
-export function tokenize(str: string, ngrams: number[] = [1, 2, 3]) {
-  const nonCjkTokens: string[] = [];
-  const cjkTokens: string[] = [];
-
-  let currentToken = "";
-  let isCjk = false;
-
-  const addToken = () => {
-    if (currentToken) {
-      if (isCjk) cjkTokens.push(currentToken);
-      else nonCjkTokens.push(currentToken);
-      currentToken = "";
-    }
-  };
-
-  for (const char of str) {
-    if (SPACE_OR_PUNCTUATION.test(char)) {
-      addToken();
-    } else {
-      const charIsCjk = CJK.test(char);
-      if (currentToken && charIsCjk !== isCjk) addToken();
-      currentToken += char;
-      isCjk = charIsCjk;
-    }
+// 提取单词的所有前缀
+export const extractAllPrefixies = (word: string): string[] => {
+  const prefixes: string[] = [];
+  for (let i = 1; i <= word.length; i++) {
+    prefixes.push(word.slice(0, i));
   }
-  addToken();
+  return prefixes;
+};
 
-  return { nonCjkTokens, cjkTokens };
-}
-
-// 简单的分词方法
-// 如果 cjkNGram == 2，则 tokenize("大家好，我是信息！Hello, world! 这是中国大陆, This is china 大陆很美 mainland")
-// 结果为 ["大家", "家好", "我是", "是信", "信息", "hello", "world", "这是", "是中", "中国", "国大", "大陆", "this", "is", "china", "大陆", "陆很", "很美", "mainland"]
-export const cjkNgramTokenize = (
+// 将字符串按 CJK 和非 CJK 分割
+// 例如："大家好！这里 here 是 china mainland 中国大陆"
+// 结果为：["大家好", "这里", "here", "是", "china", "mainland", "中国大陆"]
+export const splitByCjk = (
   str: string,
-  caseSensitive: boolean = false,
-  cjkNGram: number = 2,
+  onCjkToken: (token: string) => void,
+  onNonCjkToken: (token: string) => void,
+  opts: { caseSensitive?: boolean } = {},
 ) => {
   let prevCjk = false;
   const temp = [];
-  const tokens: string[] = [];
+
+  const processToken = (token: string, isCjk: boolean) => {
+    if (!opts.caseSensitive) token = token.toLowerCase();
+    if (isCjk) onCjkToken(token);
+    else onNonCjkToken(token);
+  };
+
   for (const c of str) {
     if (SPACE_OR_PUNCTUATION.test(c)) {
       if (temp.length > 0) {
-        let token = temp.join("");
-        if (!caseSensitive) {
-          token = token.toLowerCase();
-        }
-        if (prevCjk) {
-          tokens.push(...ngramSplit(token, cjkNGram));
-        } else {
-          tokens.push(token);
-        }
+        processToken(temp.join(""), prevCjk);
         temp.length = 0;
       }
     } else if (temp.length == 0) {
@@ -73,15 +53,7 @@ export const cjkNgramTokenize = (
     } else {
       const cjk = CJK.test(c);
       if (cjk != prevCjk) {
-        let token = temp.join("");
-        if (!caseSensitive) {
-          token = token.toLowerCase();
-        }
-        if (prevCjk) {
-          tokens.push(...ngramSplit(token, cjkNGram));
-        } else {
-          tokens.push(token);
-        }
+        processToken(temp.join(""), prevCjk);
         temp.length = 0;
         temp.push(c);
         prevCjk = cjk;
@@ -90,16 +62,48 @@ export const cjkNgramTokenize = (
       }
     }
   }
+
   if (temp.length > 0) {
-    let token = temp.join("");
-    if (!caseSensitive) {
-      token = token.toLowerCase();
-    }
-    if (prevCjk) {
-      tokens.push(...ngramSplit(token, cjkNGram));
-    } else {
+    processToken(temp.join(""), prevCjk);
+  }
+};
+
+export const hybridTokenize = (
+  str: string,
+  caseSensitive: boolean = false,
+  cjkNGram: number = 2,
+  includePrefix: boolean = true,
+) => {
+  const tokens: string[] = [];
+
+  splitByCjk(
+    str,
+    (token) => tokens.push(...ngramSplit(token, cjkNGram)),
+    (token) => {
       tokens.push(token);
+      if (includePrefix) {
+        tokens.push(...extractAllPrefixies(token).slice(0, -1));
+      }
+    },
+    { caseSensitive },
+  );
+
+  return tokens;
+};
+
+// 计算 query 和 target 的匹配分数
+// 计算规则：l / len(target)
+// 其中 len(target) 为 target 的字符数
+// l 为 query 中与 target 匹配的字符数
+// 计算匹配字符数规则如下，首先将 query 按 cjk 非 cjk 以及分隔符分为若干 token
+// 然后如果一个 token 在 target 中出现，则匹配字符数加上该 token 的长度
+export const calcMatchScore = (queryTokens: string[], target: string) => {
+  let matchedLength = 0;
+  const targetLower = target.toLowerCase();
+  for (const token of queryTokens) {
+    if (targetLower.includes(token)) {
+      matchedLength += token.length;
     }
   }
-  return tokens;
+  return matchedLength / target.length;
 };

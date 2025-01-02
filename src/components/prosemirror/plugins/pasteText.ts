@@ -6,6 +6,7 @@ import parseHtml from "../domParser";
 import { DOMParser, Node } from "prosemirror-model";
 import { pmSchema } from "../pmSchema";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
+import { hrefToTitle } from "../pasteLink";
 
 export const mkPasteTextPlugin = () => {
   const { lastFocusedBlockId, lastFocusedBlockTree } = globalThis.getLastFocusContext()!;
@@ -40,10 +41,7 @@ export const mkPasteTextPlugin = () => {
               const insertedDoc = Node.fromJSON(pmSchema, block.content[1]);
               const tr = view.state.tr.replaceSelectionWith(insertedDoc);
               view.dispatch(tr);
-              const newSelPos = view.state.selection.anchor + insertedDoc.content.size;
-              const newSel = TextSelection.create(view.state.doc, newSelPos);
-              const tr2 = view.state.tr.setSelection(newSel);
-              view.dispatch(tr2);
+              hrefToTitle(view);
               return true;
             }
           }
@@ -105,6 +103,7 @@ export const mkPasteTextPlugin = () => {
               }
             }
           });
+          hrefToTitle(view);
 
           return true;
         } else {
@@ -117,8 +116,9 @@ export const mkPasteTextPlugin = () => {
           if (lines.length === 0) return false;
 
           // 如果内容较多,显示确认对话框
-          if (lines.length > 10) {
-            showPasteDialog(text);
+          if (false) {
+            // 不显示对话框
+            // showPasteDialog(text);
           } else {
             // 少量内容直接粘贴
             taskQueue.addTask(async () => {
@@ -129,10 +129,7 @@ export const mkPasteTextPlugin = () => {
                 const insertedDoc = plainTextToPmNode(lines[0]);
                 const tr = view.state.tr.replaceSelectionWith(insertedDoc);
                 view.dispatch(tr);
-                const newSelPos = view.state.selection.anchor + insertedDoc.content.size;
-                const newSel = TextSelection.create(view.state.doc, newSelPos);
-                const tr2 = view.state.tr.setSelection(newSel);
-                view.dispatch(tr2);
+                hrefToTitle(view);
                 return;
               }
 
@@ -171,6 +168,7 @@ export const mkPasteTextPlugin = () => {
                   }
                 }
               }
+              hrefToTitle(view);
             });
           }
           return true;

@@ -67,9 +67,8 @@ import {
   BreadcrumbList,
   BreadcrumbSeparator,
 } from "../ui/breadcrumb";
-import { joinPathSegments } from "@/common/path";
+import { joinPathSegments } from "@/common/helper-functions/path";
 import AttachmentsManagerContext from "@/context/attachmentsManager";
-import { getPathSegments } from "@/common/path";
 import FileTreeItem from "./FileTreeItem.vue";
 import { timeout } from "@/utils/time";
 

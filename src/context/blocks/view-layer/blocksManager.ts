@@ -157,6 +157,28 @@ export type ForDescendantsOptions = {
     | "keep-self-and-descendants";
 };
 
+export type ForDescendantsOptionsWithMissingBlock = {
+  onEachBlock: (block: Block, level: number) => void | Promise<void>;
+  onMissingBlock?: (blockId: BlockId, parendId: BlockId, level: number) => void | Promise<void>;
+  rootBlockId: BlockId;
+  afterLeavingChildrens?: (block: Block, level: number) => void | Promise<void>;
+  rootBlockLevel?: number;
+  nonFoldOnly?: boolean;
+  includeSelf?: boolean;
+  // undefined -- 不改变
+  // "ignore-descendants" -- 忽略子块
+  // "ignore-self-and-descendants" -- 忽略自己及子块
+  // "keep-self-and-descendants" -- 不管怎么样都不忽略，比如就算块是 fold 的，也会递归进入后代
+  ignore?: (
+    block: Block,
+    level: number,
+  ) =>
+    | undefined
+    | "ignore-descendants"
+    | "ignore-self-and-descendants"
+    | "keep-self-and-descendants";
+};
+
 type PendingTask<RET> = {
   promise: Promise<RET>;
   resolve: (value: RET) => void;
@@ -217,6 +239,12 @@ export const cloneBlock = (block: Block | null): Block | null => {
 export const createBlocksManager = (yjsLayer: SyncLayer) => {
   const eventBus = useEventBus();
   const blocks = new Map<BlockId, ShallowRef<Block | null>>();
+  // 记录 missing block 的 parentId
+  // TODO: 目前这个记录只会新增，不会删除。并且只在 forDescendantsWithMissingBlock 时增加
+  // 也就是说，如果没有被 forDescendantsWithMissingBlock 访问过，则不会被记录
+  // 但是这一纪录目前的作用主要是在用户主动删除一个 missing block 时获得其 parentId
+  // 因此应该是没有问题的
+  const missingBlockParents = new Map<BlockId, BlockId>();
 
   // 记录最新收到的块信息和块数据
   const latestBlockInfos = new Map<BlockId, BlockInfo>();
@@ -270,6 +298,56 @@ export const createBlocksManager = (yjsLayer: SyncLayer) => {
   const getBlockLevel = (blockId: BlockId) => {
     const path = getBlockPath(blockId);
     return path.length - 1;
+  };
+
+  const forDescendantsWithMissingBlock = ({
+    onEachBlock,
+    onMissingBlock,
+    rootBlockId,
+    afterLeavingChildrens,
+    rootBlockLevel,
+    nonFoldOnly,
+    includeSelf,
+    ignore,
+  }: ForDescendantsOptionsWithMissingBlock) => {
+    nonFoldOnly ??= true;
+    includeSelf ??= true;
+    if (rootBlockLevel == null) {
+      const path = getBlockPath(rootBlockId);
+      if (!path) {
+        console.error("[blocksManager] cannot get path of ", rootBlockId);
+        return;
+      }
+      rootBlockLevel = path.length - 1;
+    }
+
+    const dfs = (block: Block, currLevel: number) => {
+      const ignoreResult = ignore?.(block, currLevel);
+      if (ignoreResult === "ignore-self-and-descendants") return;
+      if (includeSelf || block.id != rootBlockId) onEachBlock(block, currLevel);
+      if (ignoreResult === "ignore-descendants") return;
+      if (ignoreResult !== "keep-self-and-descendants" && nonFoldOnly && block.fold) return;
+      if (typeof block.childrenIds == "string") return;
+      for (let i = 0; i < block.childrenIds.length; i++) {
+        const childId = block.childrenIds[i];
+        const childRef = block.childrenRefs[i];
+        if (childRef.value) {
+          const rawBlock = toRaw(childRef.value);
+          dfs(rawBlock, currLevel + 1);
+        } else {
+          missingBlockParents.set(childId, block.id);
+          onMissingBlock?.(childId, block.id, currLevel + 1);
+        }
+      }
+      if (afterLeavingChildrens) afterLeavingChildrens(block, currLevel);
+    };
+
+    const rootBlock = getBlock(rootBlockId);
+    if (!rootBlock) {
+      console.error("[blocksManager] Cannot find root block", rootBlockId);
+      return;
+    }
+    dfs(rootBlock, rootBlockLevel);
   };
 
   const forDescendants = ({
@@ -475,11 +553,16 @@ export const createBlocksManager = (yjsLayer: SyncLayer) => {
     const tr = createBlockTransaction(origin);
     if (origin.type == "ui") return; // 不处理本地事务，防止无限循环
 
-    console.log("[blocksManager] in app, blockDataMapChange", dayjs().valueOf(), changes);
+    console.debug("[blocksManager] in app, blockDataMapChange", dayjs().valueOf(), changes);
 
     for (const change of changes) {
       // 添加或更新一个块的块数据
       if (change.op == "upsert") {
+        if (change.value == null) {
+          console.log("[blocksManager] invalid change (no value), ignored!");
+          continue;
+        }
+
         // 记录最新收到的块数据
         latestBlockDatas.set(change.key, change.value);
 
@@ -525,7 +608,7 @@ export const createBlocksManager = (yjsLayer: SyncLayer) => {
     const tr = createBlockTransaction(origin);
     if (origin.type === "ui") return; // 不处理本地事务，防止无限循环
 
-    console.log("[blocksManager] in app, blockInfoMapChange", dayjs().valueOf(), changes);
+    console.debug("[blocksManager] in app, blockInfoMapChange", dayjs().valueOf(), changes);
 
     const promises: Promise<void>[] = [];
 
@@ -543,10 +626,11 @@ export const createBlocksManager = (yjsLayer: SyncLayer) => {
 
       // 一个块被添加或更新了
       else if (change.op == "upsert") {
-        if (!change.value) {
-          console.error("[blocksManager] upsert block info with empty value", change.key);
+        if (change.value == null) {
+          console.log("[blocksManager] invalid change (no value), ignored!");
           continue;
         }
+
         const [status, parentId, childrenIds, docId, src] = change.value;
         const { type, fold } = extractBlockStatus(status);
         latestBlockInfos.set(change.key, change.value);
@@ -604,7 +688,7 @@ export const createBlocksManager = (yjsLayer: SyncLayer) => {
                 return;
               }
 
-              console.log("[blocksManager] getBlockDataOrWait", src, srcDocId);
+              console.debug("[blocksManager] getBlockDataOrWait", src, srcDocId);
               const srcBlockData = await getBlockDataOrWait(src, srcDocId);
               if (!srcBlockData) {
                 console.error("[blocksManager] Cannot find block data for block", src);
@@ -636,9 +720,9 @@ export const createBlocksManager = (yjsLayer: SyncLayer) => {
 
     // 等待所有异步任务完成后，提交块事务
     Promise.all(promises).then(() => {
-      console.log("[blocksManager] in app, all resolved", dayjs().valueOf());
+      console.debug("[blocksManager] in app, all resolved", dayjs().valueOf());
       tr.commit();
-      console.log("[blocksManager] in app, transaction commit", dayjs().valueOf());
+      console.debug("[blocksManager] in app, transaction commit", dayjs().valueOf());
     });
   });
 
@@ -723,6 +807,7 @@ export const createBlocksManager = (yjsLayer: SyncLayer) => {
     latestBlockInfos,
     latestBlockDatas,
     pendingTasks,
+    missingBlockParents,
     getBlock,
     getBlockRef,
     getRootBlockRef,
@@ -730,6 +815,7 @@ export const createBlocksManager = (yjsLayer: SyncLayer) => {
     getBlockLevel,
     ensureTree,
     forDescendants,
+    forDescendantsWithMissingBlock,
     createBlockTransaction,
     addBlock,
     updateBlock,

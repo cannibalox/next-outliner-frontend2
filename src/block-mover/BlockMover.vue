@@ -5,7 +5,6 @@
       trap-focus
       tabindex="-1"
       @keydown="handleKeydown"
-      ref="containerEl"
     >
       <div class="relative px-1">
         <Search class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -14,7 +13,7 @@
           @compositionend="updateSuggestions"
           v-model="query"
           :placeholder="$t('kbView.blockMover.inputPlaceholder')"
-          class="h-[32px] pl-8 rounded-sm focus-visible:outline-none"
+          class="h-[32px] pl-8 rounded-sm focus-visible:outline-none focus-visible:ring-transparent"
         />
       </div>
       <!-- XXX scroll area 的高度是 250px，因为 max-h 是 300px，减去 input 的高度和中间的 padding 就是 250px，并不优雅 -->
@@ -51,7 +50,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import BlockMoverContext from "@/context/blockMover";
 import { calcPopoverPos } from "@/utils/popover";
-import { cjkNgramTokenize } from "@/utils/tokenize";
+import { hybridTokenize } from "@/utils/tokenize";
 import { Search } from "lucide-vue-next";
 import { computed, nextTick, watch } from "vue";
 
@@ -63,14 +62,13 @@ const {
   suggestions,
   suppressMouseOver,
   updateSuggestions,
-  contentEl,
   contentClass,
   handleKeydown,
 } = BlockMoverContext.useContext();
 
 const queryTerms = computed(() => {
   if (query.value.length == 0) return [];
-  return cjkNgramTokenize(query.value, false, 1) ?? [];
+  return hybridTokenize(query.value, false, 1, false) ?? [];
 });
 
 watch(showPos, async () => {

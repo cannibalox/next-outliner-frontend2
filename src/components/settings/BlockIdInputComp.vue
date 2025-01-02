@@ -34,7 +34,7 @@ import IndexContext from "@/context";
 import BlocksContext from "@/context/blocks/blocks";
 import type { Block } from "@/context/blocks/view-layer/blocksManager";
 import type { SettingItem } from "@/context/settings";
-import { cjkNgramTokenize } from "@/utils/tokenize";
+import { hybridTokenize } from "@/utils/tokenize";
 import { useDebounceFn } from "@vueuse/core";
 import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
@@ -61,7 +61,7 @@ const blockSearchResult = ref<Block[]>([]);
 const queryTerms = computed(() => {
   const inputText = props.item.value.value;
   if (inputText.length == 0) return [];
-  return cjkNgramTokenize(inputText, false, 1) ?? [];
+  return hybridTokenize(inputText, false, 1) ?? [];
 });
 const focusIndex = ref(-1); // -1: 没有选中项
 const allowedBlockTypes = ref<boolean[]>([true, false, false, false, false]); // 默认只允许文本块
@@ -78,7 +78,7 @@ const updateBlockSearchResult = () => {
     return;
   }
   blockSearchResult.value = search(inputText)
-    .map((r) => blocksManager.getBlock(r.id))
+    .map((id) => blocksManager.getBlock(id as string))
     .filter((b): b is Block => b !== null)
     .filter((b) => b.type == "normalBlock" && allowedBlockTypes.value[b.content[0]]);
   focusIndex.value = blockSearchResult.value.length > 0 ? 0 : -1;

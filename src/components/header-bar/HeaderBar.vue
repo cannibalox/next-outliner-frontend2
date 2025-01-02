@@ -33,13 +33,7 @@
         <TooltipTrigger>
           <Dot
             class="size-8"
-            :class="
-              allSyncStatus === 'synced'
-                ? 'stroke-green-500'
-                : allSyncStatus === 'syncing'
-                  ? 'stroke-blue-500'
-                  : 'stroke-red-500'
-            "
+            :class="allSyncStatus === 'synced' ? 'stroke-green-500' : 'stroke-red-500'"
           />
         </TooltipTrigger>
         <TooltipContent>
@@ -104,7 +98,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-// import AttachmentsManagerContext from "@/context/attachmentsManager";
+import AttachmentsManagerContext from "@/context/attachmentsManager";
 import BlocksContext from "@/context/blocks/blocks";
 import FocusModeContext from "@/context/focusMode";
 import FusionCommandContext from "@/context/fusionCommand";
@@ -145,7 +139,7 @@ import HeaderBarItem from "./HeaderBarItem.vue";
 const { sidePaneOpen, sidePaneDir, sidePaneWidth, enableSidePaneAnimation } =
   SidebarContext.useContext();
 const { open: openSettingsPanel } = SettingsPanelContext.useContext();
-// const { open: openAttachmentsManager } = AttachmentsManagerContext.useContext();
+const { open: openAttachmentsManager } = AttachmentsManagerContext.useContext();
 // const { menuPaneOpen } = MenubarContext.useContext();
 const { theme, toggleTheme } = ThemeContext.useContext();
 const { focusModeEnabled } = FocusModeContext.useContext();
@@ -266,11 +260,11 @@ const moreOptions: HeaderBarItemType[] = [
         : t("kbView.headerBar.enterFocusMode"),
     onClick: () => (focusModeEnabled.value = !focusModeEnabled.value),
   },
-  // {
-  //   icon: FolderClosed,
-  //   label: () => t("kbView.headerBar.attachmentsManager"),
-  //   onClick: () => (openAttachmentsManager.value = true),
-  // },
+  {
+    icon: FolderClosed,
+    label: () => t("kbView.headerBar.attachmentsManager"),
+    onClick: () => (openAttachmentsManager.value = true),
+  },
   {
     icon: History,
     label: () => t("kbView.headerBar.timeMachine"),

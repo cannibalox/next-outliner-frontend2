@@ -1,17 +1,16 @@
+import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import type { BlockContent } from "@/common/type-and-schemas/block/block-content";
 import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import { nanoid } from "nanoid";
+import { type BlockTree } from "../../blockTree";
 import {
   cloneBlock,
-  type AddBlockParams,
   type Block,
   type BlocksManager,
   type BlockTransaction,
   type MirrorBlock,
   type VirtualBlock,
 } from "./blocksManager";
-import { BlockTreeContext, type BlockTree } from "../../blockTree";
-import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 
 export type BlockPos = BlockPosSiblingOffset | NonNormalizedBlockPosParentChild;
 
@@ -643,7 +642,28 @@ export const createBlocksEditor = (blocksManager: BlocksManager) => {
     commit ??= true;
 
     const block = blocksManager.getBlock(blockId);
-    if (!block) return;
+
+    // 如果无法获得 block，说明这是一个 missing block
+    // missing block 需要特殊处理
+    if (!block) {
+      const tr = blocksManager.createBlockTransaction({ type: "ui" });
+      const parentId = blocksManager.missingBlockParents.get(blockId);
+      if (!parentId) return;
+      const parentBlock = blocksManager.getBlock(parentId);
+      if (!parentBlock) return;
+      const index = parentBlock.childrenIds.indexOf(blockId);
+      if (index < 0) return;
+      const parentOccurs = getOccurs(parentBlock.acturalSrc, true);
+      for (const occur of parentOccurs) {
+        const occurBlock = blocksManager.getBlock(occur);
+        if (!occurBlock) continue;
+        occurBlock.childrenIds.splice(index, 1);
+        tr.updateBlock(occurBlock);
+      }
+      tr.commit();
+      return;
+    }
+
     const blocksToDelete: Block[] = [];
 
     const _deleteBlock = (block: Block) => {

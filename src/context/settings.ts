@@ -1,5 +1,5 @@
 import { createContext } from "@/utils/createContext";
-import { readonly, ref, shallowRef, type WritableComputedRef } from "vue";
+import { readonly, ref, shallowRef, type Component, type WritableComputedRef } from "vue";
 import type { z } from "zod";
 
 export type SettingComponentType =
@@ -16,7 +16,8 @@ export type SettingComponentType =
   | { type: "slider"; min?: number; max?: number }
   | { type: "keybindingInput" }
   | { type: "fontSelector" }
-  | { type: "blockIdInput" };
+  | { type: "blockIdInput" }
+  | { type: "customComponent"; component: Component };
 
 export type SettingGroupItem = {
   key: string;
@@ -33,7 +34,7 @@ export type SettingItem<
   defaultValue: T;
   desc?: Record<string, string>;
   value: WritableComputedRef<T>;
-  componentType: SettingComponentType & { type: C };
+  // componentType: SettingComponentType & { type: C };
 };
 
 const SettingsContext = createContext(() => {

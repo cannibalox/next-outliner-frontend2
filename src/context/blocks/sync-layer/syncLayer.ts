@@ -80,7 +80,7 @@ export const createSyncLayer = () => {
       }
     }
     // 将其他消息转发到事件总线
-    console.log("[syncLayer] Received message from syncWorker:", msg);
+    console.debug("[syncLayer] Received message from syncWorker:", msg);
     eventBus.emit(msg.type, msg);
   });
 
@@ -105,6 +105,14 @@ export const createSyncLayer = () => {
 
   const unloadDataDoc = (docId: number) => {
     postWorkerMsg({ type: "unloadDataDoc", docId });
+  };
+
+  const _printBlockInfo = (blockId: BlockId) => {
+    postWorkerMsg({ type: "_printBlockInfo", blockId });
+  };
+
+  const _printBlockData = (docId: number, blockId: BlockId) => {
+    postWorkerMsg({ type: "_printBlockData", docId, blockId });
   };
 
   // 创建一个同步层事务
@@ -141,6 +149,8 @@ export const createSyncLayer = () => {
     createSyncLayerTransaction,
     loadDataDoc,
     unloadDataDoc,
+    _printBlockInfo,
+    _printBlockData,
   };
   return ret;
 };

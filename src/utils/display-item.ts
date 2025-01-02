@@ -23,6 +23,7 @@ export type DisplayItem = { itemId: string } & (
   | { type: "potential-links-header"; blockId: BlockId; potentialLinks: BlockId[] }
   | { type: "potential-links-block"; block: Block; refBlockId: BlockId }
   | { type: "potential-links-descendant"; block: Block; level: number }
+  | { type: "missing-block"; blockId: BlockId; parentId: BlockId; level: number }
 );
 
 export type DisplayBlockItem =
@@ -66,7 +67,7 @@ export const generateDisplayItems = (ctx: DisplayGeneratorContext) => {
   const resultCollector: DisplayItem[] = [];
 
   for (const rootBlockId of rootBlockIds) {
-    blocksManager.forDescendants({
+    blocksManager.forDescendantsWithMissingBlock({
       rootBlockId,
       rootBlockLevel,
       nonFoldOnly: true,
@@ -76,6 +77,15 @@ export const generateDisplayItems = (ctx: DisplayGeneratorContext) => {
           type: "basic-block",
           itemId: `block-${block.id}`,
           block,
+          level,
+        });
+      },
+      onMissingBlock: (blockId, parentId, level) => {
+        resultCollector.push({
+          type: "missing-block",
+          itemId: `missing-block-${blockId}-${level}`,
+          blockId,
+          parentId,
           level,
         });
       },
@@ -175,7 +185,7 @@ const addPotentialLinksItems = (
 
   if (rootBlock && rootBlock.content[0] === BLOCK_CONTENT_TYPES.TEXT) {
     const potentialLinks = search(rootBlock.ctext)
-      .map((l) => blocksManager.getBlock(l.id))
+      .map((id) => blocksManager.getBlock(id as string))
       .filter((l): l is Block => l != null)
       .filter((b) => !backlinks.has(b.id) && b.id !== rootBlockId)
       .filter((b) => b.content[0] === BLOCK_CONTENT_TYPES.TEXT);

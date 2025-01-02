@@ -29,7 +29,6 @@ const BlockMoverContext = createContext(() => {
   const suppressMouseOver = ref(false);
   const { toast } = useToast();
   const { t } = useI18n();
-  const contentEl = ref<HTMLElement | null>(null);
   const contentClass = "block-mover-content";
   let leaveRef = false;
   let leaveMirror = false;
@@ -42,7 +41,7 @@ const BlockMoverContext = createContext(() => {
     const result = search(query.value);
     suggestions.value = result
       .slice(0, 100)
-      .map((item) => blocksManager.getBlockRef(item.id))
+      .map((id) => blocksManager.getBlockRef(id as string))
       // 只显示文本块
       .filter((blockRef) => {
         const block = blockRef.value;
@@ -122,7 +121,7 @@ const BlockMoverContext = createContext(() => {
 
   const ensureFocusedVisible = () => {
     setTimeout(() => {
-      const el = contentEl.value?.querySelector(".focus");
+      const el = document.body.querySelector(`.${contentClass} .focus`);
       if (!(el instanceof HTMLElement)) return;
       el.scrollIntoView({ block: "nearest" });
     });
@@ -130,7 +129,8 @@ const BlockMoverContext = createContext(() => {
 
   const handleKeydown = generateKeydownHandlerSimple({
     Escape: {
-      run: () => {
+      run: (e) => {
+        if (e.isComposing || e.keyCode === 229) return false;
         showPos.value = null;
         cb(null);
         return true;
@@ -139,7 +139,8 @@ const BlockMoverContext = createContext(() => {
       stopPropagation: true,
     },
     Enter: {
-      run: () => {
+      run: (e) => {
+        if (e.isComposing || e.keyCode === 229) return false;
         const focusBlockId = suggestions.value[focusItemIndex.value]?.value?.id;
         if (focusBlockId != null) {
           cb(focusBlockId);
@@ -150,7 +151,8 @@ const BlockMoverContext = createContext(() => {
       stopPropagation: true,
     },
     Backspace: {
-      run: () => {
+      run: (e) => {
+        if (e.isComposing || e.keyCode === 229) return false;
         if (query.value.length == 0) {
           cb(null);
           return true;
@@ -161,7 +163,8 @@ const BlockMoverContext = createContext(() => {
       stopPropagation: true,
     },
     ArrowUp: {
-      run: () => {
+      run: (e) => {
+        if (e.isComposing || e.keyCode === 229) return false;
         return withScrollSuppressed(() => {
           if (focusItemIndex.value > 0) {
             focusItemIndex.value--;
@@ -176,7 +179,8 @@ const BlockMoverContext = createContext(() => {
       stopPropagation: true,
     },
     ArrowDown: {
-      run: () => {
+      run: (e) => {
+        if (e.isComposing || e.keyCode === 229) return false;
         return withScrollSuppressed(() => {
           if (focusItemIndex.value < suggestions.value.length - 1) {
             focusItemIndex.value++;
@@ -191,7 +195,8 @@ const BlockMoverContext = createContext(() => {
       stopPropagation: true,
     },
     Home: {
-      run: () => {
+      run: (e) => {
+        if (e.isComposing || e.keyCode === 229) return false;
         return withScrollSuppressed(() => {
           focusItemIndex.value = 0;
           ensureFocusedVisible();
@@ -202,7 +207,8 @@ const BlockMoverContext = createContext(() => {
       stopPropagation: true,
     },
     End: {
-      run: () => {
+      run: (e) => {
+        if (e.isComposing || e.keyCode === 229) return false;
         return withScrollSuppressed(() => {
           focusItemIndex.value = suggestions.value.length - 1;
           ensureFocusedVisible();
@@ -226,7 +232,6 @@ const BlockMoverContext = createContext(() => {
     withScrollSuppressed,
     openBlockMover,
     handleKeydown,
-    contentEl,
     contentClass,
   };
 

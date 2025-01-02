@@ -97,7 +97,11 @@ const taskQueue = useTaskQueue();
 const { blockEditor } = BlocksContext.useContext();
 const { lastFocusedBlockId, lastFocusedBlockTreeId } = LastFocusContext.useContext();
 const { mainRootBlockId } = MainTreeContext.useContext();
-const { selectedBlockIds, draggingDropPos } = BlockSelectDragContext.useContext();
+const {
+  selectedBlockIds,
+  draggingDropPos,
+  isDragSelecting: isDragging,
+} = BlockSelectDragContext.useContext();
 const { getMirrors } = IndexContext.useContext();
 
 // computed
@@ -116,7 +120,10 @@ const handleFocusIn = () => {
   lastFocusedBlockId.value = blockId;
   lastFocusedBlockTreeId.value = blockTreeId;
   // 一个块获得焦点时，清除块选择
-  selectedBlockIds.value = { topLevelOnly: [], allNonFolded: [] };
+  // 但是当拖拽时，不清除块选择
+  if (!isDragging.value) {
+    selectedBlockIds.value = { topLevelOnly: [], allNonFolded: [] };
+  }
 };
 
 const handleClickFoldButton = () => {

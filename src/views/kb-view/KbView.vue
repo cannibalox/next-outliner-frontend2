@@ -12,35 +12,39 @@
                       <CreateNewTreeDialogContext.Provider>
                         <IndexContext.Provider>
                           <BacklinksContext.Provider>
-                            <SidebarContext.Provider>
-                              <LastFocusContext.Provider>
-                                <KeymapContext.Provider>
-                                  <RefSuggestionsContext.Provider>
-                                    <BlockMoverContext.Provider>
-                                      <MainTreeContext.Provider>
-                                        <BlockSelectDragContext.Provider>
-                                          <SettingsPanelContext.Provider>
-                                            <FavoriteContext.Provider>
-                                              <FieldsManagerContext.Provider>
-                                                <FloatingEditorContext.Provider>
-                                                  <FieldValueInspectorContext.Provider>
-                                                    <DailyNoteContext.Provider>
-                                                      <FusionCommandContext.Provider>
-                                                        <KbViewContent />
-                                                      </FusionCommandContext.Provider>
-                                                    </DailyNoteContext.Provider>
-                                                  </FieldValueInspectorContext.Provider>
-                                                </FloatingEditorContext.Provider>
-                                              </FieldsManagerContext.Provider>
-                                            </FavoriteContext.Provider>
-                                          </SettingsPanelContext.Provider>
-                                        </BlockSelectDragContext.Provider>
-                                      </MainTreeContext.Provider>
-                                    </BlockMoverContext.Provider>
-                                  </RefSuggestionsContext.Provider>
-                                </KeymapContext.Provider>
-                              </LastFocusContext.Provider>
-                            </SidebarContext.Provider>
+                            <AttachmentsManagerContext.Provider>
+                              <ImagesContext.Provider>
+                                <SidebarContext.Provider>
+                                  <LastFocusContext.Provider>
+                                    <KeymapContext.Provider>
+                                      <RefSuggestionsContext.Provider>
+                                        <BlockMoverContext.Provider>
+                                          <MainTreeContext.Provider>
+                                            <BlockSelectDragContext.Provider>
+                                              <SettingsPanelContext.Provider>
+                                                <FavoriteContext.Provider>
+                                                  <FieldsManagerContext.Provider>
+                                                    <FloatingEditorContext.Provider>
+                                                      <FieldValueInspectorContext.Provider>
+                                                        <DailyNoteContext.Provider>
+                                                          <FusionCommandContext.Provider>
+                                                            <KbViewContent />
+                                                          </FusionCommandContext.Provider>
+                                                        </DailyNoteContext.Provider>
+                                                      </FieldValueInspectorContext.Provider>
+                                                    </FloatingEditorContext.Provider>
+                                                  </FieldsManagerContext.Provider>
+                                                </FavoriteContext.Provider>
+                                              </SettingsPanelContext.Provider>
+                                            </BlockSelectDragContext.Provider>
+                                          </MainTreeContext.Provider>
+                                        </BlockMoverContext.Provider>
+                                      </RefSuggestionsContext.Provider>
+                                    </KeymapContext.Provider>
+                                  </LastFocusContext.Provider>
+                                </SidebarContext.Provider>
+                              </ImagesContext.Provider>
+                            </AttachmentsManagerContext.Provider>
                           </BacklinksContext.Provider>
                         </IndexContext.Provider>
                       </CreateNewTreeDialogContext.Provider>
@@ -68,8 +72,8 @@ import TimeMachineContext from "@/context/timeMachine";
 import FloatingMathInputContext from "@/context/floatingMathInput";
 import KbViewContent from "./KbViewContent.vue";
 import RefSuggestionsContext from "@/context/refSuggestions";
-// import AttachmentsManagerContext from "@/context/attachmentsManager";
-// import ImagesContext from "@/context/images";
+import AttachmentsManagerContext from "@/context/attachmentsManager";
+import ImagesContext from "@/context/images";
 import PathsContext from "@/context/paths";
 import MainTreeContext from "@/context/mainTree";
 import BlockSelectDragContext from "@/context/blockSelect";

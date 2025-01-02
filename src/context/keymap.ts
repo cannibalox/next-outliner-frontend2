@@ -23,6 +23,7 @@ import {
   insertNewlineAndIndent,
 } from "@codemirror/commands";
 import { ref } from "vue";
+import SettingsContext from "./settings";
 
 export type KeyBinding<P extends Array<any> = any[]> = {
   run: (...params: P) => boolean;
@@ -145,6 +146,7 @@ const KeymapContext = createContext(() => {
   const { lastFocusedBlock, lastFocusedBlockTree, lastFocusedEditorView, lastFocusedBlockId } =
     LastFocusContext.useContext();
   const { blockEditor, blocksManager } = BlocksContext.useContext();
+  const { registerSettingGroup } = SettingsContext.useContext();
 
   const prosemirrorKeymap = ref<{ [p: string]: KeyBinding }>({
     "Mod-z": {
@@ -982,6 +984,8 @@ const KeymapContext = createContext(() => {
       delete globalKeymap.value[from];
     }
   };
+
+  // 设置面板
 
   const ctx = {
     prosemirrorKeymap,

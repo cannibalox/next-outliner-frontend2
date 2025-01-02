@@ -53,6 +53,9 @@ importers:
       dayjs:
         specifier: ^1.11.13
         version: 1.11.13
+      flexsearch:
+        specifier: ^0.7.43
+        version: 0.7.43
       html-prettify:
         specifier: ^1.0.7
         version: 1.0.7
@@ -147,6 +150,9 @@ importers:
       '@tsconfig/node20':
         specifier: ^20.1.4
         version: 20.1.4
+      '@types/flexsearch':
+        specifier: ^0.7.6
+        version: 0.7.6
       '@types/jsdom':
         specifier: ^21.1.7
         version: 21.1.7
@@ -993,6 +999,9 @@ packages:
   '@types/estree@1.0.6':
     resolution: {integrity: sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw==}
 
+  '@types/flexsearch@0.7.6':
+    resolution: {integrity: sha512-H5IXcRn96/gaDmo+rDl2aJuIJsob8dgOXDqf8K0t8rWZd1AFNaaspmRsElESiU+EWE33qfbFPgI0OC/B1g9FCA==}
+
   '@types/jsdom@21.1.7':
     resolution: {integrity: sha512-yOriVnggzrnQ3a9OKOCxaVuSug3w3/SbOj5i7VwXWZEyUNl3bLF9V3MfxGbZKuwqJOQyRfqXyROBB1CoZLFWzA==}
 
@@ -1730,6 +1739,9 @@ packages:
 
   flatted@3.3.2:
     resolution: {integrity: sha512-AiwGJM8YcNOaobumgtng+6NHuOqC3A7MixFeDafM3X9cIUM+xUXoS5Vfgf+OihAYe20fxqNM9yPBXJzRtZ/4eA==}
+
+  flexsearch@0.7.43:
+    resolution: {integrity: sha512-c5o/+Um8aqCSOXGcZoqZOm+NqtVwNsvVpWv6lfmSclU954O3wvQKxxK8zj74fPaSJbXpSLTs4PRhh+wnoCXnKg==}
 
   follow-redirects@1.15.9:
     resolution: {integrity: sha512-gew4GsXizNgdoRyqmyfMHyAmXsZDk6mHkSxZFCzW9gwlbtOW44CDtYavM+y+72qD/Vq2l550kMF52DT8fOLJqQ==}
@@ -4319,6 +4331,8 @@ snapshots:
 
   '@types/estree@1.0.6': {}
 
+  '@types/flexsearch@0.7.6': {}
+
   '@types/jsdom@21.1.7':
     dependencies:
       '@types/node': 20.17.10
@@ -5218,6 +5232,8 @@ snapshots:
       keyv: 4.5.4
 
   flatted@3.3.2: {}
+
+  flexsearch@0.7.43: {}
 
   follow-redirects@1.15.9: {}
 

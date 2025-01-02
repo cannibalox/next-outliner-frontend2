@@ -4,8 +4,9 @@ import { createContext } from "@/utils/createContext";
 import { ref, shallowReactive } from "vue";
 import BlocksContext from "./blocks/blocks";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
-import MiniSearch, { type Query, type SearchOptions } from "minisearch";
-import { ngramSplit, tokenize } from "@/utils/tokenize";
+// @ts-ignore
+import Document from "@/../node_modules/flexsearch/dist/module/document";
+import { calcMatchScore, hybridTokenize, splitByCjk } from "@/utils/tokenize";
 
 const IndexContext = createContext(() => {
   const eventBus = useEventBus();
@@ -180,19 +181,13 @@ const IndexContext = createContext(() => {
 
   /////////// Fulltext Search ///////////
 
-  const NGRAMS_CJK = [1, 2, 3, 4, 5];
-  const NGRAM_MAP = NGRAMS_CJK.reduce(
-    (acc, ngram) => {
-      acc[`cjk${ngram}`] = ngram;
-      return acc;
+  const fulltextIndex = new Document({
+    document: {
+      id: "id",
+      index: "text",
+      store: ["text"],
     },
-    {} as Record<string, number>,
-  );
-
-  const fulltextIndex = new MiniSearch({
-    fields: ["nonCjk", ...NGRAMS_CJK.map((ngram) => `cjk${ngram}`)],
-    storeFields: ["id", "nTokens"],
-    tokenize: (text) => [text], // 插入时就是分好词的，不用再分词了
+    encode: (str: string) => hybridTokenize(str),
   });
   const dirtySet = new Set<BlockId>();
 
@@ -208,7 +203,7 @@ const IndexContext = createContext(() => {
 
   eventBus.on("blocksDestroy", () => {
     dirtySet.clear();
-    fulltextIndex.removeAll();
+    fulltextIndex; // 清空 todo
   });
 
   const _updateIndex = () => {
@@ -216,71 +211,29 @@ const IndexContext = createContext(() => {
     for (const blockId of dirtySet) {
       const block = blocksManager.getBlock(blockId);
       // 这个块被删除了
-      if (block == null && fulltextIndex.has(blockId)) {
-        fulltextIndex.discard(blockId);
+      if (block == null && fulltextIndex.contain(blockId)) {
+        fulltextIndex.remove(blockId);
       } else if (block && block.type === "normalBlock") {
-        if (fulltextIndex.has(blockId)) fulltextIndex.discard(blockId);
+        if (fulltextIndex.contain(blockId)) fulltextIndex.remove(blockId);
         const ctextAndMtext = block.ctext + " " + block.mtext;
-        const { nonCjkTokens, cjkTokens } = tokenize(ctextAndMtext);
-        const obj = {
-          id: blockId,
-          nonCjk: nonCjkTokens,
-          nTokens: nonCjkTokens.length + cjkTokens.length,
-        } as any;
-        for (const ngram of NGRAMS_CJK) {
-          obj[`cjk${ngram}`] = cjkTokens.flatMap((t) => ngramSplit(t, ngram));
-        }
-        fulltextIndex.add(obj);
+        fulltextIndex.add(blockId, { id: blockId, text: ctextAndMtext });
       }
     }
     dirtySet.clear();
   };
 
-  const search = (query: string, limit: number = 50) => {
+  const search = (query: string, limit: number = 50): BlockId[] => {
     _updateIndex();
 
-    const { nonCjkTokens, cjkTokens } = tokenize(query);
-
-    // 计算 query 有哪些 ngram
-    // 比如：query = "你好 世界" 只有 ngram=2
-    // 比如：query = "你好 阿根廷" 有 ngram=2 和 ngram=3
-    // 比如：query = "北京奥运会" 有 ngram=5
-    const queryNgrams = new Set(cjkTokens.map((t) => t.length));
-    const queries: Query[] = [];
-
-    // 搜索非中文字符时启用前缀搜索
-    if (nonCjkTokens.length > 0) {
-      queries.push({ combineWith: "AND", queries: nonCjkTokens, fields: ["nonCjk"], prefix: true });
-    }
-
-    // 搜索中文字符时不启用前缀搜索，因为已经按 ngram 划分了
-    for (const ngram of queryNgrams) {
-      queries.push({
-        combineWith: "AND",
-        queries: cjkTokens.filter((t) => t.length === ngram),
-        fields: [`cjk${ngram}`],
-      });
-    }
-
-    let results = fulltextIndex
-      .search(
-        {
-          combineWith: "AND",
-          queries,
-        },
-        {
-          tokenize: (text) => [text], // 不需要再分词
-        },
-      )
-      .slice(0, limit);
-
-    results = results.sort((a, b) => {
-      const scoreA = Object.keys(a.match).length / a.nTokens;
-      const scoreB = Object.keys(b.match).length / b.nTokens;
-      return scoreB - scoreA;
+    const results = fulltextIndex.search(query, { limit, enrich: true })[0].result;
+    const queryTokens = hybridTokenize(query, false, 1, false);
+    const idAndScores = results.map((result: any) => {
+      const score = calcMatchScore(queryTokens, result.doc.text);
+      console.log(result.doc.text, score);
+      return { id: result.id, score };
     });
-
-    return results;
+    idAndScores.sort((a: any, b: any) => b.score - a.score);
+    return idAndScores.map((item: any) => item.id);
   };
 
   const ctx = {

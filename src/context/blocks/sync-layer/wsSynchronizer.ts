@@ -63,16 +63,19 @@ export class LoroWebsocketSynchronizer {
     docController: LoroDocClientController,
     msg: ParsedMessageType<"startSync">,
   ) => {
-    console.log(`[wsSynchronizer] Received startSyncMessage, docId: ${docController.docId}`);
+    console.info(`[wsSynchronizer] Received startSyncMessage, docId: ${docController.docId}`);
     const doc = docController.doc;
     doc.import(msg.updates); // Import updates from server
-    console.log(`[wsSynchronizer] Doc ${docController.docId} after import updates:`, doc.toJSON());
+    console.info(`[wsSynchronizer] Doc ${docController.docId} after import updates:`, doc.toJSON());
     const vv = VersionVector.decode(msg.vv);
+    docController.lastSentVersion = vv;
     const clientUpdates = doc.export({ mode: "update", from: vv }); // Export client-side updates
     if (clientUpdates.length > 0) {
       const replyMsg = writePostUpdateMessage(msg.docId, clientUpdates);
       this._sendMessage(replyMsg);
-      console.log(`[wsSynchronizer] Replied with postUpdateMessage, docId: ${docController.docId}`);
+      console.info(
+        `[wsSynchronizer] Replied with postUpdateMessage, docId: ${docController.docId}`,
+      );
       this.eventBus.emit("status", { syncStatus: "synced", docId: docController.docId });
     }
   };
@@ -91,15 +94,10 @@ export class LoroWebsocketSynchronizer {
     docController: LoroDocClientController,
   ) => {
     const doc = docController.doc;
-    console.log("[wsSynchronizer] updates=", msg.updates);
-    console.log(
-      `[wsSynchronizer] Received postUpdateMessage, docId: ${docController.docId}, doc before import:`,
-      doc.toJSON(),
-    );
-
+    console.info(`[wsSynchronizer] Received postUpdateMessage, docId: ${docController.docId}`);
     doc.import(msg.updates);
     this.eventBus.emit("status", { syncStatus: "synced", docId: docController.docId });
-    console.log(
+    console.info(
       `[wsSynchronizer] Received postUpdateMessage, doc ${docController.docId} after import updates:`,
       doc.toJSON(),
     );
@@ -117,7 +115,7 @@ export class LoroWebsocketSynchronizer {
     if (this.shouldReconnect && this.connection === null) {
       this.connection = this.network.connect(this.url, this.protocol);
       this.connection.onOpen(() => {
-        console.log("[wsSynchronizer] Connection opened");
+        console.info("[wsSynchronizer] Connection opened");
         this.wsConnecting = false;
         this.wsConnected = true;
         this.unsuccessfulReconnects = 0;
@@ -149,7 +147,7 @@ export class LoroWebsocketSynchronizer {
       });
 
       this.connection.onClose(() => {
-        console.log("[wsSynchronizer] Connection closed");
+        console.info("[wsSynchronizer] Connection closed");
         this.eventBus.emit("status", { syncStatus: "disconnected" });
         this.connection = null;
         this.wsConnecting = false;
@@ -201,7 +199,7 @@ export class LoroWebsocketSynchronizer {
     controller.lastSentVersion = controller.doc.version();
     const msg = writePostUpdateMessage(docId, updates);
     this._sendMessage(msg);
-    console.log(`[wsSynchronizer] Sent postUpdateMessage, docId: ${docId}`);
+    console.info(`[wsSynchronizer] Sent postUpdateMessage, docId: ${docId}`);
   }
 
   connect() {
@@ -228,10 +226,10 @@ export class LoroWebsocketSynchronizer {
       console.error(`[wsSynchronizer] Doc already added, do nothing, docId: ${docId}`);
       return;
     }
-    console.log(`[wsSynchronizer] Add new doc, docId: ${docId}`);
+    console.info(`[wsSynchronizer] Add new doc, docId: ${docId}`);
     // Subscribe to doc updates and send new local updates to server
     const sub = doc.subscribe((ev) => {
-      console.log(`[wsSynchronizer] New event on doc ${docId}:`, ev);
+      console.info(`[wsSynchronizer] New event on doc ${docId}:`, ev);
       if (ev.by === "local") {
         this._sendNewUpdatesToServer(docId);
       }
@@ -250,7 +248,7 @@ export class LoroWebsocketSynchronizer {
       if (!doc) return;
       const msg = writeCanSyncMessage(docId, doc);
       this._sendMessage(msg);
-      console.log(`[wsSynchronizer] Sent canSyncMessage, docId: ${docId}`);
+      console.info(`[wsSynchronizer] Sent canSyncMessage, docId: ${docId}`);
     });
   }
 

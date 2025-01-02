@@ -29,7 +29,6 @@ export const BlocksContext = createContext(() => {
     if (syncLayer.syncStatus.value.size === 0) return "disconnected";
     for (const status of syncLayer.syncStatus.value.values()) {
       if (status === "disconnected") return "disconnected";
-      if (status === "syncing") return "syncing";
     }
     return "synced";
   });

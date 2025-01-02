@@ -1,7 +1,6 @@
 import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import { createContext } from "@/utils/createContext";
 import { ref } from "vue";
-import type { BlockTreeId } from "./blockTree";
 
 export type DraggingDropPos = {
   blockId: BlockId;
@@ -15,8 +14,9 @@ const BlockSelectDragContext = createContext(() => {
     allNonFolded: BlockId[];
   }>({ topLevelOnly: [], allNonFolded: [] });
   const draggingDropPos = ref<DraggingDropPos | null>(null);
+  const isDragSelecting = ref(false);
 
-  const ctx = { selectedBlockIds, draggingDropPos };
+  const ctx = { selectedBlockIds, draggingDropPos, isDragSelecting };
   globalThis.getBlockSelectContext = () => ctx;
   return ctx;
 });

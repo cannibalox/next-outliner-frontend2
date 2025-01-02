@@ -118,7 +118,7 @@ export const pmSchemaSpec: SchemaSpec = {
 
               span.classList.remove("invalid");
             } else {
-              span.innerHTML = "INVALID REF";
+              span.innerHTML = "Invalid Ref";
               span.classList.add("invalid");
             }
           },

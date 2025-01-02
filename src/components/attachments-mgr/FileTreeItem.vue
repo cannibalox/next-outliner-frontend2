@@ -27,12 +27,12 @@
 </template>
 
 <script setup lang="ts">
-import type { Dirents } from "@/common/api/fs";
+import type { Dirents } from "@/common/type-and-schemas/dirents";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
 import { ChevronDown, File, Folder } from "lucide-vue-next";
 import { ref } from "vue";
 import AttachmentsManagerContext from "@/context/attachmentsManager";
-import { joinPathSegments } from "@/common/path";
+import { joinPathSegments } from "@/common/helper-functions/path";
 
 defineProps<{
   dirent: Dirents[string];

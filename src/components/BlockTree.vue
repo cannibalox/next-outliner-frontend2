@@ -81,6 +81,12 @@
           :highlight-terms="itemData.highlightTerms"
           :highlight-refs="itemData.highlightRefs"
         ></PotentialLinksDescendantItem>
+        <MissingBlockItem
+          v-if="itemData.type == 'missing-block'"
+          :key="itemData.blockId"
+          :block-id="itemData.blockId"
+          :level="itemData.level"
+        ></MissingBlockItem>
       </template>
       <template #footer> </template>
     </virt-list>
@@ -123,6 +129,7 @@ import BacklinksDescendantItem from "./display-items/BacklinksDescendantItem.vue
 import PotentialLinksDescendantItem from "./display-items/PotentialLinksDescendantItem.vue";
 import { clip } from "@/utils/popover";
 import { useTaskQueue } from "@/plugins/taskQueue";
+import MissingBlockItem from "./display-items/MissingBlockItem.vue";
 
 const props = withDefaults(defineProps<BlockTreeProps>(), {
   virtual: true,
@@ -421,6 +428,7 @@ const getIndentSize = () => {
 };
 
 const handlePointerUpOrLeave = (e: PointerEvent) => {
+  blockSelectDragContext.isDragSelecting.value = false;
   if (dragging) {
     const taskQueue = useTaskQueue();
     // 拖动结束，将选中的块移动到拖动结束的位置
@@ -554,6 +562,10 @@ const handlePointerMove = useThrottleFn((e: PointerEvent) => {
     const duration = Date.now().valueOf() - (pointerDownTime ?? 0);
     if (duration < 200) return;
 
+    e.preventDefault();
+    e.stopPropagation();
+    blockSelectDragContext.isDragSelecting.value = true;
+
     const hoveredBlockItem = getHoveredElementWithClass(e.target, "block-item");
     const blockIdCurrent = hoveredBlockItem?.dataset["blockId"];
     if (!blockIdCurrent || pointerDownBlockId == null) return;
@@ -635,7 +647,7 @@ const handlePointerDown = (e: PointerEvent) => {
   if (!blockId) return;
   pointerDownBlockId = blockId;
   pointerDownTime = Date.now().valueOf();
-
+  blockSelectDragContext.isDragSelecting.value = false;
   // 如果按下的是块的 bullet，则认为是拖动，否则认为是框选
   const hoveredBullet = getHoveredElementWithClass(e.target, "bullet");
   if (hoveredBullet) {

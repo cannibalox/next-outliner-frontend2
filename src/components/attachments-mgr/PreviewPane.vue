@@ -155,9 +155,8 @@ import { EditorView as CMEditorView } from "@codemirror/view";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import { useTaskQueue } from "@/plugins/taskQueue";
 import type { BlockPosSiblingOffset } from "@/context/blocks/view-layer/blocksEditor";
-import type { ImageContent } from "@/common/types";
+import type { ImageContent } from "@/common/type-and-schemas/block/block-content";
 import { autoRetryGet } from "@/utils/auto-retry";
-import { fsGetAttachmentSignedUrl } from "@/common/api/fs";
 import ServerInfoContext from "@/context/serverInfo";
 import ImagesContext from "@/context/images";
 import {
@@ -166,10 +165,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "../ui/dropdown-menu";
-import { getSeperator } from "@/common/path";
+import { getSeperator } from "@/common/helper-functions/path";
 import { pmSchema } from "../prosemirror/pmSchema";
 import ImagePreviewPane from "./ImagePreviewPane.vue";
 import { isImage, isAudio, isVideo } from "@/utils/fileType";
+import { fsGetAttachmentSignedUrl } from "@/common/api-call/fs";
 
 const { blockEditor } = BlocksContext.useContext();
 const tasakQueue = useTaskQueue();

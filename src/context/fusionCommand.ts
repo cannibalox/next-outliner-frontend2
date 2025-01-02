@@ -1,7 +1,7 @@
 import { createContext } from "@/utils/createContext";
 import { computed, ref, type Ref } from "vue";
 import type { Block } from "./blocks/view-layer/blocksManager";
-import { cjkNgramTokenize } from "@/utils/tokenize";
+import { hybridTokenize } from "@/utils/tokenize";
 import IndexContext from ".";
 import BlocksContext from "./blocks/blocks";
 import { nextTick } from "vue";
@@ -21,7 +21,7 @@ export const FusionCommandContext = createContext(() => {
 
   const queryTerms = computed(() => {
     if (inputText.value.length == 0) return [];
-    return cjkNgramTokenize(inputText.value, false, 1) ?? [];
+    return hybridTokenize(inputText.value, false, 1, false) ?? [];
   });
 
   const updateBlockSearchResult = () => {
@@ -31,7 +31,7 @@ export const FusionCommandContext = createContext(() => {
       return;
     }
     blockSearchResult.value = search(query)
-      .map((r) => blocksManager.getBlock(r.id))
+      .map((id) => blocksManager.getBlock(id as string))
       .filter((b): b is Block => b !== null)
       .filter((b) => b.type == "normalBlock" && allowedBlockTypes.value[b.content[0]]);
     focusIndex.value = blockSearchResult.value.length > 0 ? 0 : -1;

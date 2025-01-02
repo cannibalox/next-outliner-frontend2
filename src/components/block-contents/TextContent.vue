@@ -31,7 +31,6 @@ import { turnToCodeBlock } from "../prosemirror/input-rules/turn-to-code-block";
 import { MathInlineKatex } from "../prosemirror/node-views/inlineMath";
 import { mkKeymapPlugin } from "../prosemirror/plugins/keymap";
 import { mkPasteImagePlugin } from "../prosemirror/plugins/pasteImage";
-import { mkPasteLinkPlugin } from "../prosemirror/plugins/pasteLink";
 import { mkPasteTextPlugin } from "../prosemirror/plugins/pasteText";
 import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 
@@ -105,8 +104,7 @@ const customPluginsGenerator = (getEditorView: () => EditorView | null, readonly
         rules: [openRefSuggestions(getEditorView), turnToCodeBlock(getBlockId, getBlockTree)],
       }),
       mkKeymapPlugin(),
-      mkPasteLinkPlugin(),
-      // mkPasteImagePlugin(),
+      mkPasteImagePlugin(),
       mkPasteTextPlugin(),
     ];
   }

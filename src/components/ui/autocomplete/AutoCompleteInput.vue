@@ -43,7 +43,8 @@ onMounted(() => {
 
 const keydownHandler = generateKeydownHandlerSimple({
   ArrowDown: {
-    run: useThrottleFn(() => {
+    run: useThrottleFn((e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       const contentEl = context.value.getContentEl();
       const itemEls = contentEl?.querySelectorAll(".AutoCompleteSuggestionItem");
       if (!itemEls) return false;
@@ -62,7 +63,8 @@ const keydownHandler = generateKeydownHandlerSimple({
     }, 100) as any,
   },
   ArrowUp: {
-    run: useThrottleFn(() => {
+    run: useThrottleFn((e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       const contentEl = context.value.getContentEl();
       const itemEls = contentEl?.querySelectorAll(".AutoCompleteSuggestionItem");
       if (!itemEls) return false;
@@ -81,7 +83,8 @@ const keydownHandler = generateKeydownHandlerSimple({
     }, 100) as any,
   },
   Enter: {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       const focusItemEl = context.value.focusItemEl;
       const itemEls = context.value.itemEls;
       if (!focusItemEl) return false;

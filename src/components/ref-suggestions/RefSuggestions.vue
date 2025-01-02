@@ -1,6 +1,5 @@
 <template>
   <Popover v-model:open="open">
-    <PopoverTrigger> </PopoverTrigger>
     <PopoverContent
       class="ref-suggestions-content py-2 pb-0 px-1 max-h-[300px] max-w-[300px] overflow-hidden"
       trap-focus
@@ -13,7 +12,7 @@
           @input="onInput"
           @compositionend="onCompositionEnd"
           v-model="query"
-          class="h-[32px] pl-8 rounded-sm focus-visible:outline-none"
+          class="h-[32px] pl-8 rounded-sm focus-visible:outline-none focus-visible:ring-transparent"
         />
       </div>
       <!-- XXX scroll area 的高度是 250px，因为 max-h 是 300px，减去 input 的高度和中间的 padding 就是 250px，并不优雅 -->
@@ -53,7 +52,7 @@ import { computed, nextTick, watch } from "vue";
 import TextContent from "../block-contents/TextContent.vue";
 import { Input } from "../ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { cjkNgramTokenize } from "@/utils/tokenize";
+import { hybridTokenize } from "@/utils/tokenize";
 import BlockContent from "../block-contents/BlockContent.vue";
 
 const {
@@ -70,7 +69,7 @@ const {
 
 const queryTerms = computed(() => {
   if (query.value.length == 0) return [];
-  return cjkNgramTokenize(query.value, false, 1) ?? [];
+  return hybridTokenize(query.value, false, 1, false) ?? [];
 });
 
 watch(showPos, async () => {
@@ -129,19 +128,24 @@ const ensureFocusedVisible = () => {
 
 const handleKeydown = generateKeydownHandlerSimple({
   Escape: {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       cb.value?.(null);
       return true;
     },
   },
   Enter: {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       cb.value?.(suggestions.value[focusItemIndex.value]?.value?.id ?? null);
       return true;
     },
+    preventDefault: true,
+    stopPropagation: true,
   },
   Backspace: {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       if (query.value.length == 0) {
         showPos.value = null;
         cb.value?.(null);
@@ -149,9 +153,12 @@ const handleKeydown = generateKeydownHandlerSimple({
       }
       return false;
     },
+    preventDefault: true,
+    stopPropagation: true,
   },
   ArrowUp: {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       return withScrollSuppressed(() => {
         if (focusItemIndex.value > 0) {
           focusItemIndex.value--;
@@ -166,7 +173,8 @@ const handleKeydown = generateKeydownHandlerSimple({
     stopPropagation: true,
   },
   ArrowDown: {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       return withScrollSuppressed(() => {
         if (focusItemIndex.value < suggestions.value.length - 1) {
           focusItemIndex.value++;
@@ -181,7 +189,8 @@ const handleKeydown = generateKeydownHandlerSimple({
     stopPropagation: true,
   },
   Home: {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       return withScrollSuppressed(() => {
         focusItemIndex.value = 0;
         ensureFocusedVisible();
@@ -190,13 +199,16 @@ const handleKeydown = generateKeydownHandlerSimple({
     },
   },
   End: {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       return withScrollSuppressed(() => {
         focusItemIndex.value = suggestions.value.length - 1;
         ensureFocusedVisible();
         return true;
       });
     },
+    preventDefault: true,
+    stopPropagation: true,
   },
 });
 </script>

@@ -29,7 +29,7 @@ const RefSuggestionsContext = createContext(() => {
     const result = search(query.value);
     suggestions.value = result
       .slice(0, 100)
-      .map((item) => blocksManager.getBlockRef(item.id))
+      .map((id) => blocksManager.getBlockRef(id as string))
       // 只显示文本块
       .filter((blockRef) => {
         const block = blockRef.value;

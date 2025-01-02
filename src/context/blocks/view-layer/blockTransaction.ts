@@ -303,19 +303,13 @@ function useBlockTransaction(context: BlockTransactionContext) {
         "docId" in block ? block.docId : null,
         "src" in block ? block.src : null,
       ] as const;
-      // 如果旧信息不存在，或者新旧信息不同，则更新
-      if (!oldBlockInfo || JSON.stringify(oldBlockInfo) != JSON.stringify(newBlockInfo)) {
-        yjsTr.upsertBlockInfo(blockId, newBlockInfo);
-      }
+      yjsTr.upsertBlockInfo(blockId, newBlockInfo);
 
       // 如果是 normal block，还需要更新块数据
       if (block.type == "normalBlock") {
         const oldBlockData = latestBlockDatas.get(blockId);
         const newBlockData: BlockData = [block.content, block.metadata] as const;
-        // 如果旧数据不存在，或者新旧数据不同，则更新
-        if (!oldBlockData || JSON.stringify(oldBlockData) != JSON.stringify(newBlockData)) {
-          yjsTr.upsertBlockData(block.docId, blockId, newBlockData);
-        }
+        yjsTr.upsertBlockData(block.docId, blockId, newBlockData);
       }
 
       // 如果旧块是普通块，而新块不是普通块，则删除旧块数据

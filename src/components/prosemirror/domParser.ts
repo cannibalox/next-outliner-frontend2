@@ -3,7 +3,7 @@ import { pmSchema } from "./pmSchema";
 import { DOMParser as ProsemirrorDOMParser, Slice } from "prosemirror-model";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import { nanoid } from "nanoid";
-import { linkify } from "./plugins/pasteLink";
+import { linkify } from "../../utils/pm";
 
 type Block = {
   id: string;

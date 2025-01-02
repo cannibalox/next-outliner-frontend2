@@ -143,7 +143,7 @@ import {
 } from "../ui/dropdown-menu";
 import { useTaskQueue } from "@/plugins/taskQueue";
 import BlocksContext from "@/context/blocks/blocks";
-import type { ImageContent } from "@/common/types";
+import type { ImageContent } from "@/common/type-and-schemas/block/block-content";
 import { watch } from "vue";
 import { syncRef } from "@vueuse/core";
 import { generateKeydownHandlerSimple } from "@/context/keymap";
@@ -166,7 +166,8 @@ let imageLeft = 0; // 拖曳开始时，记录图片左侧的位置，用于计�
 const handleKeydownOnCursorContainer = generateKeydownHandlerSimple({
   // 按删除键时删除图片
   Backspace: {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       taskQueue.addTask(() => {
         blockEditor.deleteBlock({ blockId: props.block.id });
       });
@@ -177,7 +178,8 @@ const handleKeydownOnCursorContainer = generateKeydownHandlerSimple({
   },
   // 按 Enter 时在下方插入一个空段落
   Enter: {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       taskQueue.addTask(async () => {
         const pos: BlockPos = {
           baseBlockId: props.block.id,
@@ -197,7 +199,8 @@ const handleKeydownOnCursorContainer = generateKeydownHandlerSimple({
     preventDefault: true,
   },
   ArrowDown: {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       const tree = props.blockTree;
       if (!tree) return false;
       const blockBelow = tree.getBlockBelow(props.block.id);
@@ -210,7 +213,8 @@ const handleKeydownOnCursorContainer = generateKeydownHandlerSimple({
     preventDefault: true,
   },
   ArrowUp: {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       const tree = props.blockTree;
       if (!tree) return false;
       const blockAbove = tree.getBlockAbove(props.block.id);
@@ -223,7 +227,8 @@ const handleKeydownOnCursorContainer = generateKeydownHandlerSimple({
     preventDefault: true,
   },
   ArrowLeft: {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       const tree = props.blockTree;
       if (!tree) return false;
       const blockBefore = tree.getPredecessorBlock(props.block.id);
@@ -236,7 +241,8 @@ const handleKeydownOnCursorContainer = generateKeydownHandlerSimple({
     preventDefault: true,
   },
   ArrowRight: {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       const tree = props.blockTree;
       if (!tree) return false;
       const blockAfter = tree.getSuccessorBlock(props.block.id);
@@ -255,7 +261,8 @@ const handleKeydownOnCursorContainer = generateKeydownHandlerSimple({
     preventDefault: true,
   },
   Tab: {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       taskQueue.addTask(() => {
         blockEditor.promoteBlock({ blockId: props.block.id });
       });
@@ -265,7 +272,8 @@ const handleKeydownOnCursorContainer = generateKeydownHandlerSimple({
     preventDefault: true,
   },
   "Shift-Tab": {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       taskQueue.addTask(() => {
         blockEditor.demoteBlock({ blockId: props.block.id });
       });

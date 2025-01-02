@@ -38,7 +38,10 @@ export type SyncWorkerInMsg =
   | { type: "disconnect" }
   | { type: "loadDataDoc"; docId: number }
   | { type: "unloadDataDoc"; docId: number }
-  | { type: "postYjsLayerTransaction"; transaction: SyncLayerTransaction };
+  | { type: "postYjsLayerTransaction"; transaction: SyncLayerTransaction }
+  // debug only messages
+  | { type: "_printBlockInfo"; blockId: BlockId }
+  | { type: "_printBlockData"; docId: number; blockId: BlockId };
 
 export type MapChange = { op: "upsert"; key: string; value: any } | { op: "delete"; key: string };
 
@@ -87,6 +90,14 @@ addEventListener("message", (message) => {
     case "postYjsLayerTransaction":
       postSyncLayerTransaction(msg.transaction);
       break;
+    case "_printBlockInfo":
+      console.debug("[syncWorker] _printBlockInfo", blockInfoMap?.get(msg.blockId));
+      break;
+    case "_printBlockData":
+      const dataDoc = blockDataDocs?.get(0);
+      const blockDataMap = dataDoc?.getMap(BLOCK_DATA_MAP_NAME);
+      console.debug("[syncWorker] _printBlockData", blockDataMap?.get(msg.blockId));
+      break;
   }
 });
 
@@ -101,7 +112,7 @@ const disconnect = () => {
 
 const connect = (serverUrl_: string, location_: string, token_: string) => {
   disconnect();
-  console.log("[syncWorker] connect", serverUrl_, location_, token_);
+  console.debug("[syncWorker] connect", serverUrl_, location_, token_);
 
   serverUrl = serverUrl_;
   location = location_;
@@ -118,7 +129,7 @@ const connect = (serverUrl_: string, location_: string, token_: string) => {
     for (const e of eb.events) {
       if (e.diff.type !== "map") continue;
       for (const [key, value] of Object.entries(e.diff.updated)) {
-        if (value === undefined) changes.push({ op: "delete", key });
+        if (value == null) changes.push({ op: "delete", key });
         else changes.push({ op: "upsert", key, value });
       }
     }
@@ -137,7 +148,7 @@ const connect = (serverUrl_: string, location_: string, token_: string) => {
     wsSynchronizer.connect();
     wsSynchronizer.addLoroDoc(BLOCK_INFO_DOC_NAME, baseDoc);
     wsSynchronizer.on("status", (status) => {
-      console.log("[syncWorker] wsSynchronizer status", status);
+      console.info("[syncWorker] wsSynchronizer status", status);
       postTypedMessage({ type: "syncStatus", ...status });
     });
   })();
@@ -161,7 +172,7 @@ const loadDataDoc = (docId: number) => {
     for (const e of eb.events) {
       if (e.diff.type !== "map") continue;
       for (const [key, value] of Object.entries(e.diff.updated)) {
-        if (value === undefined) changes.push({ op: "delete", key });
+        if (value == null) changes.push({ op: "delete", key });
         else changes.push({ op: "upsert", key, value });
       }
     }
@@ -176,7 +187,7 @@ const loadDataDoc = (docId: number) => {
 
   (async () => {
     // 使用 wsSynchronizer 同步
-    console.log("[syncWorker] dataDoc 加入 wsSynchronizer，开始同步");
+    console.debug("[syncWorker] dataDoc 加入 wsSynchronizer，开始同步");
     await timeout(1000);
     wsSynchronizer?.addLoroDoc(BLOCK_DATA_DOC_NAME_PREFIX + docId, dataDoc);
   })();
@@ -195,6 +206,7 @@ const postSyncLayerTransaction = (tr: SyncLayerTransaction) => {
   }
   // 先处理 blockInfoMap 的变更
   if (!blockInfoMap) return;
+  console.log("tr: ", tr);
   for (const p of tr.patches) {
     if (p.op === "upsertBlockInfo") {
       blockInfoMap.set(p.blockId, p.blockInfo);

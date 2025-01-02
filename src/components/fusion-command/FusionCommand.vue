@@ -1,12 +1,12 @@
 <template>
-  <div class="fusion-command" v-if="open">
-    <div
+  <Dialog class="fusion-command" v-model:open="open">
+    <DialogContent
       class="fusion-command-content fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 bg-background border p-0 [&>button]:hidden overflow-hidden gap-y-0"
     >
-      <!-- <DialogHeader class="hidden">
+      <DialogHeader class="hidden">
         <DialogTitle></DialogTitle>
         <DialogDescription></DialogDescription>
-      </DialogHeader> -->
+      </DialogHeader>
       <div ref="contentEl" @keydown="handleKeydown">
         <div class="relative border-b">
           <Input
@@ -91,8 +91,8 @@
           {{ $t("kbView.fusionCommand.commandHelp") }}
         </div>
       </div>
-    </div>
-  </div>
+    </DialogContent>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
@@ -108,6 +108,7 @@ import BlockContent from "../block-contents/BlockContent.vue";
 import Checkbox from "../ui/checkbox/Checkbox.vue";
 import { Input } from "../ui/input";
 import ScrollArea from "../ui/scroll-area/ScrollArea.vue";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../ui/dialog";
 
 const blockTreeContext = BlockTreeContext.useContext();
 const {
@@ -159,7 +160,8 @@ const gotoFocused = () => {
 
 const handleKeydown = generateKeydownHandlerSimple({
   ArrowUp: {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       return withScrollSuppressed(() => {
         if (focusIndex.value > 0) {
           focusIndex.value--;
@@ -174,7 +176,8 @@ const handleKeydown = generateKeydownHandlerSimple({
     preventDefault: true,
   },
   ArrowDown: {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       return withScrollSuppressed(() => {
         if (focusIndex.value < blockSearchResult.value.length - 1) {
           focusIndex.value++;
@@ -189,7 +192,8 @@ const handleKeydown = generateKeydownHandlerSimple({
     preventDefault: true,
   },
   Home: {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       return withScrollSuppressed(() => {
         focusIndex.value = 0;
         ensureFocusedVisiblle();
@@ -200,7 +204,8 @@ const handleKeydown = generateKeydownHandlerSimple({
     preventDefault: true,
   },
   End: {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       return withScrollSuppressed(() => {
         focusIndex.value = blockSearchResult.value.length - 1;
         ensureFocusedVisiblle();
@@ -212,7 +217,8 @@ const handleKeydown = generateKeydownHandlerSimple({
   },
   // 聚焦到选中项
   Enter: {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       gotoFocused();
       return true;
     },
@@ -221,7 +227,8 @@ const handleKeydown = generateKeydownHandlerSimple({
   },
   // 插入块链接
   "Mod-Enter": {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       // TODO
       return true;
     },
@@ -229,7 +236,8 @@ const handleKeydown = generateKeydownHandlerSimple({
     preventDefault: true,
   },
   Escape: {
-    run: () => {
+    run: (e) => {
+      if (e.isComposing || e.keyCode === 229) return false;
       open.value = false;
       return true;
     },

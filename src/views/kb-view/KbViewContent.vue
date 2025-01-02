@@ -54,7 +54,7 @@
   <!-- <TimeMachine /> -->
   <RefSuggestions />
   <!-- 附件管理器 -->
-  <!-- <AttachmentsManager /> -->
+  <AttachmentsManager />
   <!-- 设置面板 -->
   <SettingsPanel />
   <!-- 块移动 popover -->
@@ -88,6 +88,7 @@ import HeaderBar from "../../components/header-bar/HeaderBar.vue";
 import SidePane from "../../components/side-pane/SidePane.vue";
 import BlocksContext from "../../context/blocks/blocks";
 import SidebarContext from "../../context/sidebar";
+import AttachmentsManager from "@/components/attachments-mgr/AttachmentsManager.vue";
 
 const { sidePaneOpen, sidePaneDir, sidePaneWidth, sidePaneHeight, enableSidePaneAnimation } =
   SidebarContext.useContext();
