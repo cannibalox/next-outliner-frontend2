@@ -1,0 +1,33 @@
+- What is a distributed system?
+  - A system running on several nodes connected by a network, characterized by partial failure.
+  - Failures
+    - There are two pholosophies when dealing with failures:
+      - High-Performance Computing (HPC) philosophy:
+        - treat partial failure as total failure
+        - checkpointing
+      - "cloud computing" philosophy:
+        - treat partial failure as expected
+        - work around the failure
+        - "everything fails, all the time"
+    - Failure example
+      - Consider a system with M1, M2. M1 asks M2 for the value of x.
+      - M1 -- x? --> M2
+      - M1 <- x=5 -- M2
+      - During process above, potential failures include:
+        - request from M1 is lost
+        - request from M1 is slow
+        - M2 crashes
+        - M2 is slow to respond
+        - response from M2 is slow or lost
+        - Byzantine faults - corruput transmission / malicious response etc.
+    - Timeout: not perfect mechanism
+      - Idea: after a centain timeout, assume failure and retry
+      - Problem: length of timeout is hard to determine. If we know that max delay is d and processing time is r, then we can set timtout = 2d + r. However, it's impossible to get an accurate value for d and r in real life, just statistics.
+  - Why bother "distributed"?
+    - Make things faster
+    - Reliability (more copies of data)
+    - Throughput
+- Time
+  - Computers have 2 kinds of physical clocks
+    - Time of day clock
+    - Monotonic clock

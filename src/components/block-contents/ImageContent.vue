@@ -61,6 +61,11 @@
               <Info class="size-4 mr-2" />
               {{ $t("kbView.imageContent.metadata") }}
             </DropdownMenuItem>
+            <!-- 清除扫描图片的背景 -->
+            <DropdownMenuItem @click="handleClearScannedImage">
+              <FileScan class="size-4 mr-2" />
+              {{ $t("kbView.imageContent.clearScannedImage") }}
+            </DropdownMenuItem>
             <!-- 滤镜 -->
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
@@ -121,6 +126,7 @@ import {
   Crop,
   Download,
   Expand,
+  FileScan,
   Info,
   Loader2,
   MessageSquareMore,
@@ -150,6 +156,7 @@ import { generateKeydownHandlerSimple } from "@/context/keymap";
 import type { BlockPos } from "@/context/blocks/view-layer/blocksEditor";
 import { plainTextToTextContent } from "@/utils/pm";
 import type { Block } from "@/context/blocks/view-layer/blocksManager";
+import { fsClearScannedImage } from "@/common/api-call/fs";
 
 const props = defineProps<{
   blockTree?: BlockTree;
@@ -378,6 +385,18 @@ const handleMouseDown = (e: MouseEvent) => {
   document.addEventListener("mousemove", handleMouseMove);
   document.addEventListener("mouseup", handleMouseUpOrLeave);
   document.addEventListener("mouseleave", handleMouseUpOrLeave);
+};
+
+const handleClearScannedImage = async () => {
+  const content = props.block.content;
+  if (content[0] !== BLOCK_CONTENT_TYPES.IMAGE) return;
+  const resp = await fsClearScannedImage({ path: content[1] });
+  if (!resp.success) return;
+  taskQueue.addTask(() => {
+    const newContent = [...content] as ImageContent;
+    newContent[1] = resp.data.path;
+    blockEditor.changeBlockContent({ blockId: props.block.id, content: newContent });
+  });
 };
 </script>
 

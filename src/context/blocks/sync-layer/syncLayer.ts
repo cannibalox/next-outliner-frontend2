@@ -1,5 +1,4 @@
 import { ref, toRaw, type Ref } from "vue";
-import * as Y from "yjs";
 import type { BlockData } from "@/common/type-and-schemas/block/block-data";
 import type { BlockInfo } from "@/common/type-and-schemas/block/block-info";
 import type { BlockId } from "@/common/type-and-schemas/block/block-id";
@@ -12,8 +11,6 @@ import type {
   SyncWorkerOutMsg,
 } from "./syncWorker";
 import { createPromise } from "@/utils/promise";
-import type { SyncStatus_Internal } from "./wsSynchronizer";
-import { BLOCK_DATA_DOC_NAME_PREFIX, BLOCK_INFO_DOC_NAME } from "@/common/constants";
 
 ///////////////////////////////////////////////////////////////////
 // SyncLayer 是对 syncWorker 的很薄的一层封装
@@ -25,6 +22,8 @@ import { BLOCK_DATA_DOC_NAME_PREFIX, BLOCK_INFO_DOC_NAME } from "@/common/consta
 // - unloadDataDoc 卸载数据文档
 // - createYjsLayerTransaction 创建一个同步层事务
 // - syncStatus 当前各个文档的同步状态
+// 注意，syncStatus 反映的是 syncWorker 中文档的同步状态，而不是 blocksManager#blocks 的同步状态。
+// 即可能 syncWorker 已经同步完了，但 blocksManager 中在处理 changes，没有同步完
 ///////////////////////////////////////////////////////////////////
 
 export type SyncLayerTransactionWrapper = {
@@ -37,7 +36,8 @@ export type SyncLayerTransactionWrapper = {
 };
 
 export type SyncLayerEvents = {
-  syncStatus: { syncStatus: SyncStatus_Internal; docGuid?: string };
+  docSynced: { docId: string; hasSyncEvent: boolean };
+  disconnected: void;
   dataDocCreated: { docId: number };
   blockInfoMapChange: { changes: MapChange[]; origin: BlockOrigin };
   blockDataMapChange: { docId: number; changes: MapChange[]; origin: BlockOrigin };
@@ -48,13 +48,6 @@ export type SyncStatus = "synced" | "disconnected";
 // 创建一个 Sync 层
 export const createSyncLayer = () => {
   const eventBus = mitt<SyncLayerEvents>();
-  // docName -> syncStatus
-  // XXX: 目前 docId 前端有两个意思，一个是 data doc 的 id，类型是 number
-  // 另一个是一个文档的统一标识，格式如下：
-  // - block_info
-  // - blockData_<docId>
-  // 有时间需要统一一下
-  const syncStatus = ref<Map<string, SyncStatus>>(new Map());
   const { promise: syncWorkerStarted, resolve: resolveSyncWorkerStarted } = createPromise();
 
   const worker = new Worker(new URL("@/context/blocks/sync-layer/syncWorker.ts", import.meta.url), {
@@ -67,21 +60,9 @@ export const createSyncLayer = () => {
       resolveSyncWorkerStarted(undefined);
       return;
     }
-    // 更新同步状态
-    if (msg.type === "syncStatus") {
-      // 如果连接断开，则所有文档的同步状态都设为断开
-      if (msg.syncStatus === "disconnected") {
-        for (const docId of syncStatus.value.keys()) {
-          syncStatus.value.set(docId, "disconnected");
-        }
-      } else {
-        // 如果连接成功，则设置对应文档的同步状态
-        syncStatus.value.set(msg.docId, msg.syncStatus);
-      }
-    }
     // 将其他消息转发到事件总线
     console.debug("[syncLayer] Received message from syncWorker:", msg);
-    eventBus.emit(msg.type, msg);
+    eventBus.emit(msg.type, msg as any); // XXX
   });
 
   const postWorkerMsg = (msg: SyncWorkerInMsg) => {
@@ -145,7 +126,6 @@ export const createSyncLayer = () => {
     disconnect,
     on: eventBus.on,
     off: eventBus.off,
-    syncStatus,
     createSyncLayerTransaction,
     loadDataDoc,
     unloadDataDoc,

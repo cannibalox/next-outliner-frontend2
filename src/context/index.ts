@@ -225,11 +225,11 @@ const IndexContext = createContext(() => {
   const search = (query: string, limit: number = 50): BlockId[] => {
     _updateIndex();
 
-    const results = fulltextIndex.search(query, { limit, enrich: true })[0].result;
+    const results = fulltextIndex.search(query, { limit, enrich: true })?.[0]?.result;
+    if (!results) return [];
     const queryTokens = hybridTokenize(query, false, 1, false);
     const idAndScores = results.map((result: any) => {
       const score = calcMatchScore(queryTokens, result.doc.text);
-      console.log(result.doc.text, score);
       return { id: result.id, score };
     });
     idAndScores.sort((a: any, b: any) => b.score - a.score);

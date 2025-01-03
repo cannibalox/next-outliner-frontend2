@@ -5,7 +5,7 @@ import { timeout } from "@/utils/time";
 import { LoroDoc, type LoroMap } from "loro-crdt";
 import { type BlockOrigin } from "../view-layer/blocksManager";
 import { WebsocketClientNetwork } from "./wsClientNetwork";
-import { LoroWebsocketSynchronizer, type SyncStatus_Internal } from "./wsSynchronizer";
+import { LoroWebsocketSynchronizer } from "./wsSynchronizer";
 import {
   BLOCK_DATA_DOC_NAME_PREFIX,
   BLOCK_DATA_MAP_NAME,
@@ -49,14 +49,11 @@ export type MapChange = { op: "upsert"; key: string; value: any } | { op: "delet
 export type SyncWorkerOutMsg =
   // syncWorker 初始化完成，在此之间不应该向 syncWorker 发送消息，发了也不会处理
   | { type: "init" }
-  // 通知一个文档的同步状态
-  | ({ type: "syncStatus" } & (
-      | { syncStatus: "disconnected" }
-      | { syncStatus: "synced"; docId: string }
-    ))
-  | { type: "dataDocCreated"; docId: number }
+  | { type: "docSynced"; docId: string; hasSyncEvent: boolean }
+  | { type: "disconnected" }
+  | { type: "dataDocCreated"; dataDocId: number }
   | { type: "blockInfoMapChange"; origin: BlockOrigin; changes: MapChange[] }
-  | { type: "blockDataMapChange"; docId: number; origin: BlockOrigin; changes: MapChange[] };
+  | { type: "blockDataMapChange"; dataDocId: number; origin: BlockOrigin; changes: MapChange[] };
 
 // 用于向外界发送消息，就是包装了 postMessage 加上类型检查
 const postTypedMessage = (msg: SyncWorkerOutMsg) => {
@@ -147,9 +144,18 @@ const connect = (serverUrl_: string, location_: string, token_: string) => {
     wsSynchronizer = new LoroWebsocketSynchronizer(`ws://${serverUrl}`, wsNetwork);
     wsSynchronizer.connect();
     wsSynchronizer.addLoroDoc(BLOCK_INFO_DOC_NAME, baseDoc);
-    wsSynchronizer.on("status", (status) => {
-      console.info("[syncWorker] wsSynchronizer status", status);
-      postTypedMessage({ type: "syncStatus", ...status });
+    wsSynchronizer.on("docSynced", ({ docId, hasSyncEvent }) => {
+      console.info(
+        "[syncWorker] wsSynchronizer docSynced, docId:",
+        docId,
+        "hasSyncEvent:",
+        hasSyncEvent,
+      );
+      postTypedMessage({ type: "docSynced", docId, hasSyncEvent });
+    });
+    wsSynchronizer.on("disconnected", () => {
+      console.info("[syncWorker] wsSynchronizer disconnected");
+      postTypedMessage({ type: "disconnected" });
     });
   })();
 };
@@ -163,7 +169,7 @@ const loadDataDoc = (docId: number) => {
   const dataDoc = new LoroDoc();
   const blockDataMap = dataDoc.getMap(BLOCK_DATA_MAP_NAME);
   blockDataDocs.set(docId, dataDoc);
-  postTypedMessage({ type: "dataDocCreated", docId });
+  postTypedMessage({ type: "dataDocCreated", dataDocId: docId });
 
   blockDataMap.subscribe((eb) => {
     const origin = { type: eb.by === "local" ? "ui" : "remote" } as const; // TODO
@@ -179,7 +185,7 @@ const loadDataDoc = (docId: number) => {
 
     postTypedMessage({
       type: "blockDataMapChange",
-      docId,
+      dataDocId: docId,
       origin,
       changes,
     });
@@ -206,7 +212,6 @@ const postSyncLayerTransaction = (tr: SyncLayerTransaction) => {
   }
   // 先处理 blockInfoMap 的变更
   if (!blockInfoMap) return;
-  console.log("tr: ", tr);
   for (const p of tr.patches) {
     if (p.op === "upsertBlockInfo") {
       blockInfoMap.set(p.blockId, p.blockInfo);

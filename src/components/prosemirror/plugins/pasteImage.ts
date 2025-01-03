@@ -6,6 +6,7 @@ import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import type { ImageContent } from "@/common/type-and-schemas/block/block-content";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import { useTaskQueue } from "@/plugins/taskQueue";
+import { generateImageName } from "@/common/helper-functions/image-name";
 
 export const mkPasteImagePlugin = () => {
   const { uploadImage } = globalThis.getImagesContext()!;
@@ -37,7 +38,7 @@ export const mkPasteImagePlugin = () => {
 
         // save image
         if (imageExt && imageFile) {
-          const imagePath = `${imageFile.name}__${nanoid()}.${imageExt}`;
+          const imagePath = generateImageName(imageFile.name, imageExt);
           const imageContent: ImageContent = [
             BLOCK_CONTENT_TYPES.IMAGE,
             imagePath,

@@ -3,7 +3,7 @@
   <HeaderBar />
   <!-- mr-1 是为了让滚动条和屏幕边缘留出一点空隙 -->
   <BlockTree
-    v-if="allSyncStatus !== 'disconnected' && mainRootBlockRef"
+    v-if="synced && mainRootBlockRef"
     class="h-[100vh] mr-1"
     id="main"
     :style="{
@@ -67,6 +67,7 @@
   <Exporter />
   <!-- 属性检视器 -->
   <FieldValueInspector />
+  <!-- <ImageEditor /> -->
 </template>
 
 <script setup lang="ts">
@@ -89,32 +90,21 @@ import SidePane from "../../components/side-pane/SidePane.vue";
 import BlocksContext from "../../context/blocks/blocks";
 import SidebarContext from "../../context/sidebar";
 import AttachmentsManager from "@/components/attachments-mgr/AttachmentsManager.vue";
+// import ImageEditor from "@/components/image-editor/ImageEditor.vue";
 
 const { sidePaneOpen, sidePaneDir, sidePaneWidth, sidePaneHeight, enableSidePaneAnimation } =
   SidebarContext.useContext();
-const { allSyncStatus, blocksManager } = BlocksContext.useContext();
+const { synced, blocksManager } = BlocksContext.useContext();
 const { mainRootBlockRef } = MainTreeContext.useContext();
 const { openCreateNewTreeDialog, closeCreateNewTreeDialog } =
   CreateNewTreeDialogContext.useContext();
 
-watch(allSyncStatus, (newValue, oldValue) => {
-  if (oldValue === "disconnected" && newValue === "synced") {
+watch(synced, (newValue, oldValue) => {
+  if (!oldValue && newValue) {
     // 由断开连接恢复到连接状态时，检查根块是否存在
     const rootBlockRef = blocksManager.getRootBlockRef();
     if (rootBlockRef.value == null) {
-      blocksManager.ensureTree(
-        // 没有找到根块时
-        () => {
-          openCreateNewTreeDialog();
-        },
-        // 找到根块时
-        () => {
-          closeCreateNewTreeDialog();
-          // 提交一个空更改，修复 undo 无法 undo 到初始 state 的问题
-          const tr = blocksManager.createBlockTransaction({ type: "ui" });
-          tr.commit();
-        },
-      );
+      blocksManager.createNewTree();
     } else {
       // 提交一个空更改，修复 undo 无法 undo 到初始 state 的问题
       const tr = blocksManager.createBlockTransaction({ type: "ui" });

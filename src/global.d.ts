@@ -22,7 +22,7 @@ import type FloatingEditorContext from "./context/floatingEditor";
 import type ExporterContext from "./context/exporter";
 import type DailyNoteContext from "./context/dailynote";
 import type FusionCommandContext from "./context/fusionCommand";
-
+import type ImageEditorContext from "./context/imageEditor";
 export declare global {
   var getAxios: () => AxiosInstance | undefined;
   var getServerInfoContext: () => ReturnType<typeof ServerInfoContext.useContext> | undefined;
@@ -58,4 +58,5 @@ export declare global {
   var getExporterContext: () => ReturnType<typeof ExporterContext.useContext> | undefined;
   var getDailyNoteContext: () => ReturnType<typeof DailyNoteContext.useContext> | undefined;
   var getFusionCommandContext: () => ReturnType<typeof FusionCommandContext.useContext> | undefined;
+  var getImageEditorContext: () => ReturnType<typeof ImageEditorContext.useContext> | undefined;
 }

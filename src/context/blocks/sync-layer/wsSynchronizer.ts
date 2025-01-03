@@ -1,4 +1,4 @@
-import { LoroDoc, type Subscription, VersionVector } from "loro-crdt";
+import { LoroDoc, type LoroEventBatch, type Subscription, VersionVector } from "loro-crdt";
 import {
   MessageTypes,
   type ParsedMessageType,
@@ -13,15 +13,26 @@ import mitt, { type Emitter } from "mitt";
 export type LoroDocClientController = {
   docId: string;
   doc: LoroDoc;
+  // 最后一次发送到服务端的版本向量
   lastSentVersion?: VersionVector;
+  // 最后一次收到的 event batch
+  lastEB: LoroEventBatch | null;
   subscriptions: Subscription[];
 };
 
-// 表示一个文档的同步状态
-export type SyncStatus_Internal = "synced" | "disconnected";
-
-export type LoroWebsocketSynchronizerEvent = {
-  status: { syncStatus: "disconnected" } | { syncStatus: "synced"; docId: string };
+// 说明：
+// 视图层的同步状态不能直接根据 docSynced 得到
+// 因为 docSynced 只是表示同步层的数据已经和服务端同步了
+// 而视图层需要处理完同步层发送的相关事件（blockDataMapChange, blockInfoMapChange）
+// 根据这些事件更新 blocks，才真正完成了同步
+// 但要注意：也有可能同步层的数据一开始就和服务端一致，那么同步层就不会发送
+// blockDataMapChange, blockInfoMapChange 事件通知视图层更新视图层状态
+// 此时视图层无从得知自己的状态是否和同步层 & 服务端一致
+// 为此，我们在所有可能触发同步事件的地方，都检查到底有没有同步事件
+// 并将这一信息通过 docSynced.hasSyncEvent 传递给外界
+export type WsSynchronizerEvent = {
+  docSynced: { docId: string; hasSyncEvent: boolean };
+  disconnected: void;
 };
 
 // 同步器，其内部维护一个 websocket 连接
@@ -39,7 +50,7 @@ export class LoroWebsocketSynchronizer {
   private maxBackoffTime: number;
   private whenReady: Promise<void>;
   private whenReadyResolve: () => void;
-  private eventBus: Emitter<any>;
+  private eventBus: Emitter<WsSynchronizerEvent>;
 
   constructor(url: string, network: ClientNetwork, protocol?: string) {
     this.connection = null;
@@ -65,7 +76,7 @@ export class LoroWebsocketSynchronizer {
   ) => {
     console.info(`[wsSynchronizer] Received startSyncMessage, docId: ${docController.docId}`);
     const doc = docController.doc;
-    doc.import(msg.updates); // Import updates from server
+    doc.import(msg.updates); // 导入 msg 中包含的服务端更新
     console.info(`[wsSynchronizer] Doc ${docController.docId} after import updates:`, doc.toJSON());
     const vv = VersionVector.decode(msg.vv);
     docController.lastSentVersion = vv;
@@ -76,8 +87,14 @@ export class LoroWebsocketSynchronizer {
       console.info(
         `[wsSynchronizer] Replied with postUpdateMessage, docId: ${docController.docId}`,
       );
-      this.eventBus.emit("status", { syncStatus: "synced", docId: docController.docId });
     }
+    // 等待同步事件，这里要用 queueMicrotask 推迟到下一个微任务循环
+    // 这是因为 Loro 的内部限制，同步事件需要等到下一个微任务循环才能发送
+    docController.lastEB = null;
+    queueMicrotask(() => {
+      const hasSyncEvent = docController.lastEB !== null;
+      this.eventBus.emit("docSynced", { docId: docController.docId, hasSyncEvent });
+    });
   };
 
   // 处理收到的 postConflict 消息
@@ -96,11 +113,17 @@ export class LoroWebsocketSynchronizer {
     const doc = docController.doc;
     console.info(`[wsSynchronizer] Received postUpdateMessage, docId: ${docController.docId}`);
     doc.import(msg.updates);
-    this.eventBus.emit("status", { syncStatus: "synced", docId: docController.docId });
     console.info(
       `[wsSynchronizer] Received postUpdateMessage, doc ${docController.docId} after import updates:`,
       doc.toJSON(),
     );
+    // 等待同步事件，这里要用 queueMicrotask 推迟到下一个微任务循环
+    // 这是因为 Loro 的内部限制，同步事件需要等到下一个微任务循环才能发送
+    docController.lastEB = null;
+    queueMicrotask(() => {
+      const hasSyncEvent = docController.lastEB !== null;
+      this.eventBus.emit("docSynced", { docId: docController.docId, hasSyncEvent });
+    });
   };
 
   private _freeDocs() {
@@ -148,7 +171,7 @@ export class LoroWebsocketSynchronizer {
 
       this.connection.onClose(() => {
         console.info("[wsSynchronizer] Connection closed");
-        this.eventBus.emit("status", { syncStatus: "disconnected" });
+        this.eventBus.emit("disconnected");
         this.connection = null;
         this.wsConnecting = false;
         if (this.wsConnected) {
@@ -227,21 +250,26 @@ export class LoroWebsocketSynchronizer {
       return;
     }
     console.info(`[wsSynchronizer] Add new doc, docId: ${docId}`);
-    // Subscribe to doc updates and send new local updates to server
-    const sub = doc.subscribe((ev) => {
-      console.info(`[wsSynchronizer] New event on doc ${docId}:`, ev);
-      if (ev.by === "local") {
-        this._sendNewUpdatesToServer(docId);
-      }
-    });
     const controller: LoroDocClientController = {
       docId,
       doc,
       lastSentVersion: undefined,
-      subscriptions: [sub],
+      lastEB: null,
+      subscriptions: [],
     };
+
+    // 订阅文档更新
+    const sub = doc.subscribe((ev) => {
+      console.info(`[wsSynchronizer] New event on doc ${docId}:`, ev);
+      // 将所有本地更新推送到服务端
+      if (ev.by === "local") {
+        this._sendNewUpdatesToServer(docId);
+      }
+      controller.lastEB = ev; // 更新 lastEB
+    });
+    controller.subscriptions.push(sub);
     this.docs.set(docId, controller);
-    // Send canSync message to server when ready
+    // 当文档就绪时，发送 canSync 消息到服务端
     this.whenReady.then(() => {
       // 这里不知道为什么，不能用外部捕获的 doc，否则会报 rust 空指针异常
       const doc = this.docs.get(docId)?.doc;
@@ -252,16 +280,16 @@ export class LoroWebsocketSynchronizer {
     });
   }
 
-  on<T extends keyof LoroWebsocketSynchronizerEvent>(
+  on<T extends keyof WsSynchronizerEvent>(
     event: T,
-    listener: (data: LoroWebsocketSynchronizerEvent[T]) => void,
+    listener: (data: WsSynchronizerEvent[T]) => void,
   ) {
     this.eventBus.on(event, listener);
   }
 
-  off<T extends keyof LoroWebsocketSynchronizerEvent>(
+  off<T extends keyof WsSynchronizerEvent>(
     event: T,
-    listener: (data: LoroWebsocketSynchronizerEvent[T]) => void,
+    listener: (data: WsSynchronizerEvent[T]) => void,
   ) {
     this.eventBus.off(event, listener);
   }

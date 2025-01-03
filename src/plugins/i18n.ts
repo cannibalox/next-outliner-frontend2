@@ -57,6 +57,14 @@ export const messages = {
       keybindingInput: {
         empty: "点击设置快捷键",
       },
+      imageEditor: {
+        title: "图片编辑器",
+        description: "支持图片裁剪、旋转，自动优化扫描文件等功能",
+        cancel: "取消",
+        save: "应用更改",
+        saveAs: "另存为",
+        deleteOriginal: "是否删除原图？",
+      },
       fusionCommand: {
         noResults: "没有找到相关内容",
         noCommandResults: "没有找到相关命令",
@@ -214,6 +222,7 @@ export const messages = {
         download: "下载图片",
         metadata: "详细信息",
         filter: "滤镜",
+        clearScannedImage: "清除扫描图片的背景",
       },
       exporter: {
         title: "导出",

@@ -19,7 +19,7 @@ const DAILY_NOTE_TAG = "day";
 const DailyNoteContext = createContext(() => {
   const { registerSettingGroup, registerSettingItem } = SettingsContext.useContext();
   const { getBacklinks } = IndexContext.useContext();
-  const { blocksManager, blockEditor, allSyncStatus } = BlocksContext.useContext();
+  const { blocksManager, blockEditor, synced } = BlocksContext.useContext();
   const { toast } = useToast();
   const { t } = useI18n();
   const taskQueue = useTaskQueue();
@@ -28,9 +28,10 @@ const DailyNoteContext = createContext(() => {
   // 确保存在 day 块可以用作标签
   // TODo: 只执行一次添加
   watch(
-    allSyncStatus,
-    (status) => {
-      if (status === "synced") {
+    synced,
+    (newValue, oldValue) => {
+      // not synced -> synced
+      if (!oldValue && newValue) {
         const dayBlock = blocksManager.getBlock("day");
         if (dayBlock) return;
         const tr = blocksManager.createBlockTransaction({ type: "ui" });

@@ -1,4 +1,8 @@
-import { BLOCK_CONTENT_TYPES } from "@/common/constants";
+import {
+  BLOCK_CONTENT_TYPES,
+  BLOCK_DATA_DOC_NAME_PREFIX,
+  BLOCK_INFO_DOC_NAME,
+} from "@/common/constants";
 import { extractBlockStatus } from "@/common/helper-functions/block";
 import { type BlockContent } from "@/common/type-and-schemas/block/block-content";
 import { type BlockData } from "@/common/type-and-schemas/block/block-data";
@@ -10,7 +14,7 @@ import { plainTextToTextContent } from "@/utils/pm";
 import dayjs from "dayjs";
 import { nanoid } from "nanoid";
 import { Node } from "prosemirror-model";
-import { type ShallowRef, shallowRef, toRaw } from "vue";
+import { computed, ref, type ShallowRef, shallowRef, toRaw } from "vue";
 import { z } from "zod";
 import type { SyncLayer } from "../sync-layer/syncLayer";
 import useBlockTransaction from "./blockTransaction";
@@ -157,6 +161,8 @@ export type ForDescendantsOptions = {
     | "keep-self-and-descendants";
 };
 
+export type SyncStatus = "synced" | "waitForEventProcessing" | "disconnected";
+
 export type ForDescendantsOptionsWithMissingBlock = {
   onEachBlock: (block: Block, level: number) => void | Promise<void>;
   onMissingBlock?: (blockId: BlockId, parendId: BlockId, level: number) => void | Promise<void>;
@@ -236,7 +242,7 @@ export const cloneBlock = (block: Block | null): Block | null => {
 // 2. 后端 -> UI 时，应该使用推模式而非拉模式，因为拉模式可能拉到的是过时的数据，而我们无从判断。
 //    而推模式仅在收到数据时才触发监听器，并且能通过 origin 判断数据是否来自自己，防止将自己更新回
 //    过时的状态。
-export const createBlocksManager = (yjsLayer: SyncLayer) => {
+export const createBlocksManager = (syncLayer: SyncLayer) => {
   const eventBus = useEventBus();
   const blocks = new Map<BlockId, ShallowRef<Block | null>>();
   // 记录 missing block 的 parentId
@@ -250,6 +256,37 @@ export const createBlocksManager = (yjsLayer: SyncLayer) => {
   const latestBlockInfos = new Map<BlockId, BlockInfo>();
   const latestBlockDatas = new Map<BlockId, BlockData>();
   const loadedDataDocs = new Set<number>(); // 记录已经加载的数据文档，防止重复加载
+
+  // 记录所有文档是否已经同步
+  // 刚开始，和连接断开时，synced == false
+  // 第一次同步完成时（即 syncStatus 中所有文档的同步状态都为 synced），synced == true
+  const synced = ref(false);
+
+  // 每个文档的同步状态
+  // - synced: 文档已经同步
+  // - waitForEventProcessing: 文档正在等待事件处理完成
+  // - disconnected: 文档连接断开
+  const syncStatus = ref<Map<string, SyncStatus>>(new Map());
+
+  syncLayer.on("docSynced", ({ docId, hasSyncEvent }) => {
+    // 如果有同步事件，则还需要等待事件处理完成
+    if (hasSyncEvent) syncStatus.value.set(docId, "waitForEventProcessing");
+    // 否则文档已经同步
+    else {
+      syncStatus.value.set(docId, "synced");
+      // 块信息文档同步完成，并且不会收到同步事件，则 synced 设为 true
+      // 否则在下面 blockInfoSynced handler 中，等第一个 transaction 提交后更新 synced
+      if (synced.value == false && docId == BLOCK_INFO_DOC_NAME) {
+        synced.value = true;
+      }
+    }
+  });
+  // 连接断开时，所有文档的同步状态都设为断开
+  syncLayer.on("disconnected", () => {
+    for (const docId of syncStatus.value.keys()) {
+      syncStatus.value.set(docId, "disconnected");
+    }
+  });
 
   const pendingTasks = {
     getBlockInfo: new Map<BlockId, PendingTask<BlockInfo>>(),
@@ -526,7 +563,7 @@ export const createBlocksManager = (yjsLayer: SyncLayer) => {
     // 都没有获取到，则创建一个 pendingTask 等待这个块的数据
     if (!blockData) {
       if (!loadedDataDocs.has(docId)) {
-        yjsLayer.loadDataDoc(docId);
+        syncLayer.loadDataDoc(docId);
         loadedDataDocs.add(docId);
       }
 
@@ -549,7 +586,7 @@ export const createBlocksManager = (yjsLayer: SyncLayer) => {
     return blockData;
   };
 
-  yjsLayer.on("blockDataMapChange", ({ docId, origin, changes }) => {
+  syncLayer.on("blockDataMapChange", ({ docId, origin, changes }) => {
     const tr = createBlockTransaction(origin);
     if (origin.type == "ui") return; // 不处理本地事务，防止无限循环
 
@@ -602,9 +639,12 @@ export const createBlocksManager = (yjsLayer: SyncLayer) => {
     if (tr.patches.length > 0) {
       tr.commit();
     }
+
+    // 事件处理完成，同步状态设置为 synced
+    syncStatus.value.set(`${BLOCK_DATA_DOC_NAME_PREFIX}${docId}`, "synced");
   });
 
-  yjsLayer.on("blockInfoMapChange", ({ origin, changes }) => {
+  syncLayer.on("blockInfoMapChange", ({ origin, changes }) => {
     const tr = createBlockTransaction(origin);
     if (origin.type === "ui") return; // 不处理本地事务，防止无限循环
 
@@ -615,7 +655,6 @@ export const createBlocksManager = (yjsLayer: SyncLayer) => {
     for (const change of changes) {
       // 一个块被删除了
       if (change.op == "delete") {
-        console.debug("[blocksManager] Processing delete action for block:", change.key);
         latestBlockInfos.delete(change.key);
         const block = blocks.get(change.key);
         if (block) {
@@ -722,36 +761,12 @@ export const createBlocksManager = (yjsLayer: SyncLayer) => {
     Promise.all(promises).then(() => {
       console.debug("[blocksManager] in app, all resolved", dayjs().valueOf());
       tr.commit();
+      // 事件处理完成，同步状态设置为 synced
+      syncStatus.value.set(BLOCK_INFO_DOC_NAME, "synced");
+      synced.value = true;
       console.debug("[blocksManager] in app, transaction commit", dayjs().valueOf());
     });
   });
-
-  const hasRootBlock = () => getBlockRef("root").value != null;
-
-  const ensureTree = async (
-    onNoRoot: () => void, // 当检测到没有根块时的回调
-    onRootFound: () => void, // 当检测到根块时的回调
-  ) => {
-    //
-    const check = () => {
-      if (hasRootBlock()) {
-        clearInterval(checkInterval);
-        onRootFound();
-      } else {
-        onNoRoot();
-      }
-    };
-
-    const checkInterval = setInterval(() => {
-      check();
-    }, 1000); // 每秒检查一次
-    check();
-
-    // 30秒后停止检查
-    setTimeout(() => {
-      clearInterval(checkInterval);
-    }, 30000);
-  };
 
   // 创建新树的具体实现
   const createNewTree = async () => {
@@ -789,7 +804,7 @@ export const createBlocksManager = (yjsLayer: SyncLayer) => {
 
   const { createBlockTransaction, addBlock, updateBlock, deleteBlock } = useBlockTransaction({
     blocks,
-    yjsLayer,
+    yjsLayer: syncLayer,
     latestBlockInfos,
     latestBlockDatas,
     getBlockRef,
@@ -808,12 +823,12 @@ export const createBlocksManager = (yjsLayer: SyncLayer) => {
     latestBlockDatas,
     pendingTasks,
     missingBlockParents,
+    synced,
     getBlock,
     getBlockRef,
     getRootBlockRef,
     getBlockPath,
     getBlockLevel,
-    ensureTree,
     forDescendants,
     forDescendantsWithMissingBlock,
     createBlockTransaction,

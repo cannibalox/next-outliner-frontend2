@@ -16,8 +16,7 @@ export type SettingComponentType =
   | { type: "slider"; min?: number; max?: number }
   | { type: "keybindingInput" }
   | { type: "fontSelector" }
-  | { type: "blockIdInput" }
-  | { type: "customComponent"; component: Component };
+  | { type: "blockIdInput" };
 
 export type SettingGroupItem = {
   key: string;
@@ -34,7 +33,7 @@ export type SettingItem<
   defaultValue: T;
   desc?: Record<string, string>;
   value: WritableComputedRef<T>;
-  // componentType: SettingComponentType & { type: C };
+  componentType: SettingComponentType & { type: C };
 };
 
 const SettingsContext = createContext(() => {

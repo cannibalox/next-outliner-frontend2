@@ -31,13 +31,10 @@
       <!-- 同步状态 -->
       <Tooltip>
         <TooltipTrigger>
-          <Dot
-            class="size-8"
-            :class="allSyncStatus === 'synced' ? 'stroke-green-500' : 'stroke-red-500'"
-          />
+          <Dot class="size-8" :class="synced ? 'stroke-green-500' : 'stroke-red-500'" />
         </TooltipTrigger>
         <TooltipContent>
-          {{ t(`kbView.syncStatus.${allSyncStatus}`) }}
+          {{ t(`kbView.syncStatus.${synced ? "synced" : "disconnected"}`) }}
         </TooltipContent>
       </Tooltip>
 
@@ -145,7 +142,7 @@ const { theme, toggleTheme } = ThemeContext.useContext();
 const { focusModeEnabled } = FocusModeContext.useContext();
 const { timeMachineOpen } = TimeMachineContext.useContext();
 const { openFusionCommand } = FusionCommandContext.useContext();
-const { allSyncStatus } = BlocksContext.useContext();
+const { synced } = BlocksContext.useContext();
 const { mainRootBlockId } = MainTreeContext.useContext();
 const openImporter = ref(false);
 const { t } = useI18n();

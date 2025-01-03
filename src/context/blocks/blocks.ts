@@ -24,21 +24,12 @@ export const BlocksContext = createContext(() => {
     { immediate: true },
   );
 
-  const allSyncStatus = computed(() => {
-    // 当 syncStatus 为空时，表示未连接
-    if (syncLayer.syncStatus.value.size === 0) return "disconnected";
-    for (const status of syncLayer.syncStatus.value.values()) {
-      if (status === "disconnected") return "disconnected";
-    }
-    return "synced";
-  });
-
   const ctx = {
     blocksManager,
     blockEditor,
     syncLayer,
     syncStatus: syncLayer.syncStatus,
-    allSyncStatus,
+    synced: blocksManager.synced,
   };
   // 通过 globalThis 暴露给组件外使用
   globalThis.getBlocksContext = () => ctx;
