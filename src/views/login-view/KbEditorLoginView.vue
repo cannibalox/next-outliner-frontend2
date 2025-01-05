@@ -1,5 +1,5 @@
 <template>
-  <Card class="w-[400px]">
+  <Card class="w-[400px] z-10">
     <CardHeader>
       <CardTitle> {{ $t("login.kbEditorLogin.title") }} </CardTitle>
       <CardDescription></CardDescription>
@@ -147,8 +147,7 @@ import { Check, CircleCheck, Loader2, LoaderCircle, RefreshCcw, X } from "lucide
 import { ref } from "vue";
 import { z } from "zod";
 
-const { token } = ServerInfoContext.useContext();
-const { serverUrl } = ServerInfoContext.useContext();
+const { serverUrl, token } = ServerInfoContext.useContext();
 const password = ref<string>("");
 const selectedKbLocation = ref<string | undefined>(undefined);
 const { kbs, refreshKbList } = KbInfoContext.useContext();

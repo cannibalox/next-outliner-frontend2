@@ -3,7 +3,9 @@
     <DropdownMenuTrigger>
       <slot />
     </DropdownMenuTrigger>
-    <DropdownMenuContent class="min-w-[200px]">
+    <DropdownMenuContent
+      class="min-w-[200px] overflow-y-auto max-h-[var(--radix-dropdown-menu-content-available-height)]"
+    >
       <DropdownMenuItem
         class="!text-red-500"
         :disabled="!deleteBlock(true, blockId, undefined)"

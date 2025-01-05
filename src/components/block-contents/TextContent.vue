@@ -33,6 +33,7 @@ import { mkKeymapPlugin } from "../prosemirror/plugins/keymap";
 import { mkPasteImagePlugin } from "../prosemirror/plugins/pasteImage";
 import { mkPasteTextPlugin } from "../prosemirror/plugins/pasteText";
 import type { BlockId } from "@/common/type-and-schemas/block/block-id";
+import BlockSelectDragContext from "@/context/blockSelect";
 
 const props = defineProps<{
   blockTree?: BlockTree;
@@ -46,6 +47,7 @@ const { blockEditor, blocksManager } = BlocksContext.useContext();
 const taskQueue = useTaskQueue();
 const docJson = shallowRef<any | null>(null);
 const pmWrapper = ref<InstanceType<typeof ProseMirror> | null>(null);
+const { selectedBlockIds } = BlockSelectDragContext.useContext();
 const nodeViews: EditorProps["nodeViews"] = {
   mathInline(node, view, getPos) {
     return new MathInlineKatex(node, view, getPos);

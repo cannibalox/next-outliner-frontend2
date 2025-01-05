@@ -100,7 +100,7 @@ const { mainRootBlockId } = MainTreeContext.useContext();
 const {
   selectedBlockIds,
   draggingDropPos,
-  isDragSelecting: isDragging,
+  dragging: isDragging,
 } = BlockSelectDragContext.useContext();
 const { getMirrors } = IndexContext.useContext();
 

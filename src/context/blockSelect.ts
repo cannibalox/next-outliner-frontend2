@@ -14,9 +14,9 @@ const BlockSelectDragContext = createContext(() => {
     allNonFolded: BlockId[];
   }>({ topLevelOnly: [], allNonFolded: [] });
   const draggingDropPos = ref<DraggingDropPos | null>(null);
-  const isDragSelecting = ref(false);
+  const dragging = ref(false);
 
-  const ctx = { selectedBlockIds, draggingDropPos, isDragSelecting };
+  const ctx = { selectedBlockIds, draggingDropPos, dragging };
   globalThis.getBlockSelectContext = () => ctx;
   return ctx;
 });

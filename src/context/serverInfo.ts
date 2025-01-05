@@ -4,6 +4,9 @@ import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
 import { watch } from "vue";
 import { useLocalStorage } from "@vueuse/core";
+import { JwtPayloadSchema } from "@/common/type-and-schemas/jwtPayload";
+import { z } from "zod";
+import router from "@/router";
 
 export const ServerInfoContext = createContext(() => {
   // 使用 localStorage 存储 token
@@ -24,9 +27,25 @@ export const ServerInfoContext = createContext(() => {
         })
         .join(""),
     );
-
-    return JSON.parse(jsonPayload);
+    const validationResult = z
+      .string()
+      .transform((s) => {
+        try {
+          return JSON.parse(s);
+        } catch (e) {
+          return null;
+        }
+      })
+      .pipe(JwtPayloadSchema)
+      .safeParse(jsonPayload);
+    return validationResult.success ? validationResult.data : null;
   });
+
+  const logout = () => {
+    token.value = "";
+    serverUrl.value = "";
+    router.replace("/login/admin");
+  };
 
   // 监听路由参数中的 serverUrl，并更新 serverUrl
   watch(
@@ -57,6 +76,7 @@ export const ServerInfoContext = createContext(() => {
     tokenPayload,
     serverUrl,
     getAxios,
+    logout,
   };
 
   // 通过 globalThis 暴露给组件外使用

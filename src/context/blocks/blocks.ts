@@ -28,7 +28,6 @@ export const BlocksContext = createContext(() => {
     blocksManager,
     blockEditor,
     syncLayer,
-    syncStatus: syncLayer.syncStatus,
     synced: blocksManager.synced,
   };
   // 通过 globalThis 暴露给组件外使用

@@ -17,7 +17,7 @@
 <script setup lang="ts">
 import type { HeaderBarItemType } from ".";
 
-const props = defineProps<{
+defineProps<{
   item: HeaderBarItemType;
   iconOnly?: boolean;
   iconClass?: string;

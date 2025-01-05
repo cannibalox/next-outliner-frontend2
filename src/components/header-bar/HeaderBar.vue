@@ -6,22 +6,7 @@
     <div class="left-part">
       <!-- 左边的按钮 -->
       <div class="left-buttons">
-        <Tooltip v-for="(button, index) in leftButtons" :key="index">
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              :class="button.active?.value ? 'bg-muted' : ''"
-              @focus="preventFocus"
-              @click="button.onClick"
-            >
-              <HeaderBarItem :item="button" iconOnly />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <component :is="button.label" />
-          </TooltipContent>
-        </Tooltip>
+        <LeftButtons />
       </div>
     </div>
 
@@ -132,6 +117,9 @@ import type { HeaderBarItemType } from ".";
 import BlockPath from "../BlockPath.vue";
 import DailynoteNavigator from "../dailynote-navigator/DailynoteNavigator.vue";
 import HeaderBarItem from "./HeaderBarItem.vue";
+import ServerInfoContext from "@/context/serverInfo";
+import HistoryContext from "@/context/history";
+import LeftButtons from "./LeftButtons.vue";
 
 const { sidePaneOpen, sidePaneDir, sidePaneWidth, enableSidePaneAnimation } =
   SidebarContext.useContext();
@@ -144,8 +132,10 @@ const { timeMachineOpen } = TimeMachineContext.useContext();
 const { openFusionCommand } = FusionCommandContext.useContext();
 const { synced } = BlocksContext.useContext();
 const { mainRootBlockId } = MainTreeContext.useContext();
+const { logout } = ServerInfoContext.useContext();
 const openImporter = ref(false);
 const { t } = useI18n();
+const { goPrev, goNext, canGoPrev, canGoNext } = HistoryContext.useContext();
 
 const handleClickPathSegment = (blockId: BlockId) => {
   mainRootBlockId.value = blockId;
@@ -181,12 +171,14 @@ const leftButtons: HeaderBarItemType[] = [
   {
     icon: ArrowLeft,
     label: () => <>后退</>,
-    onClick: () => {},
+    disabled: computed(() => !canGoPrev.value),
+    onClick: goPrev,
   },
   {
     icon: ArrowRight,
     label: () => <>前进</>,
-    onClick: () => {},
+    disabled: computed(() => !canGoNext.value),
+    onClick: goNext,
   },
 ];
 
@@ -280,7 +272,7 @@ const moreOptions: HeaderBarItemType[] = [
   {
     icon: LogOut,
     label: () => t("kbView.headerBar.exit"),
-    onClick: () => {},
+    onClick: logout,
   },
 ];
 </script>

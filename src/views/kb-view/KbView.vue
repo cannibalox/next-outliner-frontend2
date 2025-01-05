@@ -21,23 +21,25 @@
                                         <RefSuggestionsContext.Provider>
                                           <BlockMoverContext.Provider>
                                             <MainTreeContext.Provider>
-                                              <BlockSelectDragContext.Provider>
-                                                <SettingsPanelContext.Provider>
-                                                  <FavoriteContext.Provider>
-                                                    <FieldsManagerContext.Provider>
-                                                      <FloatingEditorContext.Provider>
-                                                        <FieldValueInspectorContext.Provider>
-                                                          <DailyNoteContext.Provider>
-                                                            <FusionCommandContext.Provider>
-                                                              <KbViewContent />
-                                                            </FusionCommandContext.Provider>
-                                                          </DailyNoteContext.Provider>
-                                                        </FieldValueInspectorContext.Provider>
-                                                      </FloatingEditorContext.Provider>
-                                                    </FieldsManagerContext.Provider>
-                                                  </FavoriteContext.Provider>
-                                                </SettingsPanelContext.Provider>
-                                              </BlockSelectDragContext.Provider>
+                                              <HistoryContext.Provider>
+                                                <BlockSelectDragContext.Provider>
+                                                  <SettingsPanelContext.Provider>
+                                                    <FavoriteContext.Provider>
+                                                      <FieldsManagerContext.Provider>
+                                                        <FloatingEditorContext.Provider>
+                                                          <FieldValueInspectorContext.Provider>
+                                                            <DailyNoteContext.Provider>
+                                                              <FusionCommandContext.Provider>
+                                                                <KbViewContent />
+                                                              </FusionCommandContext.Provider>
+                                                            </DailyNoteContext.Provider>
+                                                          </FieldValueInspectorContext.Provider>
+                                                        </FloatingEditorContext.Provider>
+                                                      </FieldsManagerContext.Provider>
+                                                    </FavoriteContext.Provider>
+                                                  </SettingsPanelContext.Provider>
+                                                </BlockSelectDragContext.Provider>
+                                              </HistoryContext.Provider>
                                             </MainTreeContext.Provider>
                                           </BlockMoverContext.Provider>
                                         </RefSuggestionsContext.Provider>
@@ -95,4 +97,5 @@ import ExporterContext from "@/context/exporter";
 import FieldValueInspectorContext from "@/context/fieldValueInspector";
 import DailyNoteContext from "@/context/dailynote";
 import ImageEditorContext from "@/context/imageEditor";
+import HistoryContext from "@/context/history";
 </script>

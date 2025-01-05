@@ -25,18 +25,21 @@
     </CardContent>
 
     <CardFooter class="flex justify-center gap-8">
+      <router-link
+        to="/login/kb-editor"
+        class="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
+      >
+        {{ $t("login.adminLogin.kbEditorLoginBtn") }}
+      </router-link>
+
       <Button class="min-w-[100px]" @click="login" :disabled="loginStatus === 'loggingIn'">
-        <template v-if="loginStatus === 'loggingIn'">
-          <Loader2 class="size-4 mr-2 animate-spin" />
-          {{ $t("login.adminLogin.loginStatus.loggingIn") }}
-        </template>
-        <template v-else-if="loginStatus === 'loginSuccess'">
-          <Check class="size-4 mr-2" />
-          {{ $t("login.adminLogin.loginStatus.loginSuccess") }}
-        </template>
-        <template v-else>
-          {{ $t("login.adminLogin.loginBtn") }}
-        </template>
+        <Loader2 v-if="loginStatus === 'loggingIn'" class="size-4 mr-2 animate-spin" />
+        <Check v-else-if="loginStatus === 'loginSuccess'" class="size-4 mr-2" />
+        <X v-else-if="loginStatus !== 'idle'" class="size-4 mr-2" />
+        {{
+          $t(`login.adminLogin.loginBtn.${loginStatus}`) ??
+          $t("login.adminLogin.loginBtn.loginFailed")
+        }}
       </Button>
     </CardFooter>
   </Card>
@@ -64,7 +67,7 @@ import { timeout } from "@/utils/time";
 import router from "@/router";
 import ServerInfoContext from "@/context/serverInfo";
 
-const { serverUrl } = ServerInfoContext.useContext();
+const { serverUrl, token } = ServerInfoContext.useContext();
 const password = ref("");
 const { t } = useI18n();
 const loginStatus = ref<
@@ -78,7 +81,7 @@ const loginStatus = ref<
 >("idle");
 const errMsg = computed(() => {
   if (["idle", "loggingIn", "loginSuccess"].includes(loginStatus.value)) return null;
-  return t(`login.adminLogin.loginStatus.${loginStatus.value}`);
+  return t(`login.adminLogin.errMsg.${loginStatus.value}`);
 });
 
 const login = async () => {
@@ -98,9 +101,11 @@ const login = async () => {
   ]);
   if (resp.success) {
     loginStatus.value = "loginSuccess";
+    token.value = resp.data.token;
     setTimeout(() => {
       // 2s 后跳转到 dashboard
-      router.push("/admin/dashboard");
+      const p = encodeURIComponent(url);
+      router.push(`/admin-dashboard/${p}`);
     }, 2000);
   }
   // error handling

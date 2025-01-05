@@ -409,7 +409,8 @@ defineExpose(controller);
 
 let pointerDownBlockId: BlockId | null = null;
 let pointerDownTime: number | null = null;
-let dragging = false;
+// 现在是在移动块还是框选块
+let movingBlocks = false;
 
 // 获得当前 blockTree 的缩进宽度
 let indentSize: { width: number; rightMargin: number } | null = null;
@@ -428,8 +429,8 @@ const getIndentSize = () => {
 };
 
 const handlePointerUpOrLeave = (e: PointerEvent) => {
-  blockSelectDragContext.isDragSelecting.value = false;
-  if (dragging) {
+  blockSelectDragContext.dragging.value = false;
+  if (movingBlocks) {
     const taskQueue = useTaskQueue();
     // 拖动结束，将选中的块移动到拖动结束的位置
     const draggingDropPos = blockSelectDragContext.draggingDropPos.value;
@@ -437,7 +438,6 @@ const handlePointerUpOrLeave = (e: PointerEvent) => {
     const { blockId, absLevel } = draggingDropPos;
     const selected = blockSelectDragContext.selectedBlockIds.value;
     const blockLevel = blocksManager.getBlockLevel(blockId);
-    console.log("absLevel", absLevel, "blockLevel", blockLevel);
     if (absLevel > blockLevel) {
       // 将 selected 插入到 block 的子级
       taskQueue.addTask(() => {
@@ -469,7 +469,7 @@ const handlePointerUpOrLeave = (e: PointerEvent) => {
 
   pointerDownBlockId = null;
   pointerDownTime = null;
-  dragging = false;
+  movingBlocks = false;
   blockSelectDragContext.draggingDropPos.value = null;
   document.removeEventListener("pointermove", handlePointerMove);
   document.removeEventListener("pointerup", handlePointerUpOrLeave);
@@ -477,7 +477,8 @@ const handlePointerUpOrLeave = (e: PointerEvent) => {
 };
 
 const handlePointerMove = useThrottleFn((e: PointerEvent) => {
-  if (dragging) {
+  blockSelectDragContext.dragging.value = true;
+  if (movingBlocks) {
     // 1. 拖动
     e.preventDefault();
     e.stopPropagation();
@@ -564,7 +565,6 @@ const handlePointerMove = useThrottleFn((e: PointerEvent) => {
 
     e.preventDefault();
     e.stopPropagation();
-    blockSelectDragContext.isDragSelecting.value = true;
 
     const hoveredBlockItem = getHoveredElementWithClass(e.target, "block-item");
     const blockIdCurrent = hoveredBlockItem?.dataset["blockId"];
@@ -647,11 +647,11 @@ const handlePointerDown = (e: PointerEvent) => {
   if (!blockId) return;
   pointerDownBlockId = blockId;
   pointerDownTime = Date.now().valueOf();
-  blockSelectDragContext.isDragSelecting.value = false;
+  blockSelectDragContext.dragging.value = false;
   // 如果按下的是块的 bullet，则认为是拖动，否则认为是框选
   const hoveredBullet = getHoveredElementWithClass(e.target, "bullet");
   if (hoveredBullet) {
-    dragging = true;
+    movingBlocks = true;
     if (blockSelectDragContext.selectedBlockIds.value.topLevelOnly.length === 0) {
       const newSelected = {
         topLevelOnly: [blockId],

@@ -22,6 +22,25 @@ const router = createRouter({
       ],
     },
     {
+      path: "/admin-dashboard/:serverUrl",
+      component: () => import("@/views/admin-dashboard/AdminDashboard.vue"),
+      beforeEnter: (to, from, next) => {
+        const serverInfoContext = globalThis.getServerInfoContext();
+        const tokenPayload = serverInfoContext?.tokenPayload?.value;
+        const targetServerUrl = to.params.serverUrl as string;
+        if (
+          !tokenPayload ||
+          tokenPayload.role !== "admin" ||
+          tokenPayload.serverUrl !== targetServerUrl
+        ) {
+          serverInfoContext?.logout();
+          next({ path: "/login/admin" });
+        } else {
+          next();
+        }
+      },
+    },
+    {
       path: "/kb/:serverUrl/:location/:rootBlockId?/:focusedBlockId?",
       component: () => import("../views/kb-view/KbView.vue"),
       beforeEnter: (to, from, next) => {
@@ -32,9 +51,11 @@ const router = createRouter({
         // invalid or missing token
         if (
           !tokenPayload ||
+          tokenPayload.role !== "kb-editor" ||
           tokenPayload.serverUrl !== targetServerUrl ||
           tokenPayload.location !== targetLocation
         ) {
+          serverInfoContext?.logout();
           next({ path: "/login/kb-editor" });
         } else {
           next();

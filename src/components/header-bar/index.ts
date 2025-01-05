@@ -5,4 +5,5 @@ export type HeaderBarItemType = {
   icon: FunctionalComponent;
   label: FunctionalComponent;
   active?: Ref<boolean>;
+  disabled?: Ref<boolean>;
 };

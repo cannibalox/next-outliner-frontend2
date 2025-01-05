@@ -73,13 +73,14 @@ export const pmSchemaSpec: SchemaSpec = {
         if (node.attrs.tag) span.classList.add("tag"); // 是标签
 
         // 点击块引用，跳转到对应块
-        span.addEventListener("click", async (e) => {
+        span.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
-          // 从这个元素往上找，找到对应的 blockTree 更好？
-          const mainTree = blockTreeContext.getBlockTree("main");
-          if (mainTree == null) return;
-          await mainTree.focusBlock(toBlockId, { highlight: true, expandIfFold: true });
+          const { pushHistoryItem } = getHistoryContext()!;
+          pushHistoryItem(); // 记录历史
+          const tree = blockTreeContext.getBlockTree("main");
+          if (tree == null) return;
+          tree.focusBlock(toBlockId, { highlight: true, expandIfFold: true });
         });
 
         // 鼠标悬浮时，尝试打开浮动编辑器

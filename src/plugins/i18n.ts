@@ -38,11 +38,17 @@ export const messages = {
         serverUrlLabel: "服务器 URL",
         serverUrlPlaceholder: "输入服务器 URL，例如 http://43.134.1.60/:8081",
         passwordLabel: "密码",
-        loginStatus: {
+        kbEditorLoginBtn: "知识库编辑者登陆",
+        loginBtn: {
+          idle: "登录",
           loggingIn: "登录中...",
           loginSuccess: "登录成功",
+          invalidServerUrl: "登陆失败",
+          invalidPassword: "登陆失败",
+          maxAttempts: "登陆失败",
+        },
+        errMsg: {
           invalidServerUrl: "URL 格式不正确",
-          cannotConnectToServer: "无法连接到服务器",
           invalidPassword: "密码错误",
           maxAttempts: "达到最大尝试次数，请稍后再试",
         },
@@ -247,6 +253,56 @@ export const messages = {
         dontKnowWhereToCreate: {
           title: "不知道在哪里创建每日笔记",
           desc: '你应该到 "设置 > 每日笔记 > 每日笔记的存放位置" 设置新创建的每日笔记的存放位置',
+        },
+      },
+      history: {
+        goToPrev: "后退，右键查看所有历史项目",
+        goToNext: "前进，右键查看所有历史项目",
+      },
+    },
+    adminDashboard: {
+      title: "管理员面板",
+      logout: "登出",
+      tabs: {
+        kbManagement: "知识库管理",
+        logsAndAnalytics: "日志和分析",
+      },
+      kbManagement: {
+        allKbs: "所有知识库",
+        allKbsDescription: "你可以在这里创建新知识库，删除知识库，或修改已有知识库的信息",
+        kbActions: {
+          edit: "编辑",
+          delete: "删除",
+          addKb: "创建新知识库",
+          refreshKbList: "刷新知识库列表",
+        },
+        newKbDialog: {
+          title: "创建新知识库",
+          description: "请填写以下信息来创建新的知识库",
+          nameLabel: "名称",
+          namePlaceholder: "请输入知识库名称",
+          locationLabel: "位置",
+          locationPlaceholder: "请输入知识库位置",
+          passwordLabel: "密码",
+          passwordPlaceholder: "请输入知识库密码",
+          createBtn: {
+            idle: "创建",
+            creating: "创建中...",
+            createSuccess: "创建成功",
+            createFailed: "创建失败",
+          },
+          cancelBtn: "取消",
+        },
+        deleteKbDialog: {
+          title: "删除知识库",
+          description: '你确定要删除知识库 "{name}" 吗？此操作不可撤销。',
+          cancelBtn: "取消",
+          status: {
+            idle: "删除",
+            deleting: "正在删除...",
+            deleteSuccess: "删除成功",
+            deleteFailed: "删除失败",
+          },
         },
       },
     },

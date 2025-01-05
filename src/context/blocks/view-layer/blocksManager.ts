@@ -286,6 +286,7 @@ export const createBlocksManager = (syncLayer: SyncLayer) => {
     for (const docId of syncStatus.value.keys()) {
       syncStatus.value.set(docId, "disconnected");
     }
+    synced.value = false;
   });
 
   const pendingTasks = {
@@ -318,6 +319,7 @@ export const createBlocksManager = (syncLayer: SyncLayer) => {
     return srcBlock as Block & { type: "normalBlock" };
   };
 
+  // self -> root
   const getBlockPath = (blockId: BlockId): Block[] => {
     let curr = getBlockRef(blockId);
     if (!curr) return [];
@@ -327,7 +329,7 @@ export const createBlocksManager = (syncLayer: SyncLayer) => {
       if (curr.value.id == "root") break;
       const parentRef = curr.value.parentRef;
       if (parentRef.value) curr = parentRef;
-      else curr = getBlockRef(curr.value.parentId);
+      else curr = getBlockRef(curr.value.parentId); // IMPOSSIBLE
     }
     return path;
   };
