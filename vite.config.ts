@@ -23,6 +23,7 @@ export default defineConfig({
     // vueDevTools(),
   ],
   worker: {
+    format: "es",
     // @ts-expect-error
     plugins: [wasm(), topLevelAwait()],
   },
