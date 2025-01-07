@@ -6,12 +6,7 @@ import { LoroDoc, type LoroMap } from "loro-crdt";
 import { type BlockOrigin } from "../view-layer/blocksManager";
 import { WebsocketClientNetwork } from "./wsClientNetwork";
 import { LoroWebsocketSynchronizer } from "./wsSynchronizer";
-import {
-  BLOCK_DATA_DOC_NAME_PREFIX,
-  BLOCK_DATA_MAP_NAME,
-  BLOCK_INFO_DOC_NAME,
-  BLOCK_INFO_MAP_NAME,
-} from "@/common/constants";
+import { BLOCK_DATA_DOC_NAME_PREFIX, BLOCK_INFO_DOC_NAME, DATA_MAP_NAME } from "@/common/constants";
 
 ///////////////////////////////////////////////////////////////////
 // syncWorker 是同步层的实现，负责与服务端通信
@@ -92,7 +87,7 @@ addEventListener("message", (message) => {
       break;
     case "_printBlockData":
       const dataDoc = blockDataDocs?.get(0);
-      const blockDataMap = dataDoc?.getMap(BLOCK_DATA_MAP_NAME);
+      const blockDataMap = dataDoc?.getMap(DATA_MAP_NAME);
       console.debug("[syncWorker] _printBlockData", blockDataMap?.get(msg.blockId));
       break;
   }
@@ -116,7 +111,7 @@ const connect = (serverUrl_: string, location_: string, token_: string) => {
   token = token_;
 
   baseDoc = new LoroDoc();
-  blockInfoMap = baseDoc.getMap(BLOCK_INFO_MAP_NAME) as LoroMap<Record<string, BlockInfo>>;
+  blockInfoMap = baseDoc.getMap(DATA_MAP_NAME) as LoroMap<Record<string, BlockInfo>>;
   blockDataDocs = new Map();
 
   blockInfoMap.subscribe((eb) => {
@@ -167,7 +162,7 @@ const loadDataDoc = (docId: number) => {
   }
   if (blockDataDocs.has(docId)) return blockDataDocs.get(docId);
   const dataDoc = new LoroDoc();
-  const blockDataMap = dataDoc.getMap(BLOCK_DATA_MAP_NAME);
+  const blockDataMap = dataDoc.getMap(DATA_MAP_NAME);
   blockDataDocs.set(docId, dataDoc);
   postTypedMessage({ type: "dataDocCreated", dataDocId: docId });
 
@@ -238,7 +233,7 @@ const postSyncLayerTransaction = (tr: SyncLayerTransaction) => {
     const dataDoc = loadDataDoc(docId);
     if (!dataDoc) continue;
     // 每个文档分别事务
-    const blockDataMap = dataDoc.getMap(BLOCK_DATA_MAP_NAME);
+    const blockDataMap = dataDoc.getMap(DATA_MAP_NAME);
     for (const p of patches) {
       if (p.op === "upsertBlockData") {
         blockDataMap.set(p.blockId, p.blockData);
