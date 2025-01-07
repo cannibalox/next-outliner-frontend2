@@ -1,5 +1,10 @@
-import { createRouter, createWebHashHistory, createWebHistory } from "vue-router";
-
+import AdminDashboard from "@/views/admin-dashboard/AdminDashboard.vue";
+import KbView from "@/views/kb-view/KbView.vue";
+import AdminLoginView from "@/views/login-view/AdminLoginView.vue";
+import KbEditorLoginView from "@/views/login-view/KbEditorLoginView.vue";
+import LoginView from "@/views/login-view/LoginView.vue";
+import { createRouter, createWebHashHistory } from "vue-router";
+// TODO: switch to dynamic import
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [
@@ -9,21 +14,21 @@ const router = createRouter({
     },
     {
       path: "/login",
-      component: () => import("@/views/login-view/LoginView.vue"),
+      component: LoginView,
       children: [
         {
           path: "kb-editor",
-          component: () => import("@/views/login-view/KbEditorLoginView.vue"),
+          component: KbEditorLoginView,
         },
         {
           path: "admin",
-          component: () => import("@/views/login-view/AdminLoginView.vue"),
+          component: AdminLoginView,
         },
       ],
     },
     {
       path: "/admin-dashboard/:serverUrl",
-      component: () => import("@/views/admin-dashboard/AdminDashboard.vue"),
+      component: AdminDashboard,
       beforeEnter: (to, from, next) => {
         const serverInfoContext = globalThis.getServerInfoContext();
         const tokenPayload = serverInfoContext?.tokenPayload?.value;
@@ -42,7 +47,7 @@ const router = createRouter({
     },
     {
       path: "/kb/:serverUrl/:location/:rootBlockId?/:focusedBlockId?",
-      component: () => import("../views/kb-view/KbView.vue"),
+      component: KbView,
       beforeEnter: (to, from, next) => {
         const serverInfoContext = globalThis.getServerInfoContext();
         const tokenPayload = serverInfoContext?.tokenPayload?.value;
