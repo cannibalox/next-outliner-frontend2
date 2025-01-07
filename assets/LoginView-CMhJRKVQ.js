@@ -1,0 +1,1 @@
+import{_ as e}from"./_plugin-vue_export-helper-DlAUqK2U.js";import{c as r,a as s,o,r as a}from"./index-BaJCbjHG.js";const n={},c={class:"absolute w-full h-full flex items-center justify-center"};function l(f,i){const t=a("router-view");return o(),r("div",c,[s(t)])}const u=e(n,[["render",l]]);export{u as default};
