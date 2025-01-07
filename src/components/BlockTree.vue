@@ -21,23 +21,36 @@
     >
       <template #header> </template>
       <template #default="{ itemData }">
+        <RootBlockItem
+          v-if="itemData.type == 'root-block'"
+          :key="itemData.itemId"
+          :item-id="itemData.itemId"
+          :block-tree="controller"
+          :block="itemData.block"
+          :highlight-terms="itemData.highlightTerms"
+          :highlight-refs="itemData.highlightRefs"
+        ></RootBlockItem>
         <BasicBlockItem
           v-if="itemData.type == 'basic-block'"
-          :key="itemData.block.id"
+          :key="itemData.itemId"
+          :item-id="itemData.itemId"
           :block-tree="controller"
           :block="itemData.block"
           :level="itemData.level"
+          :highlight-terms="itemData.highlightTerms"
+          :highlight-refs="itemData.highlightRefs"
         ></BasicBlockItem>
         <BacklinksHeaderItem
           v-if="itemData.type == 'backlink-header'"
-          :key="itemData.blockId"
+          :key="itemData.itemId"
           :block-tree="controller"
           :block-id="itemData.blockId"
           :backlinks="itemData.backlinks"
         ></BacklinksHeaderItem>
         <BacklinksBlockItem
           v-if="itemData.type == 'backlink-block'"
-          :key="itemData.block.id"
+          :key="itemData.itemId"
+          :item-id="itemData.itemId"
           :block-tree="controller"
           :block="itemData.block"
           :ref-block-id="itemData.refBlockId"
@@ -47,7 +60,8 @@
         ></BacklinksBlockItem>
         <BacklinksDescendantItem
           v-if="itemData.type == 'backlink-descendant'"
-          :key="itemData.block.id"
+          :key="itemData.itemId"
+          :item-id="itemData.itemId"
           :block-tree="controller"
           :block="itemData.block"
           :level="itemData.level"
@@ -57,13 +71,14 @@
         ></BacklinksDescendantItem>
         <PotentialLinksHeaderItem
           v-if="itemData.type == 'potential-links-header'"
-          :key="itemData.blockId"
+          :key="itemData.itemId"
           :block-id="itemData.blockId"
           :potential-links="itemData.potentialLinks"
         ></PotentialLinksHeaderItem>
         <PotentialLinksBlockItem
           v-if="itemData.type == 'potential-links-block'"
-          :key="itemData.blockId"
+          :key="itemData.itemId"
+          :item-id="itemData.itemId"
           :block-tree="controller"
           :block="itemData.block"
           :ref-block-id="itemData.refBlockId"
@@ -73,7 +88,8 @@
         ></PotentialLinksBlockItem>
         <PotentialLinksDescendantItem
           v-if="itemData.type == 'potential-links-descendant'"
-          :key="itemData.block.id"
+          :key="itemData.itemId"
+          :item-id="itemData.itemId"
           :block-tree="controller"
           :block="itemData.block"
           :level="itemData.level"
@@ -83,7 +99,8 @@
         ></PotentialLinksDescendantItem>
         <MissingBlockItem
           v-if="itemData.type == 'missing-block'"
-          :key="itemData.blockId"
+          :key="itemData.itemId"
+          :item-id="itemData.itemId"
           :block-id="itemData.blockId"
           :level="itemData.level"
         ></MissingBlockItem>
@@ -100,9 +117,11 @@ import type { Block } from "@/context/blocks/view-layer/blocksManager";
 import BlockSelectDragContext from "@/context/blockSelect";
 import {
   BlockTreeContext,
+  DI_FILTERS,
   type BlockTree,
   type BlockTreeEventMap,
   type BlockTreeProps,
+  type DiFocusOptions,
 } from "@/context/blockTree";
 import { useEventBus } from "@/plugins/eventbus";
 import {
@@ -110,6 +129,7 @@ import {
   isBlockDi,
   type DisplayBlockItem,
   type DisplayItem,
+  type DisplayItemId,
 } from "@/utils/display-item";
 import { getHoveredElementWithClass, inViewport } from "@/utils/dom";
 import mitt from "@/utils/mitt";
@@ -130,27 +150,33 @@ import PotentialLinksDescendantItem from "./display-items/PotentialLinksDescenda
 import { clip } from "@/utils/popover";
 import { useTaskQueue } from "@/plugins/taskQueue";
 import MissingBlockItem from "./display-items/MissingBlockItem.vue";
+import RootBlockItem from "./display-items/RootBlockItem.vue";
+import BacklinksContext from "@/context/backlinks";
+import IndexContext from "@/context";
 
 const props = withDefaults(defineProps<BlockTreeProps>(), {
   virtual: true,
   showBacklinks: true,
   showPotentialLinks: true,
+  enlargeRootBlock: false,
   paddingBottom: 200,
   paddingTop: 0,
 });
 const eventBus = useEventBus();
-const blockTreeContext = BlockTreeContext.useContext();
-const { blocksManager, blockEditor } = BlocksContext.useContext();
-const blockSelectDragContext = BlockSelectDragContext.useContext();
+const blockTreeContext = BlockTreeContext.useContext()!;
+const backlinksContext = BacklinksContext.useContext()!;
+const indexContext = IndexContext.useContext()!;
+const { blocksManager, blockEditor } = BlocksContext.useContext()!;
+const dndCtx = BlockSelectDragContext.useContext()!;
 const $blockTree = ref<HTMLElement | null>(null);
 const $vlist = ref<InstanceType<typeof VirtList> | null>(null);
 const displayItems = shallowRef<DisplayItem[]>();
 const localEventBus = mitt<BlockTreeEventMap>();
 const changeRef = eventBus.eventRefs.afterBlocksTrCommit;
 const editorViews = new Map<BlockId, PmEditorView | CmEditorView>();
-// 反链和潜在链接面板中所有被展开的块
-// 由于反链和潜在链接面板中的块，默认都是折叠的，因此这里记录所有被展开的块更合适
-const expandedBPBlockIds = ref<Record<BlockId, boolean>>({});
+// 反链和潜在链接面板中所有被展开的 display item 的 itemId
+// 由于反链和潜在链接面板中默认都是折叠的，因此这里记录所有被展开的更合适
+const expandedBP = ref<Record<BlockId, boolean>>({});
 let fixedOffset: number | null = null;
 
 const updateDisplayItems = () => {
@@ -158,12 +184,15 @@ const updateDisplayItems = () => {
   const blockTreeId = props.id;
   console.time(`calc displayItems ${blockTreeId}`);
   displayItems.value = generateDisplayItems({
-    rootBlockIds: props.rootBlockIds,
+    rootBlockId: props.rootBlockId,
     rootBlockLevel: props.rootBlockLevel,
+    enlargeRootBlock: props.enlargeRootBlock,
     blocksManager,
     showBacklinks: props.showBacklinks ?? true,
     showPotentialLinks: props.showPotentialLinks ?? true,
-    expandedBPBlockIds: expandedBPBlockIds.value,
+    expandedBP: expandedBP.value,
+    getBacklinksContext: () => backlinksContext,
+    getIndexContext: () => indexContext,
   });
   console.timeEnd(`calc displayItems ${blockTreeId}`);
 
@@ -179,8 +208,8 @@ const updateDisplayItems = () => {
   });
 };
 
-watch(expandedBPBlockIds, updateDisplayItems, { deep: true });
-watch([() => props.rootBlockIds, changeRef], updateDisplayItems, {
+watch(expandedBP, updateDisplayItems, { deep: true });
+watch([() => props.rootBlockId, changeRef], updateDisplayItems, {
   immediate: true,
 });
 
@@ -193,22 +222,16 @@ const nextUpdate = (cb?: () => void | Promise<void>) => {
   });
 };
 
-const getBlockAbove = (blockId: BlockId): Block | null => {
-  return getPredecessorBlock(blockId); // TODO 未引入多列布局，因此 getBlockAbove 和 getPredecessorBlock 的实现是一样的
-};
-
-const getBlockBelow = (blockId: BlockId): Block | null => {
-  return getSuccessorBlock(blockId); // TODO 未引入多列布局，因此 getBlockBelow 和 getSuccessorBlock 的实现是一样的
-};
-
-const getPredecessorBlock = (blockId: BlockId): Block | null => {
+const getPredecessorDi = (
+  itemId: DisplayItemId,
+  filter?: (item: DisplayItem) => boolean,
+): [DisplayItem, number] | null => {
   for (let i = 0; i < displayItems.value!.length; i++) {
-    const itemI = displayItems.value![i];
-    if (isBlockDi(itemI)?.id == blockId) {
+    const item = displayItems.value![i];
+    if (item.itemId === itemId) {
       for (let j = i - 1; j >= 0; j--) {
         const itemJ = displayItems.value![j];
-        const block = isBlockDi(itemJ);
-        if (block) return block;
+        if (!filter || filter(itemJ)) return [itemJ, j];
       }
       return null;
     }
@@ -216,14 +239,16 @@ const getPredecessorBlock = (blockId: BlockId): Block | null => {
   return null;
 };
 
-const getSuccessorBlock = (blockId: BlockId): Block | null => {
+const getSuccessorDi = (
+  itemId: DisplayItemId,
+  filter?: (item: DisplayItem) => boolean,
+): [DisplayItem, number] | null => {
   for (let i = 0; i < displayItems.value!.length; i++) {
-    const itemI = displayItems.value![i];
-    if (isBlockDi(itemI)?.id == blockId) {
+    const item = displayItems.value![i];
+    if (item.itemId === itemId) {
       for (let j = i + 1; j < displayItems.value!.length; j++) {
         const itemJ = displayItems.value![j];
-        const block = isBlockDi(itemJ);
-        if (block) return block;
+        if (!filter || filter(itemJ)) return [itemJ, j];
       }
       return null;
     }
@@ -231,14 +256,46 @@ const getSuccessorBlock = (blockId: BlockId): Block | null => {
   return null;
 };
 
-const getEditorView = (blockId: BlockId) => editorViews.get(blockId) ?? null;
+// 未引入多列布局，因此 getDiAbove 和 getPredecessorDi 的实现是一样的
+const getDiAbove = (
+  itemId: DisplayItemId,
+  filter?: (item: DisplayItem) => boolean,
+): [DisplayItem, number] | null => {
+  return getPredecessorDi(itemId, filter);
+};
 
-const scrollBlockIntoView = (blockId: BlockId) => {
-  const blockDom = getDomOfDi(`block-${blockId}`);
+// 未引入多列布局，因此 getDiBelow 和 getSuccessorDi 的实现是一样的
+const getDiBelow = (
+  itemId: DisplayItemId,
+  filter?: (item: DisplayItem) => boolean,
+): [DisplayItem, number] | null => {
+  return getSuccessorDi(itemId, filter);
+};
+
+// 获得一个 DisplayItem 的 DOM 元素
+const getDomOfDi = (itemId: string): HTMLElement | null => {
+  return $blockTree.value?.querySelector(`[data-id="${itemId}"]`) ?? null;
+};
+
+const getEditorView = (itemId: DisplayItemId) => editorViews.get(itemId) ?? null;
+
+const registerEditorView = (itemId: DisplayItemId, editorView: PmEditorView | CmEditorView) => {
+  editorViews.set(itemId, editorView);
+};
+
+const unregisterEditorView = (itemId: DisplayItemId, editorView: PmEditorView | CmEditorView) => {
+  const oldEditorView = editorViews.get(itemId);
+  if (oldEditorView === editorView && !oldEditorView.dom.isConnected) {
+    editorViews.delete(itemId);
+  }
+};
+
+const scrollDiIntoView = (itemId: DisplayItemId): boolean => {
+  const diDom = getDomOfDi(itemId);
   // 如果已经在视口内，则不滚动
-  if (blockDom && inViewport(blockDom)) return;
+  if (diDom && inViewport(diDom)) return true;
   // 滚动到该块
-  const index = displayItems.value!.findIndex((item) => isBlockDi(item)?.id == blockId);
+  const index = displayItems.value!.findIndex((item) => item.itemId == itemId);
   if (index != null && index >= 0) {
     const pos = $vlist.value?.getItemPosByIndex(index);
     if (pos) {
@@ -246,68 +303,64 @@ const scrollBlockIntoView = (blockId: BlockId) => {
       $vlist.value?.scrollToOffset(top - 60); // 60 是 headerbar 的高度多一点
     }
   }
+  return true;
 };
 
-const getDomOfDi = (itemId: string): HTMLElement | null => {
-  return $blockTree.value?.querySelector(`[data-id="${itemId}"]`) ?? null;
-};
-
-const focusBlock = async (
-  blockId: BlockId,
-  options: {
-    scrollIntoView?: boolean;
-    highlight?: boolean;
-    expandIfFold?: boolean;
-  } = {},
-) => {
+const focusDi = async (itemId: DisplayItemId, options: DiFocusOptions = {}) => {
   let { scrollIntoView, highlight, expandIfFold } = options;
   scrollIntoView ??= true;
   highlight ??= false;
   expandIfFold ??= false;
 
-  // 如果 expandIfFold，则先展开这个块
   if (expandIfFold) {
-    await blockEditor.locateBlock(blockId, controller);
+    // TODO ...
   }
 
-  // 确保这个块在视口中
-  scrollIntoView && scrollBlockIntoView(blockId);
+  if (scrollIntoView) {
+    const success = scrollDiIntoView(itemId);
+    if (!success) return;
+  }
 
-  await timeout(0); // 等待渲染完毕
+  await timeout(0); // 等待渲染完成
 
   // 聚焦到文本或代码块
-  getEditorView(blockId)?.focus();
+  const view = getEditorView(itemId);
+  if (view) view.focus();
 
-  const $diEl = getDomOfDi(`block-${blockId}`)?.querySelector(".block-item");
-  if (!$diEl) return;
+  const diEl = getDomOfDi(itemId)?.querySelector(".block-item");
+  if (!diEl) return;
 
   // 点击公式块以聚焦到公式
-  const $mathContentEl = $diEl.querySelector(".math-content");
-  if ($mathContentEl instanceof HTMLElement) {
-    $mathContentEl.click();
+  const mathContentEl = diEl.querySelector(".math-content");
+  if (mathContentEl instanceof HTMLElement) {
+    mathContentEl.click();
   }
 
   // 聚焦到图片块
-  const $cursorContainerEl = $diEl.querySelector(".cursor-container");
-  if ($cursorContainerEl instanceof HTMLElement) {
-    $cursorContainerEl.focus();
+  const cursorContainerEl = diEl.querySelector(".cursor-container");
+  if (cursorContainerEl instanceof HTMLElement) {
+    cursorContainerEl.focus();
   }
 
   if (highlight) {
     // 0-1000ms 高亮，1000-3000ms 淡化，3000ms 后移除高亮
-    $diEl.classList.add("highlight-keep");
+    diEl.classList.add("highlight-keep");
     setTimeout(() => {
-      $diEl.classList.add("highlight-fade");
+      diEl.classList.add("highlight-fade");
     }, 1000);
     setTimeout(() => {
-      $diEl.classList.remove("highlight-keep");
-      $diEl.classList.remove("highlight-fade");
+      diEl.classList.remove("highlight-keep");
+      diEl.classList.remove("highlight-fade");
     }, 3000);
   }
 };
 
-const moveCursorToTheEnd = (blockId: BlockId) => {
-  const editorView = getEditorView(blockId);
+const findDi = (filter: (item: DisplayItem) => boolean) => {
+  return displayItems.value?.find((item) => filter(item)) ?? null;
+};
+
+const moveCursorToTheEnd = (itemId: DisplayItemId) => {
+  const editorView = getEditorView(itemId);
   if (editorView instanceof PmEditorView) {
     const tr = editorView.state.tr;
     const sel = AllSelection.atEnd(editorView.state.doc);
@@ -321,8 +374,8 @@ const moveCursorToTheEnd = (blockId: BlockId) => {
   }
 };
 
-const moveCursorToBegin = (blockId: BlockId) => {
-  const editorView = getEditorView(blockId);
+const moveCursorToBegin = (itemId: DisplayItemId) => {
+  const editorView = getEditorView(itemId);
   if (editorView instanceof PmEditorView) {
     const tr = editorView.state.tr;
     const sel = AllSelection.atStart(editorView.state.doc);
@@ -335,79 +388,42 @@ const moveCursorToBegin = (blockId: BlockId) => {
   }
 };
 
-// 获得包含有一个块的“最外层”的 DisplayItem
-const findBelongingDi = (blockId: BlockId): DisplayItem | null => {
-  if (!displayItems.value) return null;
-  for (const item of displayItems.value) {
-    if (item.type == "basic-block" && item.block.id == blockId) {
-      return item;
-    }
-  }
-  return null;
-};
-
-// 获得包含有一个块的“最外层”的 DisplayItem 的 index
-const indexOfBelongingDi = (blockId: BlockId): number => {
-  if (!displayItems.value) return -1;
-  for (let i = 0; i < displayItems.value.length; i++) {
-    const item = displayItems.value[i];
-    if (item.type == "basic-block" && item.block.id == blockId) {
-      return i;
-    }
-  }
-  return -1;
-};
-
-const registerEditorView = (blockId: BlockId, editorView: PmEditorView | CmEditorView) => {
-  editorViews.set(blockId, editorView);
-};
-
-const unregisterEditorView = (blockId: BlockId, editorView: PmEditorView | CmEditorView) => {
-  const oldEditorView = editorViews.get(blockId);
-  if (oldEditorView === editorView && !oldEditorView.dom.isConnected) {
-    editorViews.delete(blockId);
-  }
-};
-
-const addToExpandedBPBlockIds = (blockId: BlockId) => {
-  expandedBPBlockIds.value[blockId] = true;
-};
-
-const removeFromExpandedBPBlockIds = (blockId: BlockId) => {
-  delete expandedBPBlockIds.value[blockId];
-};
-
-const getExpandedBPBlockIds = () => {
-  return expandedBPBlockIds.value;
+const getDi = (itemId: DisplayItemId) => {
+  return displayItems.value?.find((item) => item.itemId === itemId) ?? null;
 };
 
 const controller: BlockTree = {
   getProps: () => props,
   getId: () => props.id,
   getDom: () => $blockTree.value!,
-  getRootBlockIds: () => props.rootBlockIds ?? [],
+  getRootBlockId: () => props.rootBlockId,
   getDisplayItems: () => displayItems.value!,
-  getSuccessorBlock,
-  getPredecessorBlock,
-  getBlockAbove,
-  getBlockBelow,
+  getDi,
+  findDi,
+
+  localEventBus,
+  expandedBP,
+  nextUpdate,
+
   getEditorViews: () => editorViews,
+  getEditorView,
   registerEditorView,
   unregisterEditorView,
-  localEventBus,
-  nextUpdate,
-  getEditorView,
-  focusBlock,
+
+  getSuccessorDi,
+  getPredecessorDi,
+  getDiAbove,
+  getDiBelow,
+
+  focusDi,
   getDomOfDi,
+
   moveCursorToTheEnd,
   moveCursorToBegin,
-  addToExpandedBPBlockIds,
-  removeFromExpandedBPBlockIds,
-  getExpandedBPBlockIds,
 };
 defineExpose(controller);
 
-let pointerDownBlockId: BlockId | null = null;
+let pointerDownDi: DisplayItem | null = null;
 let pointerDownTime: number | null = null;
 // 现在是在移动块还是框选块
 let movingBlocks = false;
@@ -429,20 +445,22 @@ const getIndentSize = () => {
 };
 
 const handlePointerUpOrLeave = (e: PointerEvent) => {
-  blockSelectDragContext.dragging.value = false;
+  dndCtx.dragging.value = false;
   if (movingBlocks) {
     const taskQueue = useTaskQueue();
     // 拖动结束，将选中的块移动到拖动结束的位置
-    const draggingDropPos = blockSelectDragContext.draggingDropPos.value;
+    const draggingDropPos = dndCtx.draggingDropPos.value;
     if (!draggingDropPos) return;
-    const { blockId, absLevel } = draggingDropPos;
-    const selected = blockSelectDragContext.selectedBlockIds.value;
-    const blockLevel = blocksManager.getBlockLevel(blockId);
+    const { itemId, absLevel } = draggingDropPos;
+    const di = getDi(itemId);
+    if (!di || !DI_FILTERS.isBlockDi(di)) return;
+    const selected = dndCtx.selectedBlockIds.value;
+    const blockLevel = blocksManager.getBlockLevel(di.block.id);
     if (absLevel > blockLevel) {
       // 将 selected 插入到 block 的子级
       taskQueue.addTask(() => {
         const pos = blockEditor.normalizePos({
-          parentId: blockId,
+          parentId: di.block.id,
           childIndex: "first",
         });
         if (!pos) return;
@@ -455,7 +473,7 @@ const handlePointerUpOrLeave = (e: PointerEvent) => {
       // 将 selected 插入到 block 的下方（与 block 同级）
       taskQueue.addTask(() => {
         const pos = blockEditor.normalizePos({
-          baseBlockId: blockId,
+          baseBlockId: di.block.id,
           offset: 1,
         });
         if (!pos) return;
@@ -467,73 +485,77 @@ const handlePointerUpOrLeave = (e: PointerEvent) => {
     }
   }
 
-  pointerDownBlockId = null;
+  pointerDownDi = null;
   pointerDownTime = null;
   movingBlocks = false;
-  blockSelectDragContext.draggingDropPos.value = null;
+  dndCtx.draggingDropPos.value = null;
   document.removeEventListener("pointermove", handlePointerMove);
   document.removeEventListener("pointerup", handlePointerUpOrLeave);
   document.removeEventListener("pointerleave", handlePointerUpOrLeave);
 };
 
+const clearDraggingDropPos = () => {
+  dndCtx.draggingDropPos.value = null;
+};
+
 const handlePointerMove = useThrottleFn((e: PointerEvent) => {
-  blockSelectDragContext.dragging.value = true;
+  // 如果按下时间小于 200ms，则认为是点击，防止影响双击选词的功能
+  const duration = Date.now().valueOf() - (pointerDownTime ?? 0);
+  if (duration < 200) return;
+
+  dndCtx.dragging.value = true;
+  e.preventDefault();
+  e.stopPropagation();
+
+  // 1. 拖动
   if (movingBlocks) {
-    // 1. 拖动
-    e.preventDefault();
-    e.stopPropagation();
     const hoveredBlockItem = getHoveredElementWithClass(e.target, "block-item");
-    const hoveredBlockId = hoveredBlockItem?.dataset["blockId"];
+    const hoveredItemId = hoveredBlockItem?.dataset["itemId"];
     // 指针悬停的块的缩进层级，相对于 rootBlockLevel
     const hoveredBlockLevel = parseInt(hoveredBlockItem?.dataset["blockLevel"]!);
-    if (!hoveredBlockId) {
-      blockSelectDragContext.draggingDropPos.value = null;
-      return;
-    }
+    if (!hoveredItemId) return clearDraggingDropPos();
 
     // 指针悬停处的缩进层级，相对 rootBlockLevel，不一定等于 hoveredBlockLevel！
     const { width, rightMargin } = getIndentSize();
     const pointerLevel = Math.floor((e.x + rightMargin) / (width + rightMargin));
 
     // 正在被拖曳的块
-    const draggingBlocks = blockSelectDragContext.selectedBlockIds.value;
+    const draggingBlocks = dndCtx.selectedBlockIds.value;
 
     // 判断是希望插到悬停的块上方还是下方
     const rect = hoveredBlockItem.getBoundingClientRect();
     const upperHalf = e.y < rect.y + rect.height / 2; // 光标悬停在块的上半部分还是下半部分
     if (upperHalf) {
-      const predBlock = getPredecessorBlock(hoveredBlockId);
-      if (!predBlock) return;
-      const predPath = blocksManager.getBlockPath(predBlock.id);
-      if (!predPath) return;
-      const predLevel = predPath.length - 1 - props.rootBlockLevel;
+      const diAbove = getDiAbove(hoveredItemId, DI_FILTERS.isBlockDi);
+      if (!diAbove || !DI_FILTERS.isBlockDi(diAbove[0])) return clearDraggingDropPos();
+      const blockAbove = diAbove[0].block;
+      const pathAboce = blocksManager.getBlockPath(blockAbove.id);
+      if (!pathAboce) return clearDraggingDropPos();
+      const levelAboce = pathAboce.length - 1 - props.rootBlockLevel;
       // 禁止将自己拖动到自己上
       for (const id of draggingBlocks.allNonFolded) {
-        if (predPath.find((b) => b.id === id)) {
-          blockSelectDragContext.draggingDropPos.value = null;
-          return;
-        }
+        if (pathAboce.find((b) => b.id === id)) return clearDraggingDropPos();
       }
-      const predFoldAndHasChild = predBlock.fold && predBlock.childrenIds.length > 0;
+      const aboveFoldAndHasChild = blockAbove.fold && blockAbove.childrenIds.length > 0;
 
       const clippedLevel = clip(
         pointerLevel,
         // 如果 pred 折叠了，并且有孩子，则不允许拖成 pred 的子级
-        predFoldAndHasChild ? predLevel : predLevel + 1,
+        aboveFoldAndHasChild ? levelAboce : levelAboce + 1,
         hoveredBlockLevel,
       );
-      blockSelectDragContext.draggingDropPos.value = {
-        blockId: predBlock.id,
+      dndCtx.draggingDropPos.value = {
+        itemId: diAbove[0].itemId,
         relIndent: clippedLevel * (width + rightMargin) + width,
         absLevel: clippedLevel + props.rootBlockLevel, // 加上 rootBlockLevel 才是绝对层级
       };
     } else {
       let clippedLevel;
-      const succBlock = getSuccessorBlock(hoveredBlockId);
+      const diBelow = getDiBelow(hoveredItemId, DI_FILTERS.isBlockDi);
       const hoveredFoldAndHasChild =
         hoveredBlockItem.classList.contains("fold") &&
         hoveredBlockItem.classList.contains("hasChildren");
-      if (!succBlock) {
+      if (!diBelow) {
         // 最后一个块
         clippedLevel = clip(
           pointerLevel,
@@ -541,46 +563,49 @@ const handlePointerMove = useThrottleFn((e: PointerEvent) => {
           1,
         );
       } else {
-        const succPath = blocksManager.getBlockPath(succBlock.id);
-        if (!succPath) return;
-        const succLevel = succPath.length - 1 - props.rootBlockLevel;
+        if (!DI_FILTERS.isBlockDi(diBelow[0])) return clearDraggingDropPos();
+        const blockBelow = diBelow[0].block;
+        const belowPath = blocksManager.getBlockPath(blockBelow.id);
+        if (!belowPath) return clearDraggingDropPos();
+        const belowLevel = belowPath.length - 1 - props.rootBlockLevel;
         clippedLevel = clip(
           pointerLevel,
           hoveredFoldAndHasChild ? hoveredBlockLevel : hoveredBlockLevel + 1,
-          succLevel,
+          belowLevel,
         );
       }
-      blockSelectDragContext.draggingDropPos.value = {
-        blockId: hoveredBlockId,
+      dndCtx.draggingDropPos.value = {
+        itemId: hoveredItemId,
         relIndent: clippedLevel * (width + rightMargin) + width,
         absLevel: clippedLevel + props.rootBlockLevel, // 加上 rootBlockLevel 才是绝对层级
       };
     }
-  } else {
-    // 2. 框选
-    // 如果按下时间小于 200ms，则认为是点击，不认为是框选
-    // 防止影响双击选词的功能
-    const duration = Date.now().valueOf() - (pointerDownTime ?? 0);
-    if (duration < 200) return;
-
-    e.preventDefault();
-    e.stopPropagation();
-
+  }
+  // 2. 框选
+  else {
     const hoveredBlockItem = getHoveredElementWithClass(e.target, "block-item");
-    const blockIdCurrent = hoveredBlockItem?.dataset["blockId"];
-    if (!blockIdCurrent || pointerDownBlockId == null) return;
+    const currItemId = hoveredBlockItem?.dataset["itemId"];
+    const currDi = currItemId ? getDi(currItemId) : null;
+    if (
+      !currItemId ||
+      !currDi ||
+      !DI_FILTERS.isBlockDi(currDi) ||
+      pointerDownDi == null ||
+      !DI_FILTERS.isBlockDi(pointerDownDi)
+    )
+      return;
     // 如果点击的是同一个块，则取消选中，并聚焦到这个块，以框选其中的文字
-    if (pointerDownBlockId == blockIdCurrent) {
-      blockSelectDragContext.selectedBlockIds.value = { topLevelOnly: [], allNonFolded: [] };
-      focusBlock(blockIdCurrent, { scrollIntoView: false });
+    if (pointerDownDi.itemId === currItemId) {
+      dndCtx.selectedBlockIds.value = { topLevelOnly: [], allNonFolded: [] };
+      focusDi(currItemId, { scrollIntoView: false });
       return;
     }
     // 框选区域：blockIdStart 到 blockIdCurrent
     (document.activeElement as HTMLElement)?.blur(); // 先让当前聚焦的块失焦
-    blockSelectDragContext.selectedBlockIds.value = { topLevelOnly: [], allNonFolded: [] };
+    dndCtx.selectedBlockIds.value = { topLevelOnly: [], allNonFolded: [] };
     // 计算选中的块
-    const startBlockPath = blocksManager.getBlockPath(pointerDownBlockId).map((b) => b.id);
-    const currBlockPath = blocksManager.getBlockPath(blockIdCurrent).map((b) => b.id);
+    const startBlockPath = blocksManager.getBlockPath(pointerDownDi.block.id).map((b) => b.id);
+    const currBlockPath = blocksManager.getBlockPath(currDi.block.id).map((b) => b.id);
     let commonParentI = -1,
       commonParentJ = -1;
     for (let i = 0; i < startBlockPath.length; i++) {
@@ -607,7 +632,7 @@ const handlePointerMove = useThrottleFn((e: PointerEvent) => {
             newSelected.allNonFolded.push(b.id);
           },
         });
-        blockSelectDragContext.selectedBlockIds.value = newSelected;
+        dndCtx.selectedBlockIds.value = newSelected;
       } else {
         const commonParentId = startBlockPath[commonParentI];
         const commonParentBlock = blocksManager.getBlock(commonParentId);
@@ -634,7 +659,7 @@ const handlePointerMove = useThrottleFn((e: PointerEvent) => {
             },
           });
         }
-        blockSelectDragContext.selectedBlockIds.value = newSelected;
+        dndCtx.selectedBlockIds.value = newSelected;
       }
     }
   }
@@ -643,22 +668,25 @@ const handlePointerMove = useThrottleFn((e: PointerEvent) => {
 const handlePointerDown = (e: PointerEvent) => {
   const hoveredBlockItem = getHoveredElementWithClass(e.target, "block-item");
   if (!hoveredBlockItem) return;
-  const blockId = hoveredBlockItem.dataset["blockId"];
-  if (!blockId) return;
-  pointerDownBlockId = blockId;
+  const diId = hoveredBlockItem.dataset["itemId"];
+  const di = diId ? getDi(diId) : null;
+  if (!diId || !di || !DI_FILTERS.isBlockDi(di)) return;
+  pointerDownDi = di;
   pointerDownTime = Date.now().valueOf();
-  blockSelectDragContext.dragging.value = false;
+  dndCtx.dragging.value = false;
   // 如果按下的是块的 bullet，则认为是拖动，否则认为是框选
   const hoveredBullet = getHoveredElementWithClass(e.target, "bullet");
   if (hoveredBullet) {
     movingBlocks = true;
-    if (blockSelectDragContext.selectedBlockIds.value.topLevelOnly.length === 0) {
+    // 如果是在拖动块，并且目前没有选中任何块
+    // 则将当前块加入选中
+    if (dndCtx.selectedBlockIds.value.topLevelOnly.length === 0) {
       const newSelected = {
-        topLevelOnly: [blockId],
+        topLevelOnly: [di.block.id],
         allNonFolded: [] as BlockId[],
       };
       blocksManager.forDescendants({
-        rootBlockId: blockId,
+        rootBlockId: di.block.id,
         rootBlockLevel: 0,
         nonFoldOnly: true,
         includeSelf: true,
@@ -666,7 +694,7 @@ const handlePointerDown = (e: PointerEvent) => {
           newSelected.allNonFolded.push(b.id);
         },
       });
-      blockSelectDragContext.selectedBlockIds.value = newSelected;
+      dndCtx.selectedBlockIds.value = newSelected;
     }
   }
 

@@ -13,8 +13,8 @@ import { Check, Loader2, X } from "lucide-vue-next";
 import BlocksContext from "@/context/blocks/blocks";
 import CreateNewTreeDialogContext from "@/context/createNewTreeDialog";
 
-const { blocksManager } = BlocksContext.useContext();
-const { open, status, closeCreateNewTreeDialog } = CreateNewTreeDialogContext.useContext();
+const { blocksManager } = BlocksContext.useContext()!;
+const { open, status, closeCreateNewTreeDialog } = CreateNewTreeDialogContext.useContext()!;
 
 const createNewTree = async () => {
   status.value = "creating";

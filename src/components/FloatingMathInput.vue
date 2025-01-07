@@ -12,7 +12,7 @@
         class="flex-grow"
         ref="codeMirror"
         lang="latex"
-        :extensions-generator="extensionsGenerator"
+        :extensionsBuilder="extensionsGenerator"
         :on-src-changed="onChange ?? undefined"
       ></CodeMirror>
       <Label class="text-muted-foreground text-[.8em] font-normal text-right mr-2"
@@ -38,7 +38,7 @@ const open = computed({
 });
 const src = ref("");
 const codeMirror = ref<InstanceType<typeof CodeMirror> | null>(null);
-const { registerFloatingMathInput } = FloatingMathInputContext.useContext();
+const { registerFloatingMathInput } = FloatingMathInputContext.useContext()!;
 
 // context
 let mathEl: HTMLElement | null = null; // 公式块

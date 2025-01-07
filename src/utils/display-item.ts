@@ -1,10 +1,15 @@
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import type { BlockId } from "@/common/type-and-schemas/block/block-id";
+import type IndexContext from "@/context";
+import type BacklinksContext from "@/context/backlinks";
 import type { Block } from "@/context/blocks/view-layer/blocksManager";
 import type {
   BlocksManager,
   ForDescendantsOptions,
 } from "@/context/blocks/view-layer/blocksManager";
+import { nanoid } from "nanoid";
+
+export type DisplayItemId = DisplayItem["itemId"];
 
 // - block-item
 //   - basic-block
@@ -17,6 +22,7 @@ import type {
 //   - potential-links-header
 export type DisplayItem = { itemId: string } & (
   | { type: "basic-block"; level: number; block: Block }
+  | { type: "root-block"; block: Block }
   | { type: "backlink-block"; block: Block; refBlockId: BlockId }
   | { type: "backlink-header"; blockId: BlockId; backlinks: BlockId[] }
   | { type: "backlink-descendant"; block: Block; level: number }
@@ -34,14 +40,18 @@ export type DisplayBlockItem =
   | (DisplayItem & { type: "potential-links-descendant" });
 
 export type DisplayGeneratorContext = {
-  rootBlockIds: BlockId[];
+  rootBlockId: BlockId;
   rootBlockLevel: number;
+  enlargeRootBlock: boolean;
   // 是否显示反链面板
   showBacklinks?: boolean;
   // 是否显示潜在链接面板
   showPotentialLinks?: boolean;
   blocksManager: BlocksManager;
-  expandedBPBlockIds: Record<BlockId, boolean>;
+  expandedBP: Record<BlockId, boolean>;
+  // required context
+  getBacklinksContext: () => ReturnType<typeof BacklinksContext.useContext>;
+  getIndexContext: () => ReturnType<typeof IndexContext.useContext>;
 };
 
 export const isBlockDi = (item: DisplayItem) => {
@@ -56,60 +66,77 @@ export const isBlockDi = (item: DisplayItem) => {
 
 export const generateDisplayItems = (ctx: DisplayGeneratorContext) => {
   const {
-    rootBlockIds,
+    rootBlockId,
     rootBlockLevel,
+    enlargeRootBlock,
     showBacklinks,
     showPotentialLinks,
     blocksManager,
-    expandedBPBlockIds,
+    expandedBP,
+    getBacklinksContext,
+    getIndexContext,
   } = ctx;
 
   const resultCollector: DisplayItem[] = [];
 
-  for (const rootBlockId of rootBlockIds) {
-    blocksManager.forDescendantsWithMissingBlock({
-      rootBlockId,
-      rootBlockLevel,
-      nonFoldOnly: true,
-      includeSelf: true,
-      onEachBlock: (block, level) => {
-        resultCollector.push({
-          type: "basic-block",
-          itemId: `block-${block.id}`,
-          block,
-          level,
-        });
-      },
-      onMissingBlock: (blockId, parentId, level) => {
-        resultCollector.push({
-          type: "missing-block",
-          itemId: `missing-block-${blockId}-${level}`,
-          blockId,
-          parentId,
-          level,
-        });
-      },
+  const rootBlock = blocksManager.getBlock(rootBlockId);
+  if (!rootBlock) return resultCollector;
+
+  if (enlargeRootBlock) {
+    resultCollector.push({
+      type: "root-block",
+      itemId: `root-block-${rootBlockId}`,
+      block: rootBlock,
     });
   }
 
-  if (rootBlockIds.length === 1) {
-    const rootBlockId = rootBlockIds[0];
+  blocksManager.forDescendantsWithMissingBlock({
+    rootBlockId,
+    rootBlockLevel: enlargeRootBlock ? -1 : rootBlockLevel,
+    nonFoldOnly: true,
+    includeSelf: enlargeRootBlock ? false : true,
+    onEachBlock: (block, level) => {
+      resultCollector.push({
+        type: "basic-block",
+        itemId: `block-${block.id}`,
+        block,
+        level,
+      });
+    },
+    onMissingBlock: (blockId, parentId, level) => {
+      resultCollector.push({
+        type: "missing-block",
+        itemId: `missing-block-${blockId}-${level}`,
+        blockId,
+        parentId,
+        level,
+      });
+    },
+  });
 
-    // 如果要显示反链
-    let backlinks: [Set<BlockId> | undefined] = [undefined];
-    if (showBacklinks)
-      addBacklinkItems(rootBlockId, resultCollector, blocksManager, backlinks, expandedBPBlockIds);
+  // 如果要显示反链
+  let backlinks: [Set<BlockId> | undefined] = [undefined];
+  if (showBacklinks)
+    addBacklinkItems(
+      rootBlockId,
+      resultCollector,
+      blocksManager,
+      backlinks,
+      expandedBP,
+      getBacklinksContext,
+    );
 
-    // 如果要显示潜在链接
-    if (showPotentialLinks)
-      addPotentialLinksItems(
-        rootBlockId,
-        resultCollector,
-        blocksManager,
-        backlinks,
-        expandedBPBlockIds,
-      );
-  }
+  // 如果要显示潜在链接
+  if (showPotentialLinks)
+    addPotentialLinksItems(
+      rootBlockId,
+      resultCollector,
+      blocksManager,
+      backlinks,
+      expandedBP,
+      getBacklinksContext,
+      getIndexContext,
+    );
 
   return resultCollector;
 };
@@ -119,13 +146,48 @@ const addBacklinkItems = (
   resultCollector: DisplayItem[],
   blocksManager: BlocksManager,
   backlinksCollector: [Set<BlockId> | undefined],
-  expandedBPBlockIds: Record<BlockId, boolean>,
+  expandedBP: Record<BlockId, boolean>,
+  getBacklinksContext: () => ReturnType<typeof BacklinksContext.useContext>,
 ) => {
   const { getBacklinksConsideringAliases } = getBacklinksContext() ?? {};
   if (!getBacklinksConsideringAliases) return;
 
   const backlinks = getBacklinksConsideringAliases(rootBlockId);
   if (backlinks.size <= 0) return;
+
+  // 只保留顶层反链
+  // 比如：
+  // - root [[test]]
+  //   - block1 [[test]]
+  //     - block2 [[test]]
+  //       - block3 [[test]]
+  // 在 test 的反链面板中，只会显示 root [[test]] 这个块
+  const topLevelBacklinks = new Set<BlockId>(backlinks);
+  const deleted = new Set<BlockId>();
+
+  let prevSize: number;
+  do {
+    prevSize = topLevelBacklinks.size;
+
+    for (const backlink of topLevelBacklinks) {
+      if (deleted.has(backlink)) continue;
+
+      const path = blocksManager.getBlockPath(backlink);
+      // 检查除自身外的祖先是否在 topLevelBacklinks 中且未被标记删除
+      const hasAncestorBacklink = path
+        .slice(1)
+        .some((ancestor) => topLevelBacklinks.has(ancestor.id) && !deleted.has(ancestor.id));
+
+      if (hasAncestorBacklink) {
+        deleted.add(backlink);
+      }
+    }
+
+    // 一次性删除所有标记的块
+    for (const blockId of deleted) {
+      topLevelBacklinks.delete(blockId);
+    }
+  } while (topLevelBacklinks.size !== prevSize);
 
   // 添加 backlink header
   resultCollector.push({
@@ -136,12 +198,16 @@ const addBacklinkItems = (
   });
 
   // 添加 backlink blocks
-  for (const backlink of backlinks) {
+  // 说明：生成时 itemId 的指定非常关键，必须保证：
+  //   1. 和 block tree 中的其他 item 的 itemId 不冲突
+  //   2. 多次生成时，itemId 是稳定的
+  for (const backlink of topLevelBacklinks) {
     const block = blocksManager.getBlock(backlink);
     if (!block) continue;
+    // 对一个反链根块，其 itemId 格式为 `backlink-block-${backlink}`
     resultCollector.push({
       type: "backlink-block",
-      itemId: `backlink-${backlink}`,
+      itemId: `backlink-block-${backlink}`,
       block,
       refBlockId: rootBlockId,
     });
@@ -152,13 +218,14 @@ const addBacklinkItems = (
       nonFoldOnly: true,
       includeSelf: false,
       ignore: (b) => {
-        if (expandedBPBlockIds[b.id]) return "keep-self-and-descendants";
+        if (expandedBP[b.id]) return "keep-self-and-descendants";
         return "ignore-descendants";
       },
       onEachBlock: (block, level) => {
+        // 对于反链根块下的一个后代块，其 itemId 格式为 `backlink-descendant-${backlink}-${block.id}`
         resultCollector.push({
           type: "backlink-descendant",
-          itemId: `backlink-descendant-${block.id}`,
+          itemId: `backlink-descendant-${backlink}-${block.id}`,
           block,
           level,
         });
@@ -174,7 +241,9 @@ const addPotentialLinksItems = (
   resultCollector: DisplayItem[],
   blocksManager: BlocksManager,
   backlinksCollector: [Set<BlockId> | undefined],
-  expandedBPBlockIds: Record<BlockId, boolean>,
+  expandedBP: Record<BlockId, boolean>,
+  getBacklinksContext: () => ReturnType<typeof BacklinksContext.useContext>,
+  getIndexContext: () => ReturnType<typeof IndexContext.useContext>,
 ) => {
   const { getBacklinksConsideringAliases } = getBacklinksContext() ?? {};
   const { search } = getIndexContext() ?? {};
@@ -216,7 +285,7 @@ const addPotentialLinksItems = (
           nonFoldOnly: true,
           includeSelf: false,
           ignore: (b) => {
-            if (expandedBPBlockIds[b.id]) return "keep-self-and-descendants";
+            if (expandedBP[b.id]) return "keep-self-and-descendants";
             return "ignore-descendants";
           },
           onEachBlock: (block, level) => {

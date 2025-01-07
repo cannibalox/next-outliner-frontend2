@@ -1,9 +1,10 @@
 import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import { createContext } from "@/utils/createContext";
+import type { DisplayItemId } from "@/utils/display-item";
 import { ref } from "vue";
 
 export type DraggingDropPos = {
-  blockId: BlockId;
+  itemId: DisplayItemId;
   relIndent: number;
   absLevel: number;
 };
@@ -17,7 +18,6 @@ const BlockSelectDragContext = createContext(() => {
   const dragging = ref(false);
 
   const ctx = { selectedBlockIds, draggingDropPos, dragging };
-  globalThis.getBlockSelectContext = () => ctx;
   return ctx;
 });
 

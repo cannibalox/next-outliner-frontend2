@@ -80,7 +80,7 @@ import { Switch } from "../ui/switch";
 import { Checkbox } from "../ui/checkbox";
 import { createPromise } from "@/utils/promise";
 
-const { open, imageUrl, deleteOriginal } = ImageEditorContext.useContext();
+const { open, imageUrl, deleteOriginal } = ImageEditorContext.useContext()!;
 const leftOffset = ref(0);
 const topOffset = ref(0);
 const width = ref(200);

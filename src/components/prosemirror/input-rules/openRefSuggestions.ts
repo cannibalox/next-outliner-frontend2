@@ -1,10 +1,11 @@
 import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import { InputRule } from "prosemirror-inputrules";
-import type { EditorView } from "prosemirror-view";
-import { pmSchema } from "../pmSchema";
-export const openRefSuggestions = (getEditorView: () => EditorView | null) =>
+import type { PmPluginCtx } from "../plugins/pluginContext";
+import { getPmSchema } from "../pmSchema";
+
+export const openRefSuggestions = (ctx: PmPluginCtx) =>
   new InputRule(/([#@])$/, (state, match) => {
-    const view = getEditorView();
+    const view = ctx.getEditorView();
     if (!view) return null;
 
     const cursorPos = view.state.selection.from;
@@ -18,7 +19,7 @@ export const openRefSuggestions = (getEditorView: () => EditorView | null) =>
     const callback = (blockId: BlockId | null) => {
       if (blockId) {
         const tag = match[1] == "#";
-        const node = pmSchema.nodes.blockRef_v2.create({
+        const node = ctx.getSchema().nodes.blockRef_v2.create({
           toBlockId: blockId,
           tag,
         });
@@ -29,7 +30,7 @@ export const openRefSuggestions = (getEditorView: () => EditorView | null) =>
       setTimeout(() => view.focus(), 50); // 重新聚焦
     };
 
-    const { openRefSuggestions } = globalThis.getRefSuggestionsContext() ?? {};
+    const { openRefSuggestions } = ctx.refSuggestionsContext ?? {};
     openRefSuggestions?.(showPos, callback);
 
     return null;

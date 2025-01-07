@@ -21,8 +21,12 @@ import type { SyncLayer, SyncLayerTransactionWrapper } from "../sync-layer/syncL
 import { useEventBus } from "@/plugins/eventbus";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import { calcBlockStatus } from "@/common/helper-functions/block";
+import type { BlockTree } from "@/context/blockTree";
 
 type BlockTransactionContext = {
+  mainRootBlockId: ShallowRef<BlockId | null>;
+  lastFocusedBlockTree: ShallowRef<BlockTree | null>;
+  lastFocusedDiId: ShallowRef<string | null>;
   blocks: Map<BlockId, ShallowRef<Block | null>>;
   latestBlockInfos: Map<BlockId, BlockInfo>;
   latestBlockDatas: Map<BlockId, BlockData>;
@@ -35,6 +39,9 @@ type BlockTransactionContext = {
 
 function useBlockTransaction(context: BlockTransactionContext) {
   const {
+    mainRootBlockId,
+    lastFocusedBlockTree,
+    lastFocusedDiId,
     blocks,
     latestBlockInfos,
     latestBlockDatas,
@@ -112,15 +119,15 @@ function useBlockTransaction(context: BlockTransactionContext) {
   };
 
   const captureEnvInfo = () => {
-    const rootBlockId = getMainTreeContext()!.mainRootBlockId.value;
-    const lastFocusContext = getLastFocusContext()!;
-    const focusedBlockId = lastFocusContext.lastFocusedBlockId.value ?? null;
-    const view = lastFocusContext.lastFocusedEditorView.value;
-    const sel = view?.state.selection.toJSON();
+    const focusedTreeId = lastFocusedBlockTree.value?.getId() ?? null;
+    const focusedItemId = lastFocusedDiId.value ?? null;
+    const view = focusedItemId ? lastFocusedBlockTree.value?.getEditorView(focusedItemId) : null;
+    const sel = view?.state.selection.toJSON() ?? null;
     const undoPointInfo: TransactionEnvInfo = {
-      focusedBlockId,
+      rootBlockId: mainRootBlockId.value!,
+      focusedTreeId,
+      focusedItemId,
       selection: sel,
-      rootBlockId,
     };
     return undoPointInfo;
   };

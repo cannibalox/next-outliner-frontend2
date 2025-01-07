@@ -8,7 +8,7 @@ import { type BlockContent } from "@/common/type-and-schemas/block/block-content
 import { type BlockData } from "@/common/type-and-schemas/block/block-data";
 import { type BlockId } from "@/common/type-and-schemas/block/block-id";
 import { type BlockInfo } from "@/common/type-and-schemas/block/block-info";
-import { pmSchema } from "@/components/prosemirror/pmSchema";
+import { getPmSchema } from "@/components/prosemirror/pmSchema";
 import { useEventBus } from "@/plugins/eventbus";
 import { plainTextToTextContent } from "@/utils/pm";
 import dayjs from "dayjs";
@@ -19,6 +19,9 @@ import { z } from "zod";
 import type { SyncLayer } from "../sync-layer/syncLayer";
 import useBlockTransaction from "./blockTransaction";
 import createUndoManager from "./undoManager";
+import type { DisplayItemId } from "@/utils/display-item";
+import LastFocusContext from "@/context/lastFocus";
+import MainTreeContext from "@/context/mainTree";
 
 ///////////////////////////////////////////////////////////////////
 // blocksManager 负责管理视图层的所有块，其职责有二：
@@ -87,8 +90,9 @@ export type VirtualBlock = Block & { type: "virtualBlock" };
 // 用于撤销 & 重做
 export type TransactionEnvInfo = {
   rootBlockId: BlockId;
-  focusedBlockId: BlockId | null;
-  selection: any;
+  focusedTreeId: string | null;
+  focusedItemId: DisplayItemId | null;
+  selection: any | null;
   [key: string]: any;
 };
 
@@ -257,6 +261,10 @@ export const createBlocksManager = (syncLayer: SyncLayer) => {
   const latestBlockDatas = new Map<BlockId, BlockData>();
   const loadedDataDocs = new Set<number>(); // 记录已经加载的数据文档，防止重复加载
 
+  const { lastFocusedBlockTree, lastFocusedDiId } = LastFocusContext.useContext()!;
+  const { mainRootBlockId } = MainTreeContext.useContext()!;
+
+  // 记录所有文档是否已经同步
   // 记录所有文档是否已经同步
   // 刚开始，和连接断开时，synced == false
   // 第一次同步完成时（即 syncStatus 中所有文档的同步状态都为 synced），synced == true
@@ -436,6 +444,8 @@ export const createBlocksManager = (syncLayer: SyncLayer) => {
   // 将块内容转换为字符串，用于显示和搜索
   const getCtext = (content: BlockContent, includeTags?: boolean) => {
     if (content[0] === BLOCK_CONTENT_TYPES.TEXT) {
+      const schemaCtx = { getBlockRef: getBlockRef };
+      const pmSchema = getPmSchema(schemaCtx);
       const doc = Node.fromJSON(pmSchema, content[1]);
       const arr: string[] = [];
       doc.descendants((node) => {
@@ -501,6 +511,8 @@ export const createBlocksManager = (syncLayer: SyncLayer) => {
   };
 
   const getOlinks = (docContent: any, type: "blockRef" | "tag" | "both" = "both") => {
+    const schemaCtx = { getBlockRef: getBlockRef };
+    const pmSchema = getPmSchema(schemaCtx);
     const doc = Node.fromJSON(pmSchema, docContent);
     const olinks: BlockId[] = [];
     // 从 content 中提取
@@ -773,6 +785,7 @@ export const createBlocksManager = (syncLayer: SyncLayer) => {
   // 创建新树的具体实现
   const createNewTree = async () => {
     const fstChildId = nanoid();
+    const schema = getPmSchema({ getBlockRef: getBlockRef });
     createBlockTransaction({ type: "ui" })
       .addBlock({
         type: "normalBlock",
@@ -780,7 +793,7 @@ export const createBlocksManager = (syncLayer: SyncLayer) => {
         fold: false,
         parentId: "root",
         childrenIds: [],
-        content: plainTextToTextContent(""),
+        content: plainTextToTextContent("", schema),
         metadata: {},
       })
       .addBlock({
@@ -789,7 +802,7 @@ export const createBlocksManager = (syncLayer: SyncLayer) => {
         fold: false,
         parentId: "root",
         childrenIds: [fstChildId],
-        content: plainTextToTextContent(""),
+        content: plainTextToTextContent("", schema),
         metadata: {},
       })
       .commit();
@@ -813,6 +826,9 @@ export const createBlocksManager = (syncLayer: SyncLayer) => {
     getCtext,
     getMtext,
     getOlinks,
+    mainRootBlockId,
+    lastFocusedBlockTree,
+    lastFocusedDiId,
   });
 
   const { undo, redo, addUndoPoint, clearUndoRedoHistory } = createUndoManager({

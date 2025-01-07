@@ -13,7 +13,6 @@ const ImageEditorContext = createContext(() => {
     imageUrl,
     deleteOriginal,
   };
-  globalThis.getImageEditorContext = () => ctx;
   return ctx;
 });
 

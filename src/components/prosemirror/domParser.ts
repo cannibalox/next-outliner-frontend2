@@ -1,6 +1,5 @@
 import type { BlockContent } from "@/common/type-and-schemas/block/block-content";
-import { pmSchema } from "./pmSchema";
-import { DOMParser as ProsemirrorDOMParser, Slice } from "prosemirror-model";
+import { DOMParser as ProsemirrorDOMParser, Schema, Slice } from "prosemirror-model";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import { nanoid } from "nanoid";
 import { linkify } from "../../utils/pm";
@@ -57,7 +56,7 @@ const ignoreTags: { [tagName: string]: boolean } = {
   TITLE: true,
 };
 
-function parseHtml(html: string) {
+function parseHtml(pmSchema: Schema, html: string) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, "text/html");
   const ctx: Block[] = [];

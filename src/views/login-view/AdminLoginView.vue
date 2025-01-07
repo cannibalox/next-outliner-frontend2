@@ -67,7 +67,7 @@ import { timeout } from "@/utils/time";
 import router from "@/router";
 import ServerInfoContext from "@/context/serverInfo";
 
-const { serverUrl, token } = ServerInfoContext.useContext();
+const { serverUrl, token } = ServerInfoContext.useContext()!;
 const password = ref("");
 const { t } = useI18n();
 const loginStatus = ref<

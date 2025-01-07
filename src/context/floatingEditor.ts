@@ -7,7 +7,7 @@ const FloatingEditorContext = createContext(() => {
   const showPos = ref<{ x: number; y: number } | null>(null);
   const open = ref(false);
   const openedBlockId = ref<BlockId | null>(null);
-  const { enableFloatingEditor } = BasicSettingsContext.useContext();
+  const { enableFloatingEditor } = BasicSettingsContext.useContext()!;
 
   const openFloatingEditor = (blockId: BlockId, pos: { x: number; y: number }) => {
     if (!enableFloatingEditor.value) return;
@@ -43,7 +43,6 @@ const FloatingEditorContext = createContext(() => {
     openFloatingEditor,
     closeFloatingEditor,
   };
-  globalThis.getFloatingEditorContext = () => ctx;
   return ctx;
 });
 

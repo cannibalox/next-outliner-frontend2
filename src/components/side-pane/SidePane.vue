@@ -39,7 +39,7 @@
           class="h-full mr-1"
           :key="sidePaneCurrentBlockId"
           :id="`side-pane-${sidePaneCurrentBlockId}`"
-          :root-block-ids="[sidePaneCurrentBlockId]"
+          :root-block-id="sidePaneCurrentBlockId"
           :root-block-level="0"
           :paddingBottom="20"
         />
@@ -118,7 +118,7 @@ const {
   goPrev,
   goNext,
   dir,
-} = SidebarContext.useContext();
+} = SidebarContext.useContext()!;
 
 const buttons: SidePaneButton[] = [
   {

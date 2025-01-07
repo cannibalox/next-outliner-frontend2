@@ -65,7 +65,7 @@ const {
   suppressMouseOver,
   updateSuggestions,
   withScrollSuppressed,
-} = RefSuggestionsContext.useContext();
+} = RefSuggestionsContext.useContext()!;
 
 const queryTerms = computed(() => {
   if (query.value.length == 0) return [];

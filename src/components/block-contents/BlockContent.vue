@@ -6,23 +6,27 @@
     :readonly="readonly"
     :highlight-terms="highlightTerms"
     :highlight-refs="highlightRefs"
+    :item-id="itemId"
   ></TextContent>
   <MathContent
     v-else-if="block.content[0] === BLOCK_CONTENT_TYPES.MATH"
     :block="block"
     :block-tree="blockTree"
     :readonly="readonly"
+    :item-id="itemId"
   ></MathContent>
   <CodeContent
     v-else-if="block.content[0] === BLOCK_CONTENT_TYPES.CODE"
     :block="block"
     :block-tree="blockTree"
     :readonly="readonly"
+    :item-id="itemId"
   ></CodeContent>
   <ImageContent
     v-else-if="block.content[0] === BLOCK_CONTENT_TYPES.IMAGE"
     :block="block"
     :block-tree="blockTree"
+    :item-id="itemId"
   ></ImageContent>
 </template>
 
@@ -35,9 +39,11 @@ import ImageContent from "../block-contents/ImageContent.vue";
 import MathContent from "@/components/block-contents/MathContent.vue";
 import TextContent from "@/components/block-contents/TextContent.vue";
 import type { Block } from "@/context/blocks/view-layer/blocksManager";
+import type { DisplayItemId } from "@/utils/display-item";
 
 defineProps<{
   block: Block;
+  itemId?: DisplayItemId;
   blockTree?: BlockTree;
   readonly?: boolean;
   highlightTerms?: string[];

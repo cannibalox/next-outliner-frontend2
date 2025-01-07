@@ -1,36 +1,44 @@
+import { BLOCK_CONTENT_TYPES } from "@/common/constants";
+import type BlocksContext from "@/context/blocks/blocks";
+import { DI_FILTERS } from "@/context/blockTree";
+import type LastFocusContext from "@/context/lastFocus";
 import { useTaskQueue } from "@/plugins/taskQueue";
 import { plainTextToPmNode, plainTextToTextContent } from "@/utils/pm";
-import { AllSelection, Plugin, TextSelection } from "prosemirror-state";
+import { Node } from "prosemirror-model";
+import { Plugin } from "prosemirror-state";
 import { EditorView as PmEditorView } from "prosemirror-view";
 import parseHtml from "../domParser";
-import { DOMParser, Node } from "prosemirror-model";
-import { pmSchema } from "../pmSchema";
-import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import { hrefToTitle } from "../pasteLink";
+import { getPmSchema } from "../pmSchema";
+import type { PmPluginCtx } from "./pluginContext";
 
-export const mkPasteTextPlugin = () => {
-  const { lastFocusedBlockId, lastFocusedBlockTree } = globalThis.getLastFocusContext()!;
-  const { showPasteDialog } = globalThis.getPasteDialogContext()!;
-  const { blockEditor } = globalThis.getBlocksContext()!;
-  const { blocksManager } = globalThis.getBlocksContext()!;
+export const mkPasteTextPlugin = (ctx: PmPluginCtx) => {
+  const lastFocusContext = ctx.lastFocusContext;
+  const blocksManager = ctx.blocksContext?.blocksManager;
+  const blockEditor = ctx.blocksContext?.blockEditor;
 
   return new Plugin({
     props: {
       handlePaste(view: PmEditorView, event: ClipboardEvent) {
+        if (!lastFocusContext || !blocksManager || !blockEditor) return false;
+
         event.preventDefault();
         event.stopImmediatePropagation();
 
         const taskQueue = useTaskQueue();
-        const blockId = lastFocusedBlockId.value;
-        if (blockId == null) return false;
-        const tree = lastFocusedBlockTree.value;
+        const tree = lastFocusContext.lastFocusedBlockTree.value;
+        const diId = lastFocusContext.lastFocusedDiId.value;
+        const di = diId ? tree?.getDi(diId) : null;
+        if (!tree || !diId || !di || !DI_FILTERS.isBlockDi(di)) return false;
         const currBlockEmpty = view.state.doc.textContent.trim() === "";
+        const blockId = di.block.id;
+        const pmSchema = ctx.getSchema();
 
         // 检测到 html 内容
         // 则优先粘贴 html，以保持格式
         const html = event.clipboardData?.getData("text/html");
         if (html) {
-          const [parsedTree, parsedBlocks] = parseHtml(html);
+          const [parsedTree, parsedBlocks] = parseHtml(pmSchema, html);
           if (parsedTree.length === 0) return false;
 
           // 如果只解析出一个块，并且是文本块，则将该块拼在当前块的光标后面，
@@ -41,7 +49,7 @@ export const mkPasteTextPlugin = () => {
               const insertedDoc = Node.fromJSON(pmSchema, block.content[1]);
               const tr = view.state.tr.replaceSelectionWith(insertedDoc);
               view.dispatch(tr);
-              hrefToTitle(view);
+              hrefToTitle(pmSchema, view);
               return true;
             }
           }
@@ -93,17 +101,17 @@ export const mkPasteTextPlugin = () => {
               // 聚焦到插入的最后一个块，并将光标移至末尾
               const lastBlockId = parsedTree[parsedTree.length - 1].id;
               if (lastBlockId) {
-                await tree.focusBlock(lastBlockId);
-                const view = tree.getEditorView(lastBlockId);
-                if (view instanceof PmEditorView) {
-                  const sel = AllSelection.atEnd(view.state.doc);
-                  const tr = view.state.tr.setSelection(sel);
-                  view.dispatch(tr);
+                const di = tree.findDi(
+                  (item) => item.type === "basic-block" && item.block.id === lastBlockId,
+                );
+                if (di) {
+                  tree.focusDi(di.itemId);
+                  tree.moveCursorToTheEnd(di.itemId);
                 }
               }
             }
           });
-          hrefToTitle(view);
+          hrefToTitle(pmSchema, view);
 
           return true;
         } else {
@@ -126,10 +134,10 @@ export const mkPasteTextPlugin = () => {
               // 如果只有一行，则直接该块拼在当前块的光标后面，
               // 并且将光标移动到粘贴内容的末尾，而不是在下方创建新块
               if (lines.length === 1) {
-                const insertedDoc = plainTextToPmNode(lines[0]);
+                const insertedDoc = plainTextToPmNode(lines[0], pmSchema);
                 const tr = view.state.tr.replaceSelectionWith(insertedDoc);
                 view.dispatch(tr);
-                hrefToTitle(view);
+                hrefToTitle(pmSchema, view);
                 return;
               }
 
@@ -141,7 +149,7 @@ export const mkPasteTextPlugin = () => {
                     offset: 1,
                   },
                   blocks: lines.map((line) => ({
-                    content: plainTextToTextContent(line),
+                    content: plainTextToTextContent(line, pmSchema),
                   })),
                   tr,
                   commit: false,
@@ -159,16 +167,16 @@ export const mkPasteTextPlugin = () => {
                 // 聚焦到插入的最后一个块，并将光标移至末尾
                 const lastBlockId = newNormalBlockIds?.[newNormalBlockIds.length - 1];
                 if (lastBlockId) {
-                  await tree.focusBlock(lastBlockId);
-                  const view = tree.getEditorView(lastBlockId);
-                  if (view instanceof PmEditorView) {
-                    const sel = AllSelection.atEnd(view.state.doc);
-                    const tr = view.state.tr.setSelection(sel);
-                    view.dispatch(tr);
+                  const di = tree.findDi(
+                    (item) => item.type === "basic-block" && item.block.id === lastBlockId,
+                  );
+                  if (di) {
+                    tree.focusDi(di.itemId);
+                    tree.moveCursorToTheEnd(di.itemId);
                   }
                 }
               }
-              hrefToTitle(view);
+              hrefToTitle(pmSchema, view);
             });
           }
           return true;

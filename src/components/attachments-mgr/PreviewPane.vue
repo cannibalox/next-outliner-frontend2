@@ -166,17 +166,19 @@ import {
   DropdownMenuItem,
 } from "../ui/dropdown-menu";
 import { getSeperator } from "@/common/helper-functions/path";
-import { pmSchema } from "../prosemirror/pmSchema";
+import { getPmSchema } from "../prosemirror/pmSchema";
 import ImagePreviewPane from "./ImagePreviewPane.vue";
 import { isImage, isAudio, isVideo } from "@/utils/fileType";
 import { fsGetAttachmentSignedUrl } from "@/common/api-call/fs";
+import { DI_FILTERS } from "@/context/blockTree";
 
-const { blockEditor } = BlocksContext.useContext();
+const { blockEditor } = BlocksContext.useContext()!;
 const tasakQueue = useTaskQueue();
-const { serverUrl } = ServerInfoContext.useContext();
-const { useImage } = ImagesContext.useContext();
-const { lastFocusedBlockId, lastFocusedEditorView } = LastFocusContext.useContext();
-const { attachmentsBasePath, activeDirent, open } = AttachmentsManagerContext.useContext();
+const { serverUrl } = ServerInfoContext.useContext()!;
+const { useImage } = ImagesContext.useContext()!;
+const { attachmentsBasePath, activeDirent, open } = AttachmentsManagerContext.useContext()!;
+const { lastFocusedBlockTree, lastFocusedDiId } = LastFocusContext.useContext()!;
+const { blocksManager } = BlocksContext.useContext()!;
 
 const activePathInfo = computed(() => {
   const rootPath = attachmentsBasePath.value;
@@ -246,9 +248,20 @@ const handleTogglePreview = () => {
 };
 
 const handleInsertImage = (relativePath: string) => {
-  const blockId = lastFocusedBlockId.value;
+  const tree = lastFocusedBlockTree.value;
+  const diId = lastFocusedDiId.value;
+  if (!tree || !diId) return;
+  const di = tree.getDi(diId);
+  const view = tree.getEditorView(diId);
+  if (
+    !di ||
+    !DI_FILTERS.isBlockDi(di) ||
+    !(view instanceof PMEditorView || view instanceof CMEditorView)
+  )
+    return;
+  const blockId = di.block.id;
   if (!blockId) return;
-  const editorView = lastFocusedEditorView.value;
+
   const imageContent: ImageContent = [
     BLOCK_CONTENT_TYPES.IMAGE,
     relativePath,
@@ -257,9 +270,8 @@ const handleInsertImage = (relativePath: string) => {
     null,
     [],
   ];
-  const isEmptyTextBlock =
-    editorView instanceof PMEditorView && editorView.state.doc.content.size === 0;
-  const isEmptyCodeBlock = editorView instanceof CMEditorView && editorView.state.doc.length === 0;
+  const isEmptyTextBlock = view instanceof PMEditorView && view.state.doc.content.size === 0;
+  const isEmptyCodeBlock = view instanceof CMEditorView && view.state.doc.length === 0;
   // 如果当前块是空文本或代码块，则将这个空块变为图片块
   if (isEmptyTextBlock || isEmptyCodeBlock) {
     tasakQueue.addTask(() => {
@@ -296,9 +308,13 @@ const handleDelete = async (path: string) => {
 };
 
 const handleInsertPathRef = (path: string | undefined) => {
-  if (!path) return;
-  const view = lastFocusedEditorView.value;
-  if (!(view instanceof PMEditorView)) return;
+  const tree = lastFocusedBlockTree.value;
+  const diId = lastFocusedDiId.value;
+  if (!tree || !diId) return;
+  const view = tree.getEditorView(diId);
+  if (!path || !(view instanceof PMEditorView)) return;
+  const schemaCtx = { getBlockRef: blocksManager.getBlockRef };
+  const pmSchema = getPmSchema(schemaCtx);
   const pathRefNode = pmSchema.nodes.pathRef.create({ path });
   const tr = view.state.tr.replaceSelectionWith(pathRefNode);
   view.dispatch(tr);

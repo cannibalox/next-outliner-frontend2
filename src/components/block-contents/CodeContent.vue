@@ -5,7 +5,7 @@
     v-model:src="src!"
     :readonly="readonly"
     :lang="block.content[2]!"
-    :extensions-generator="extensionsGenerator"
+    :extensions-builder="extensionsBuilder"
     :on-src-changed="handleSrcChange"
     :keymap="codemirrorKeymap"
   >
@@ -26,19 +26,21 @@ import { keymap } from "@codemirror/view";
 import { onBeforeUnmount, onMounted, onUnmounted, ref, watch } from "vue";
 import CodeMirror from "../codemirror/CodeMirror.vue";
 import type { Block } from "@/context/blocks/view-layer/blocksManager";
+import type { DisplayItemId } from "@/utils/display-item";
 
 const props = defineProps<{
   blockTree?: BlockTree;
+  itemId?: DisplayItemId;
   block: Block;
   readonly?: boolean;
 }>();
 
-const { blockEditor } = BlocksContext.useContext();
+const { blockEditor } = BlocksContext.useContext()!;
 const taskQueue = useTaskQueue();
 const src = ref<string | null>(null);
 const cmWrapper = ref<InstanceType<typeof CodeMirror> | null>(null);
-const { codemirrorKeymap } = KeymapContext.useContext();
-const extensionsGenerator = () => {
+const { codemirrorKeymap } = KeymapContext.useContext()!;
+const extensionsBuilder = () => {
   const ret: Extension[] = props.readonly
     ? []
     : [indentOnInput(), bracketMatching(), closeBrackets()];
@@ -78,20 +80,22 @@ watch(
 
 onMounted(() => {
   // 加载时，向 blockTree 注册 editorView
-  const blockId = props.block.id;
-  const editorView = cmWrapper.value?.getEditorView();
-  if (editorView) {
-    props.blockTree?.registerEditorView(blockId, editorView);
+  if (props.itemId) {
+    const editorView = cmWrapper.value?.getEditorView();
+    if (editorView) {
+      props.blockTree?.registerEditorView(props.itemId, editorView);
+    }
   }
 });
 
 onUnmounted(() => {
   // 卸载时，从 blockTree 注销 editorView
-  const blockId = props.block.id;
-  const editorView = cmWrapper.value?.getEditorView();
-  if (editorView) {
-    props.blockTree?.unregisterEditorView(blockId, editorView);
-    editorView.destroy();
+  if (props.itemId) {
+    const editorView = cmWrapper.value?.getEditorView();
+    if (editorView) {
+      props.blockTree?.unregisterEditorView(props.itemId, editorView);
+      editorView.destroy();
+    }
   }
 });
 </script>

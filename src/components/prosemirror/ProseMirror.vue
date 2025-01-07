@@ -4,7 +4,11 @@
 
 <script setup lang="ts">
 import type { BlockId } from "@/common/type-and-schemas/block/block-id";
-import { Node } from "prosemirror-model";
+import BlockTreeContext, { type BlockTree } from "@/context/blockTree";
+import BlocksContext from "@/context/blocks/blocks";
+import HistoryContext from "@/context/history";
+import RefSuggestionsContext from "@/context/refSuggestions";
+import { Node, Schema } from "prosemirror-model";
 import { EditorState, Plugin, Selection } from "prosemirror-state";
 import { type EditorProps, EditorView } from "prosemirror-view";
 import { onMounted, onUnmounted, ref, watch } from "vue";
@@ -12,30 +16,72 @@ import { mkEventBusPlugin } from "./plugins/eventBus";
 import { mkHighlightMatchesPlugin } from "./plugins/highlightMatches";
 import { mkHighlightRefsPlugin } from "./plugins/highlightRefs";
 import { mkListenDocChangedPlugin } from "./plugins/listenDocChange";
-import { pmSchema } from "./pmSchema";
+import type { PmPluginCtx } from "./plugins/pluginContext";
+import { getPmSchema } from "./pmSchema";
+import type { DisplayItemId } from "@/utils/display-item";
+import LastFocusContext from "@/context/lastFocus";
+import PathsContext from "@/context/paths";
+import ImagesContext from "@/context/images";
+import KeymapContext from "@/context/keymap";
 
-const props = defineProps<{
-  readonly?: boolean;
-  // 块失焦时关闭拼写检查
-  disableSpellcheckWhenBlur?: boolean;
-  nodeViews?: EditorProps["nodeViews"];
-  pluginsGenerator?: (getEditorView: () => EditorView | null, readonly: boolean) => Plugin[];
-  onDocChanged?: (event: {
-    newDoc: any;
-    oldDoc: any;
-    view: EditorView;
-    oldSelection: any;
-    newSelection: any;
-  }) => void;
-  highlightTerms?: string[];
-  highlightRefs?: BlockId[];
-}>();
+const props = withDefaults(
+  defineProps<{
+    // 块失焦时关闭拼写检查
+    disableSpellcheckWhenBlur?: boolean;
+    nodeViews?: EditorProps["nodeViews"];
+    schema: Schema;
+    pluginsBuilder?: (ctx: PmPluginCtx) => Plugin[];
+    onDocChanged?: (event: {
+      newDoc: any;
+      oldDoc: any;
+      view: EditorView;
+      oldSelection: any;
+      newSelection: any;
+    }) => void;
+    highlightTerms?: string[];
+    highlightRefs?: BlockId[];
+    blockTree?: BlockTree;
+    itemId?: DisplayItemId;
+    readonly?: boolean;
+  }>(),
+  {
+    readonly: false,
+    disableSpellcheckWhenBlur: true,
+  },
+);
 
 const docJson = defineModel<any>("doc");
 
 const $wrapper = ref<HTMLElement | null>(null);
 const corrupted = ref(false);
 let editorView: EditorView | null = null;
+
+const historyContext = HistoryContext.useContext();
+const blockTreeContext = BlockTreeContext.useContext();
+const blocksContext = BlocksContext.useContext();
+const refSuggestionsContext = RefSuggestionsContext.useContext();
+const lastFocusContext = LastFocusContext.useContext();
+const pathsContext = PathsContext.useContext();
+const imagesContext = ImagesContext.useContext();
+const keymapContext = KeymapContext.useContext();
+
+const pluginsCtx: PmPluginCtx = {
+  getSchema: () => props.schema,
+  getItemId: () => props.itemId ?? null,
+  getBlockTree: () => props.blockTree ?? null,
+  getReadonly: () => props.readonly,
+  getEditorView: () => editorView!,
+  getHighlightTerms: () => props.highlightTerms ?? [],
+  getHighlightRefs: () => props.highlightRefs ?? [],
+  lastFocusContext,
+  historyContext,
+  blockTreeContext,
+  blocksContext,
+  refSuggestionsContext,
+  imagesContext,
+  pathsContext,
+  keymapContext,
+};
 
 defineExpose({
   getEditorView: () => editorView,
@@ -44,24 +90,20 @@ defineExpose({
 });
 
 const mkPlugins = () => {
-  const getEditorView = () => editorView;
-  const getHighlightTerms = () => props.highlightTerms;
-  const getHighlightRefs = () => props.highlightRefs;
-
-  const customPlugins = props.pluginsGenerator?.(getEditorView, props.readonly) ?? [];
+  const customPlugins = props.pluginsBuilder?.(pluginsCtx) ?? [];
 
   if (props.readonly) {
     return [
-      mkHighlightMatchesPlugin(getHighlightTerms),
-      mkHighlightRefsPlugin(getHighlightRefs),
+      mkHighlightMatchesPlugin(pluginsCtx),
+      mkHighlightRefsPlugin(pluginsCtx),
       ...customPlugins,
     ];
   } else {
     return [
       mkEventBusPlugin(),
       mkListenDocChangedPlugin(),
-      mkHighlightMatchesPlugin(getHighlightTerms),
-      mkHighlightRefsPlugin(getHighlightRefs),
+      mkHighlightMatchesPlugin(pluginsCtx),
+      mkHighlightRefsPlugin(pluginsCtx),
       ...customPlugins,
     ];
   }
@@ -76,7 +118,7 @@ watch(docJson, () => {
 
   let doc;
   try {
-    doc = Node.fromJSON(pmSchema, docJson.value);
+    doc = Node.fromJSON(props.schema, docJson.value);
   } catch (e) {
     corrupted.value = true;
     return;
@@ -112,7 +154,7 @@ onMounted(() => {
 
   let doc;
   try {
-    doc = Node.fromJSON(pmSchema, docJson.value);
+    doc = Node.fromJSON(props.schema, docJson.value);
   } catch (e) {
     corrupted.value = true;
     return;

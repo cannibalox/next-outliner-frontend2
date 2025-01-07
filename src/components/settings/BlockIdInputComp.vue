@@ -53,8 +53,8 @@ const props = defineProps<{
   item: SettingItem<string, "blockIdInput">;
 }>();
 
-const { blocksManager } = BlocksContext.useContext();
-const { search } = IndexContext.useContext();
+const { blocksManager } = BlocksContext.useContext()!;
+const { search } = IndexContext.useContext()!;
 
 const { t } = useI18n();
 const blockSearchResult = ref<Block[]>([]);

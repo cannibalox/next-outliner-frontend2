@@ -12,7 +12,7 @@ import {
 export interface CreateContext<T> {
   Provider: DefineComponent<{}, () => VNode | VNode[] | undefined, any>;
   injectionKey: InjectionKey<T>;
-  useContext: (defaultValue?: T) => T;
+  useContext: (defaultValue?: T) => T | undefined;
 }
 
 export const createContext = <T extends object, P = {}>(
@@ -31,7 +31,7 @@ export const createContext = <T extends object, P = {}>(
   });
 
   const useContext = (defaultValue?: T) => {
-    return inject(injectionKey, defaultValue || ({} as T));
+    return inject(injectionKey, defaultValue);
   };
 
   return {

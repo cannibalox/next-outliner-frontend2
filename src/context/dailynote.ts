@@ -12,18 +12,18 @@ import { useToast } from "@/components/ui/toast/use-toast";
 import { useI18n } from "vue-i18n";
 import { useTaskQueue } from "@/plugins/taskQueue";
 import BlockTreeContext from "./blockTree";
-import { pmSchema } from "@/components/prosemirror/pmSchema";
+import { getPmSchema } from "@/components/prosemirror/pmSchema";
 
 const DAILY_NOTE_TAG = "day";
 
 const DailyNoteContext = createContext(() => {
-  const { registerSettingGroup, registerSettingItem } = SettingsContext.useContext();
-  const { getBacklinks } = IndexContext.useContext();
-  const { blocksManager, blockEditor, synced } = BlocksContext.useContext();
+  const { registerSettingGroup, registerSettingItem } = SettingsContext.useContext()!;
+  const { getBacklinks } = IndexContext.useContext()!;
+  const { blocksManager, blockEditor, synced } = BlocksContext.useContext()!;
   const { toast } = useToast();
   const { t } = useI18n();
   const taskQueue = useTaskQueue();
-  const { getBlockTree } = BlockTreeContext.useContext();
+  const { getBlockTree } = BlockTreeContext.useContext()!;
 
   // 确保存在 day 块可以用作标签
   // TODo: 只执行一次添加
@@ -32,6 +32,7 @@ const DailyNoteContext = createContext(() => {
     (newValue, oldValue) => {
       // not synced -> synced
       if (!oldValue && newValue) {
+        const schema = getPmSchema({ getBlockRef: blocksManager.getBlockRef });
         const dayBlock = blocksManager.getBlock("day");
         if (dayBlock) return;
         const tr = blocksManager.createBlockTransaction({ type: "ui" });
@@ -41,7 +42,7 @@ const DailyNoteContext = createContext(() => {
           fold: false,
           parentId: INTERNAL_BLOCK_PARENT_ID,
           childrenIds: [],
-          content: plainTextToTextContent("Day"),
+          content: plainTextToTextContent("Day", schema),
           metadata: {},
         });
         tr.commit();
@@ -52,8 +53,7 @@ const DailyNoteContext = createContext(() => {
 
   const blockIdValidator = (value: string) => {
     if (!value) return "没有指定块 ID";
-    const blocksContext = globalThis.getBlocksContext()!;
-    const block = blocksContext.blocksManager.getBlock(value);
+    const block = blocksManager.getBlock(value);
     return block ? undefined : "无效的块 ID";
   };
 
@@ -113,6 +113,7 @@ const DailyNoteContext = createContext(() => {
     if (!main) return;
     const dateToDailyNote = getDateToDailyNote();
     const dateStr = dayjs(date).format("YYYY-MM-DD");
+    const schema = getPmSchema({ getBlockRef: blocksManager.getBlockRef });
     // 如果已经存在，则不创建
     if (dateToDailyNote[dateStr]) return;
     // 否则创建
@@ -131,14 +132,16 @@ const DailyNoteContext = createContext(() => {
             childIndex: "first",
           },
           content: contentNodesToPmNode([
-            pmSchema.text(dateStr + " "),
-            pmSchema.nodes.blockRef_v2.create({ toBlockId: "day", tag: true }),
+            schema.text(dateStr + " "),
+            schema.nodes.blockRef_v2.create({ toBlockId: "day", tag: true }),
           ]),
         }) ?? {};
       if (newNormalBlockId) {
         await main.nextUpdate();
-        await main.focusBlock(newNormalBlockId);
-        main.moveCursorToTheEnd(newNormalBlockId);
+        const di = main.findDi(
+          (item) => item.type === "basic-block" && item.block.id === newNormalBlockId,
+        );
+        di && main.focusDi(di.itemId);
       }
     });
   };
@@ -150,7 +153,6 @@ const DailyNoteContext = createContext(() => {
     getDateToDailyNote,
     createDailyNote,
   };
-  globalThis.getDailyNoteContext = () => ctx;
   return ctx;
 });
 

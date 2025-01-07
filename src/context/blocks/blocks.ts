@@ -5,13 +5,20 @@ import { createBlocksEditor } from "./view-layer/blocksEditor";
 import { useRouterParams } from "@/utils/routerParams";
 import { computed, watch } from "vue";
 import ServerInfoContext from "../serverInfo";
+import kbViewRegistry from "../kbViewRegistry";
+import type IndexContext from "..";
+import MainTreeContext from "../mainTree";
 
 export const BlocksContext = createContext(() => {
   const params = useRouterParams();
-  const { token } = ServerInfoContext.useContext();
+  const { token } = ServerInfoContext.useContext()!;
+  const { get } = kbViewRegistry.useContext()!;
+  const { mainRootBlockId } = MainTreeContext.useContext()!;
+  const getIndexContext = () => get<ReturnType<typeof IndexContext.useContext>>("index");
+
   const syncLayer = createSyncLayer();
   const blocksManager = createBlocksManager(syncLayer);
-  const blockEditor = createBlocksEditor(blocksManager);
+  const blockEditor = createBlocksEditor(blocksManager, mainRootBlockId, getIndexContext);
 
   watch(
     params,
@@ -30,8 +37,6 @@ export const BlocksContext = createContext(() => {
     syncLayer,
     synced: blocksManager.synced,
   };
-  // 通过 globalThis 暴露给组件外使用
-  globalThis.getBlocksContext = () => ctx;
   return ctx;
 });
 

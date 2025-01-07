@@ -147,10 +147,10 @@ import { Check, CircleCheck, Loader2, LoaderCircle, RefreshCcw, X } from "lucide
 import { ref } from "vue";
 import { z } from "zod";
 
-const { serverUrl, token } = ServerInfoContext.useContext();
+const { serverUrl, token } = ServerInfoContext.useContext()!;
 const password = ref<string>("");
 const selectedKbLocation = ref<string | undefined>(undefined);
-const { kbs, refreshKbList } = KbInfoContext.useContext();
+const { kbs, refreshKbList } = KbInfoContext.useContext()!;
 const serverStatus = ref<"invalidURL" | "connFailed" | "connecting" | "connSuccess" | "noKbServer">(
   "invalidURL",
 );

@@ -91,35 +91,40 @@ function createUndoManager(ctx: UndoManagerCtx) {
     undoTr.commit();
 
     // 恢复其他状态
-    const lastFocusContext = getLastFocusContext()!;
-    const tree = lastFocusContext.lastFocusedBlockTree.value;
     // 恢复到第一个事务之前的状态
     const targetEnvInfo =
       trsToApply[0].meta.envUndoStrategy === "beforeCommit"
         ? trsToApply[0].envInfo.beforeCommit
         : trsToApply[0].envInfo.onCreate;
-    const { rootBlockId, focusedBlockId, selection } = targetEnvInfo ?? {};
+    const { rootBlockId, focusedTreeId, focusedItemId, selection } = targetEnvInfo ?? {};
 
     // 这里先让 ProseMirror 更新 state，然后恢复 focusedBlockId 和 selection
     setTimeout(() => {
       try {
-        if (tree) {
-          // 1. 恢复 focusedBlockId
-          if (focusedBlockId != null) {
-            tree.focusBlock(focusedBlockId);
-          }
-          // 2. 恢复 selection
-          if (selection != null) {
-            const editorView = lastFocusContext.lastFocusedEditorView.value;
-            if (editorView instanceof PmEditorView) {
-              const sel = Selection.fromJSON(editorView.state.doc, selection);
-              const tr = editorView.state.tr.setSelection(sel);
-              editorView.dispatch(tr);
-            } else if (editorView instanceof CmEditorView) {
-              const sel = EditorSelection.fromJSON(selection);
-              editorView.dispatch({
-                selection: sel,
-              });
+        // 恢复 rootBlockId
+        const { mainRootBlockId } = getMainTreeContext()!;
+        mainRootBlockId.value = rootBlockId;
+
+        const { getBlockTree } = getBlockTreeContext()!;
+        if (focusedTreeId) {
+          const tree = getBlockTree(focusedTreeId);
+          if (tree) {
+            // 恢复 focusedItem 和 selection
+            if (focusedItemId) {
+              tree.focusDi(focusedItemId);
+              if (selection != null) {
+                const editorView = tree.getEditorView(focusedItemId);
+                if (editorView instanceof PmEditorView) {
+                  const sel = Selection.fromJSON(editorView.state.doc, selection);
+                  const tr = editorView.state.tr.setSelection(sel);
+                  editorView.dispatch(tr);
+                } else if (editorView instanceof CmEditorView) {
+                  const sel = EditorSelection.fromJSON(selection);
+                  editorView.dispatch({
+                    selection: sel,
+                  });
+                }
+              }
             }
           }
         }
@@ -152,33 +157,40 @@ function createUndoManager(ctx: UndoManagerCtx) {
     redoTr.commit();
 
     // 恢复其他状态
-    const lastFocusContext = getLastFocusContext()!;
-    const tree = lastFocusContext.lastFocusedBlockTree.value;
     // 恢复到最后一个事务结束时的状态
-    console.log(trsToApply);
-    const { rootBlockId, focusedBlockId, selection } =
-      trsToApply[trsToApply.length - 1].envInfo.afterCommit ?? {};
+    const targetEnvInfo =
+      trsToApply[0].meta.envUndoStrategy === "beforeCommit"
+        ? trsToApply[0].envInfo.beforeCommit
+        : trsToApply[0].envInfo.onCreate;
+    const { rootBlockId, focusedTreeId, focusedItemId, selection } = targetEnvInfo ?? {};
 
     // 这里先让 ProseMirror 更新 state，然后恢复 focusedBlockId 和 selection
     setTimeout(() => {
       try {
-        if (tree) {
-          // 1. 恢复 focusedBlockId
-          if (focusedBlockId != null) {
-            tree.focusBlock(focusedBlockId);
-          }
-          // 2. 恢复 selection
-          if (selection != null) {
-            const editorView = lastFocusContext.lastFocusedEditorView.value;
-            if (editorView instanceof PmEditorView) {
-              const sel = Selection.fromJSON(editorView.state.doc, selection);
-              const tr = editorView.state.tr.setSelection(sel);
-              editorView.dispatch(tr);
-            } else if (editorView instanceof CmEditorView) {
-              const sel = EditorSelection.fromJSON(selection);
-              editorView.dispatch({
-                selection: sel,
-              });
+        // 恢复 rootBlockId
+        const { mainRootBlockId } = getMainTreeContext()!;
+        mainRootBlockId.value = rootBlockId;
+
+        const { getBlockTree } = getBlockTreeContext()!;
+        if (focusedTreeId) {
+          const tree = getBlockTree(focusedTreeId);
+          if (tree) {
+            // 恢复 focusedItem 和 selection
+            if (focusedItemId) {
+              tree.focusDi(focusedItemId);
+              if (selection != null) {
+                const editorView = tree.getEditorView(focusedItemId);
+                if (editorView instanceof PmEditorView) {
+                  const sel = Selection.fromJSON(editorView.state.doc, selection);
+                  const tr = editorView.state.tr.setSelection(sel);
+                  editorView.dispatch(tr);
+                } else if (editorView instanceof CmEditorView) {
+                  const sel = EditorSelection.fromJSON(selection);
+                  editorView.dispatch({
+                    selection: sel,
+                  });
+                }
+              }
             }
           }
         }

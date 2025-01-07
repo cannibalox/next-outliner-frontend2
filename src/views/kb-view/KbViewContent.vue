@@ -4,16 +4,17 @@
   <!-- mr-1 是为了让滚动条和屏幕边缘留出一点空隙 -->
   <BlockTree
     v-if="synced && mainRootBlockRef"
-    class="h-[100vh] mr-1"
+    class="h-[100vh] mr-1 ml-4"
     id="main"
     :style="{
       paddingRight: sidePaneOpen && sidePaneDir === 'right' ? `${sidePaneWidth}px` : '0px',
       paddingBottom: sidePaneOpen && sidePaneDir === 'bottom' ? `${sidePaneHeight}px` : '0px',
       transition: enableSidePaneAnimation ? 'padding 500ms var(--tf)' : 'none',
     }"
-    :root-block-ids="[mainRootBlockRef.id]"
+    :root-block-id="mainRootBlockRef.id"
     :root-block-level="0"
     :padding-top="60"
+    :enlarge-root-block="true"
   ></BlockTree>
   <div
     v-else
@@ -82,7 +83,7 @@ import SettingsPanel from "@/components/settings/SettingsPanel.vue";
 import CreateNewTreeDialogContext from "@/context/createNewTreeDialog";
 import MainTreeContext from "@/context/mainTree";
 import { Loader2 } from "lucide-vue-next";
-import { watch } from "vue";
+import { shallowRef, watch } from "vue";
 import FloatingMathInput from "../../components/FloatingMathInput.vue";
 import FusionCommand from "../../components/fusion-command/FusionCommand.vue";
 import HeaderBar from "../../components/header-bar/HeaderBar.vue";
@@ -90,14 +91,17 @@ import SidePane from "../../components/side-pane/SidePane.vue";
 import BlocksContext from "../../context/blocks/blocks";
 import SidebarContext from "../../context/sidebar";
 import AttachmentsManager from "@/components/attachments-mgr/AttachmentsManager.vue";
+import type { Block } from "@/context/blocks/view-layer/blocksManager";
+import { syncRef } from "@vueuse/core";
 // import ImageEditor from "@/components/image-editor/ImageEditor.vue";
 
 const { sidePaneOpen, sidePaneDir, sidePaneWidth, sidePaneHeight, enableSidePaneAnimation } =
-  SidebarContext.useContext();
-const { synced, blocksManager } = BlocksContext.useContext();
-const { mainRootBlockRef } = MainTreeContext.useContext();
+  SidebarContext.useContext()!;
+const { synced, blocksManager } = BlocksContext.useContext()!;
+const { mainRootBlockId } = MainTreeContext.useContext()!;
+const mainRootBlockRef = shallowRef<Block | null>(null);
 const { openCreateNewTreeDialog, closeCreateNewTreeDialog } =
-  CreateNewTreeDialogContext.useContext();
+  CreateNewTreeDialogContext.useContext()!;
 
 watch(synced, (newValue, oldValue) => {
   if (!oldValue && newValue) {
@@ -112,6 +116,15 @@ watch(synced, (newValue, oldValue) => {
     }
   }
 });
+
+watch(
+  mainRootBlockId,
+  (newVal) => {
+    const mainRootBlockRef2 = blocksManager.getBlockRef(newVal);
+    syncRef(mainRootBlockRef, mainRootBlockRef2, { direction: "rtl" });
+  },
+  { immediate: true },
+);
 
 const handleCloseR = (el: Element, done: () => void) => {
   if (!(el instanceof HTMLElement)) return;

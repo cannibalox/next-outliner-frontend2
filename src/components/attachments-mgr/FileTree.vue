@@ -78,7 +78,7 @@ const {
   currentPathSegments,
   orderedFiles,
   refetchFiles,
-} = AttachmentsManagerContext.useContext();
+} = AttachmentsManagerContext.useContext()!;
 
 // Define a union type for the status
 type Status = "idle" | "loading" | "updated";

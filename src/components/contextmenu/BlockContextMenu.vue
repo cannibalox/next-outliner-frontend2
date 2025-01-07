@@ -195,13 +195,13 @@ defineProps<{
 }>();
 
 const taskQueue = useTaskQueue();
-const { blockEditor, blocksManager } = BlocksDropdown.useContext();
-const { openBlockMover } = BlockMoverContext.useContext();
-const { favoriteBlockIds } = FavoriteContext.useContext();
-const { sidePaneBlockIds } = SidebarContext.useContext();
-const { lastFocusedBlockTree } = LastFocusContext.useContext();
-const { openExporter } = ExporterContext.useContext();
-const { openFieldValuesInspector } = FieldValueInspectorContext.useContext();
+const { blockEditor, blocksManager } = BlocksDropdown.useContext()!;
+const { openBlockMover } = BlockMoverContext.useContext()!;
+const { favoriteBlockIds } = FavoriteContext.useContext()!;
+const { sidePaneBlockIds } = SidebarContext.useContext()!;
+const { lastFocusedBlockTree } = LastFocusContext.useContext()!;
+const { openExporter } = ExporterContext.useContext()!;
+const { openFieldValuesInspector } = FieldValueInspectorContext.useContext()!;
 
 const predefinedColors = ["red", "green", "blue", "yellow", "gray", "orange", "purple"];
 
@@ -257,12 +257,11 @@ const insertMirrorBelow: CommandExec = (test, blockId) => {
         baseBlockId: blockId,
         offset: 1,
       };
-      const { focusNext } =
-        (await blockEditor.insertMirrorBlock({ pos, srcBlockId: blockId })) ?? {};
       const tree = lastFocusedBlockTree.value;
-      if (focusNext && tree) {
-        tree.focusBlock(focusNext);
-      }
+      if (!tree) return;
+      await blockEditor.insertMirrorBlock({ pos, srcBlockId: blockId });
+      const diBelow = tree.getDiBelow(blockId);
+      diBelow && tree.focusDi(diBelow[0].itemId);
     });
   }
   return !!blockId;

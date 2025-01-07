@@ -27,7 +27,6 @@ export const PasteDialogContext = createContext(() => {
     showPasteDialog,
     closePasteDialog,
   };
-  globalThis.getPasteDialogContext = () => ctx;
   return ctx;
 });
 

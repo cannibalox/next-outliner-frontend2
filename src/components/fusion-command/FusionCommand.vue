@@ -110,7 +110,7 @@ import { Input } from "../ui/input";
 import ScrollArea from "../ui/scroll-area/ScrollArea.vue";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../ui/dialog";
 
-const blockTreeContext = BlockTreeContext.useContext();
+const blockTreeContext = BlockTreeContext.useContext()!;
 const {
   inputText,
   mode,
@@ -122,7 +122,7 @@ const {
   allowedBlockTypes,
   queryTerms,
   updateBlockSearchResult,
-} = FusionCommandContext.useContext();
+} = FusionCommandContext.useContext()!;
 
 const handleInput = useDebounceFn((e: any) => {
   if (e.isComposing) return;
@@ -152,10 +152,11 @@ const gotoFocused = () => {
   if (focusIndex.value === -1) return false;
   const focusBlock = blockSearchResult.value[focusIndex.value];
   if (!focusBlock) return false;
-  const mainTree = blockTreeContext.getBlockTree("main");
-  if (!mainTree) return false;
+  const tree = blockTreeContext.getBlockTree("main");
+  if (!tree) return false;
   open.value = false;
-  mainTree.focusBlock(focusBlock.id, { highlight: true, expandIfFold: true });
+  const di = tree.findDi((item) => item.type === "basic-block" && item.block.id === focusBlock.id);
+  di && tree.focusDi(di.itemId, { highlight: true, expandIfFold: true });
 };
 
 const handleKeydown = generateKeydownHandlerSimple({

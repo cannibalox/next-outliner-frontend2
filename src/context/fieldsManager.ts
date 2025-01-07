@@ -1,6 +1,6 @@
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import type { BlockId } from "@/common/type-and-schemas/block/block-id";
-import { pmSchema } from "@/components/prosemirror/pmSchema";
+import { getPmSchema } from "@/components/prosemirror/pmSchema";
 import { createContext } from "@/utils/createContext";
 import { plainTextToTextContent } from "@/utils/pm";
 import { type Fragment, Node } from "prosemirror-model";
@@ -47,9 +47,10 @@ type FieldMetadataType = z.infer<typeof fieldMetadataSchema>;
 type Eater<CTX> = (content: Fragment | null, ctx?: CTX) => Fragment | null;
 
 const FieldsManagerContext = createContext(() => {
-  const { blocksManager } = BlocksContext.useContext();
+  const { blocksManager } = BlocksContext.useContext()!;
   // const eventBus = useEventBus();
   const allFieldNames = ref<Set<string> | null>(null);
+  const schema = getPmSchema({ getBlockRef: blocksManager.getBlockRef });
 
   const initFieldNames = () => {
     if (allFieldNames.value) return;
@@ -117,11 +118,12 @@ const FieldsManagerContext = createContext(() => {
     if (existed) {
       throw new Error(`Field ${name} already exists`);
     }
+    const schema = getPmSchema({ getBlockRef: blocksManager.getBlockRef });
     blocksManager.addBlock(
       {
         id: name,
         type: "normalBlock",
-        content: plainTextToTextContent(name),
+        content: plainTextToTextContent(name, schema),
         fold: true,
         parentId: "root",
         childrenIds: [],
@@ -162,7 +164,7 @@ const FieldsManagerContext = createContext(() => {
 
     let content: Fragment | null = null;
     try {
-      content = Node.fromJSON(pmSchema, block.content[1]).content;
+      content = Node.fromJSON(schema, block.content[1]).content;
     } catch (e) {}
     if (!content) return;
 
@@ -197,7 +199,7 @@ const FieldsManagerContext = createContext(() => {
 
         let content: Fragment | null = null;
         try {
-          content = Node.fromJSON(pmSchema, childBlock.content[1]).content;
+          content = Node.fromJSON(schema, childBlock.content[1]).content;
         } catch (e) {}
         if (!content) return;
 
@@ -253,7 +255,6 @@ const FieldsManagerContext = createContext(() => {
     getFieldMetadata,
     getFieldValues,
   };
-  globalThis.getFieldsManagerContext = () => ctx;
   return ctx;
 });
 

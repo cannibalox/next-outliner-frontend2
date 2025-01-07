@@ -89,7 +89,6 @@ const SettingsContext = createContext(() => {
     unregisterSettingItem,
     getAllSettingItemsInGroup,
   };
-  globalThis.getSettingsContext = () => ctx;
   return ctx;
 });
 

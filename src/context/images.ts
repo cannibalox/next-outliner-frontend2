@@ -13,10 +13,10 @@ export type ImageState =
   | { status: "uploadError"; url: string };
 
 const ImagesContext = createContext(() => {
-  const { serverUrl } = ServerInfoContext.useContext();
+  const { serverUrl } = ServerInfoContext.useContext()!;
   const images = reactive<Record<string, ImageState>>({});
-  const { tokenPayload } = ServerInfoContext.useContext();
-  const { attachmentsBasePath } = PathsContext.useContext();
+  const { tokenPayload } = ServerInfoContext.useContext()!;
+  const { attachmentsBasePath } = PathsContext.useContext()!;
 
   // const fixImagePath = (blockId: BlockId) => {
   //   const { blocksManager } = getBlocksContext()!;
@@ -133,7 +133,6 @@ const ImagesContext = createContext(() => {
   };
 
   const ctx = { images, useImage, uploadImage };
-  globalThis.getImagesContext = () => ctx;
   return ctx;
 });
 

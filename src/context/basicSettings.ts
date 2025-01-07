@@ -4,7 +4,7 @@ import { useLocalStorage } from "@vueuse/core";
 import useWritableComputedRef from "@/utils/useWritableComputedRef";
 
 const BasicSettingsContext = createContext(() => {
-  const { registerSettingGroup, registerSettingItem } = SettingsContext.useContext();
+  const { registerSettingGroup, registerSettingItem } = SettingsContext.useContext()!;
 
   registerSettingGroup({
     key: "basic",
@@ -101,7 +101,6 @@ const BasicSettingsContext = createContext(() => {
     monospaceFontFamily,
     enableFloatingEditor,
   };
-  globalThis.getBasicSettingsContext = () => ctx;
   return ctx;
 });
 

@@ -1,10 +1,8 @@
-import { Plugin } from "prosemirror-state";
-import { Fragment, Node, Slice } from "prosemirror-model";
-import { EditorView } from "prosemirror-view";
-import { pmSchema } from "./pmSchema";
 import { fetchWebpageTitle } from "@/common/api-call/misc";
+import { Schema } from "prosemirror-model";
+import { EditorView } from "prosemirror-view";
 
-export const hrefToTitle = (editorView: EditorView) => {
+export const hrefToTitle = (pmSchema: Schema, editorView: EditorView) => {
   // 提取出 editorView 中的所有链接
   const links: string[] = [];
   editorView.state.doc.descendants((node, pos) => {
@@ -13,7 +11,6 @@ export const hrefToTitle = (editorView: EditorView) => {
       links.push(linkMark.attrs.href);
     }
   });
-  console.log("links", links);
 
   // 获取每个链接的标题
   for (const link of links) {

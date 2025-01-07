@@ -80,8 +80,8 @@ import { CalendarRoot } from "radix-vue";
 import { computed, ref } from "vue";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
-const { getDateToDailyNote, createDailyNote } = DailyNoteContext.useContext();
-const { getBlockTree } = BlockTreeContext.useContext();
+const { getDateToDailyNote, createDailyNote } = DailyNoteContext.useContext()!;
+const { getBlockTree } = BlockTreeContext.useContext()!;
 
 const open = ref(false);
 const dateToDailyNote = computed(() => getDateToDailyNote());
@@ -94,10 +94,11 @@ const hasDailyNote = (date: Date) => {
 const handleClickCell = (date: Date) => {
   const dateStr = dayjs(date).format("YYYY-MM-DD");
   const blockId = dateToDailyNote.value[dateStr];
-  const main = getBlockTree("main");
-  if (!main) return;
+  const tree = getBlockTree("main");
+  if (!tree) return;
   if (blockId) {
-    main.focusBlock(blockId, { highlight: true });
+    const di = tree.findDi((item) => item.type === "basic-block" && item.block.id === blockId);
+    di && tree.focusDi(di.itemId);
   } else {
     createDailyNote(date);
   }

@@ -17,9 +17,9 @@ import PasteDialogContext from "@/context/pasteDialog";
 import { useTaskQueue } from "@/plugins/taskQueue";
 import { computed } from "vue";
 
-const { blocksManager, blockEditor } = BlocksContext.useContext();
-const { lastFocusedBlockId } = LastFocusContext.useContext();
-const { open, status, content, closePasteDialog } = PasteDialogContext.useContext();
+const { blocksManager, blockEditor } = BlocksContext.useContext()!;
+const { lastFocusedDiId, lastFocusedBlockTree } = LastFocusContext.useContext()!;
+const { open, status, content, closePasteDialog } = PasteDialogContext.useContext()!;
 const taskQueue = useTaskQueue();
 
 // 计算统计信息
@@ -34,52 +34,48 @@ const stats = computed(() => {
 });
 
 const paste = async () => {
-  if (!lastFocusedBlockId.value) return;
-
-  status.value = "pasting";
-  try {
-    const lines = content.value.split(/\r?\n/).filter((line) => line.trim());
-    const total = lines.length;
-
-    // 处理第一行
-    await taskQueue.addTask(() => {
-      const tr = blocksManager.createBlockTransaction({ type: "ui" });
-      const blockId = lastFocusedBlockId.value!;
-      blockEditor.changeBlockContent({
-        blockId,
-        content: plainTextToTextContent(lines[0]),
-        tr,
-        commit: false,
-      });
-      tr.commit();
-    });
-
-    // 处理剩余行
-    if (lines.length > 1) {
-      const remainingLines = lines.slice(1);
-      await taskQueue.addTask(() => {
-        const tr = blocksManager.createBlockTransaction({ type: "ui" });
-        blockEditor.insertNormalBlocks({
-          pos: {
-            baseBlockId: lastFocusedBlockId.value!,
-            offset: 1, // 从第一行后开始插入
-          },
-          blocks: remainingLines.map((line) => ({
-            content: plainTextToTextContent(line),
-          })),
-          tr,
-          commit: false,
-        });
-        tr.commit();
-      });
-    }
-
-    status.value = "done";
-    setTimeout(closePasteDialog, 1000);
-  } catch (err) {
-    console.error(err);
-    status.value = "failed";
-  }
+  // if (!lastFocusedBlockId.value) return;
+  // status.value = "pasting";
+  // try {
+  //   const lines = content.value.split(/\r?\n/).filter((line) => line.trim());
+  //   const total = lines.length;
+  //   // 处理第一行
+  //   await taskQueue.addTask(() => {
+  //     const tr = blocksManager.createBlockTransaction({ type: "ui" });
+  //     const blockId = lastFocusedBlockId.value!;
+  //     blockEditor.changeBlockContent({
+  //       blockId,
+  //       content: plainTextToTextContent(lines[0]),
+  //       tr,
+  //       commit: false,
+  //     });
+  //     tr.commit();
+  //   });
+  //   // 处理剩余行
+  //   if (lines.length > 1) {
+  //     const remainingLines = lines.slice(1);
+  //     await taskQueue.addTask(() => {
+  //       const tr = blocksManager.createBlockTransaction({ type: "ui" });
+  //       blockEditor.insertNormalBlocks({
+  //         pos: {
+  //           baseBlockId: lastFocusedBlockId.value!,
+  //           offset: 1, // 从第一行后开始插入
+  //         },
+  //         blocks: remainingLines.map((line) => ({
+  //           content: plainTextToTextContent(line),
+  //         })),
+  //         tr,
+  //         commit: false,
+  //       });
+  //       tr.commit();
+  //     });
+  //   }
+  //   status.value = "done";
+  //   setTimeout(closePasteDialog, 1000);
+  // } catch (err) {
+  //   console.error(err);
+  //   status.value = "failed";
+  // }
 };
 </script>
 

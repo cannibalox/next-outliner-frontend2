@@ -1,67 +1,71 @@
 <template>
-  <ImageEditorContext.Provider>
-    <SettingsContext.Provider>
-      <BasicSettingsContext.Provider>
-        <PathsContext.Provider>
-          <BlockTreeContext.Provider>
-            <PasteDialogContext.Provider>
-              <FocusModeContext.Provider>
-                <TimeMachineContext.Provider>
-                  <FloatingMathInputContext.Provider>
-                    <BlocksContext.Provider>
-                      <ExporterContext.Provider>
-                        <CreateNewTreeDialogContext.Provider>
-                          <IndexContext.Provider>
-                            <BacklinksContext.Provider>
-                              <AttachmentsManagerContext.Provider>
-                                <ImagesContext.Provider>
-                                  <SidebarContext.Provider>
-                                    <LastFocusContext.Provider>
-                                      <KeymapContext.Provider>
-                                        <RefSuggestionsContext.Provider>
-                                          <BlockMoverContext.Provider>
-                                            <MainTreeContext.Provider>
-                                              <HistoryContext.Provider>
-                                                <BlockSelectDragContext.Provider>
-                                                  <SettingsPanelContext.Provider>
-                                                    <FavoriteContext.Provider>
-                                                      <FieldsManagerContext.Provider>
-                                                        <FloatingEditorContext.Provider>
-                                                          <FieldValueInspectorContext.Provider>
-                                                            <DailyNoteContext.Provider>
-                                                              <FusionCommandContext.Provider>
-                                                                <KbViewContent />
-                                                              </FusionCommandContext.Provider>
-                                                            </DailyNoteContext.Provider>
-                                                          </FieldValueInspectorContext.Provider>
-                                                        </FloatingEditorContext.Provider>
-                                                      </FieldsManagerContext.Provider>
-                                                    </FavoriteContext.Provider>
-                                                  </SettingsPanelContext.Provider>
-                                                </BlockSelectDragContext.Provider>
-                                              </HistoryContext.Provider>
-                                            </MainTreeContext.Provider>
-                                          </BlockMoverContext.Provider>
-                                        </RefSuggestionsContext.Provider>
-                                      </KeymapContext.Provider>
-                                    </LastFocusContext.Provider>
-                                  </SidebarContext.Provider>
-                                </ImagesContext.Provider>
-                              </AttachmentsManagerContext.Provider>
-                            </BacklinksContext.Provider>
-                          </IndexContext.Provider>
-                        </CreateNewTreeDialogContext.Provider>
-                      </ExporterContext.Provider>
-                    </BlocksContext.Provider>
-                  </FloatingMathInputContext.Provider>
-                </TimeMachineContext.Provider>
-              </FocusModeContext.Provider>
-            </PasteDialogContext.Provider>
-          </BlockTreeContext.Provider>
-        </PathsContext.Provider>
-      </BasicSettingsContext.Provider>
-    </SettingsContext.Provider>
-  </ImageEditorContext.Provider>
+  <kbViewRegistry.Provider>
+    <MainTreeContext.Provider>
+      <MenubarContext.Provider>
+        <ImageEditorContext.Provider>
+          <SettingsContext.Provider>
+            <BasicSettingsContext.Provider>
+              <PathsContext.Provider>
+                <BlockTreeContext.Provider>
+                  <PasteDialogContext.Provider>
+                    <FocusModeContext.Provider>
+                      <TimeMachineContext.Provider>
+                        <FloatingMathInputContext.Provider>
+                          <LastFocusContext.Provider>
+                            <BlocksContext.Provider>
+                              <ExporterContext.Provider>
+                                <CreateNewTreeDialogContext.Provider>
+                                  <IndexContext.Provider>
+                                    <AttachmentsManagerContext.Provider>
+                                      <ImagesContext.Provider>
+                                        <SidebarContext.Provider>
+                                          <KeymapContext.Provider>
+                                            <RefSuggestionsContext.Provider>
+                                              <BlockMoverContext.Provider>
+                                                <HistoryContext.Provider>
+                                                  <BlockSelectDragContext.Provider>
+                                                    <SettingsPanelContext.Provider>
+                                                      <FavoriteContext.Provider>
+                                                        <FieldsManagerContext.Provider>
+                                                          <BacklinksContext.Provider>
+                                                            <FloatingEditorContext.Provider>
+                                                              <FieldValueInspectorContext.Provider>
+                                                                <DailyNoteContext.Provider>
+                                                                  <FusionCommandContext.Provider>
+                                                                    <KbViewContent />
+                                                                  </FusionCommandContext.Provider>
+                                                                </DailyNoteContext.Provider>
+                                                              </FieldValueInspectorContext.Provider>
+                                                            </FloatingEditorContext.Provider>
+                                                          </BacklinksContext.Provider>
+                                                        </FieldsManagerContext.Provider>
+                                                      </FavoriteContext.Provider>
+                                                    </SettingsPanelContext.Provider>
+                                                  </BlockSelectDragContext.Provider>
+                                                </HistoryContext.Provider>
+                                              </BlockMoverContext.Provider>
+                                            </RefSuggestionsContext.Provider>
+                                          </KeymapContext.Provider>
+                                        </SidebarContext.Provider>
+                                      </ImagesContext.Provider>
+                                    </AttachmentsManagerContext.Provider>
+                                  </IndexContext.Provider>
+                                </CreateNewTreeDialogContext.Provider>
+                              </ExporterContext.Provider>
+                            </BlocksContext.Provider>
+                          </LastFocusContext.Provider>
+                        </FloatingMathInputContext.Provider>
+                      </TimeMachineContext.Provider>
+                    </FocusModeContext.Provider>
+                  </PasteDialogContext.Provider>
+                </BlockTreeContext.Provider>
+              </PathsContext.Provider>
+            </BasicSettingsContext.Provider>
+          </SettingsContext.Provider>
+        </ImageEditorContext.Provider>
+      </MenubarContext.Provider>
+    </MainTreeContext.Provider>
+  </kbViewRegistry.Provider>
 </template>
 
 <script setup lang="ts">
@@ -98,4 +102,6 @@ import FieldValueInspectorContext from "@/context/fieldValueInspector";
 import DailyNoteContext from "@/context/dailynote";
 import ImageEditorContext from "@/context/imageEditor";
 import HistoryContext from "@/context/history";
+import MenubarContext from "@/context/menubar";
+import kbViewRegistry from "@/context/kbViewRegistry";
 </script>

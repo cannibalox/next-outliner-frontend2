@@ -40,7 +40,7 @@ defineProps<{
 }>();
 
 const open = ref(false);
-const { activeDirent } = AttachmentsManagerContext.useContext();
+const { activeDirent } = AttachmentsManagerContext.useContext()!;
 
 const handleClickItem = (dirent: Dirents[string], path: string) => {
   activeDirent.value = {

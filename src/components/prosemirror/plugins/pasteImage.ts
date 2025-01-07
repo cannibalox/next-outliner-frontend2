@@ -7,19 +7,27 @@ import type { ImageContent } from "@/common/type-and-schemas/block/block-content
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import { useTaskQueue } from "@/plugins/taskQueue";
 import { generateImageName } from "@/common/helper-functions/image-name";
+import { DI_FILTERS } from "@/context/blockTree";
+import type { PmPluginCtx } from "./pluginContext";
 
-export const mkPasteImagePlugin = () => {
-  const { uploadImage } = globalThis.getImagesContext()!;
+export const mkPasteImagePlugin = (ctx: PmPluginCtx) => {
   const taskQueue = useTaskQueue();
-  const { lastFocusedBlockId } = globalThis.getLastFocusContext()!;
-  const { attachmentsBasePath } = globalThis.getPathsContext()!;
-  const { blockEditor } = globalThis.getBlocksContext()!;
+  const imagesContext = ctx.imagesContext;
+  const lastFocusContext = ctx.lastFocusContext;
+  const pathsContext = ctx.pathsContext;
+  const blocksContext = ctx.blocksContext;
 
   return new Plugin({
     props: {
       handlePaste(view: EditorView, event: ClipboardEvent, slice: Slice) {
-        const blockId = lastFocusedBlockId.value;
-        if (blockId == null) return;
+        if (!imagesContext || !lastFocusContext || !pathsContext || !blocksContext) return false;
+
+        const tree = lastFocusContext.lastFocusedBlockTree.value;
+        const diId = lastFocusContext.lastFocusedDiId.value;
+        const di = diId ? tree?.getDi(diId) : null;
+        if (!tree || !diId || !di || !DI_FILTERS.isBlockDi(di)) return false;
+
+        const blockId = di.block.id;
 
         // find image
         let imageExt: string | null = null;
@@ -52,11 +60,13 @@ export const mkPasteImagePlugin = () => {
             // 当前块为空, 直接将当前块变成图片块
             imageBlockId = blockId;
             taskQueue.addTask(() => {
+              const blockEditor = blocksContext.blockEditor;
               blockEditor.changeBlockContent({ blockId, content: imageContent });
             });
           } else {
             // 当前块不为空, 在下方插入图片块
             taskQueue.addTask(() => {
+              const blockEditor = blocksContext.blockEditor;
               const { newNormalBlockId } =
                 blockEditor.insertNormalBlock({
                   pos: {
@@ -70,7 +80,7 @@ export const mkPasteImagePlugin = () => {
           }
 
           if (imageBlockId) {
-            uploadImage(imageFile, imagePath);
+            imagesContext.uploadImage(imageFile, imagePath);
           }
         }
       },

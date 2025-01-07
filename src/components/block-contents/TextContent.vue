@@ -3,8 +3,9 @@
     class="text-content block-content"
     ref="pmWrapper"
     v-model:doc="docJson"
+    :schema="schema"
     :readonly="readonly"
-    :plugins-generator="customPluginsGenerator"
+    :plugins-builder="buildPlugins"
     :disable-spellcheck-when-blur="true"
     :on-doc-changed="onDocChanged"
     :node-views="nodeViews"
@@ -16,43 +17,48 @@
 <script setup lang="ts">
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import type { TextContent } from "@/common/type-and-schemas/block/block-content";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import ProseMirror from "@/components/prosemirror/ProseMirror.vue";
 import type { BlockTree } from "@/context/blockTree";
 import BlocksContext from "@/context/blocks/blocks";
 import type { Block } from "@/context/blocks/view-layer/blocksManager";
 import { useTaskQueue } from "@/plugins/taskQueue";
+import type { DisplayItemId } from "@/utils/display-item";
 import "katex/dist/katex.css";
 import { inputRules } from "prosemirror-inputrules";
-import type { EditorProps, EditorView, EditorViewCustomEvents } from "prosemirror-view";
+import type { EditorProps, EditorViewCustomEvents } from "prosemirror-view";
 import "prosemirror-view/style/prosemirror.css";
-import { onBeforeUnmount, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { openRefSuggestions } from "../prosemirror/input-rules/openRefSuggestions";
 import { turnToCodeBlock } from "../prosemirror/input-rules/turn-to-code-block";
 import { MathInlineKatex } from "../prosemirror/node-views/inlineMath";
 import { mkKeymapPlugin } from "../prosemirror/plugins/keymap";
 import { mkPasteImagePlugin } from "../prosemirror/plugins/pasteImage";
 import { mkPasteTextPlugin } from "../prosemirror/plugins/pasteText";
-import type { BlockId } from "@/common/type-and-schemas/block/block-id";
-import BlockSelectDragContext from "@/context/blockSelect";
+import type { PmPluginCtx } from "../prosemirror/plugins/pluginContext";
+import { getPmSchema } from "../prosemirror/pmSchema";
+import FloatingMathInputContext from "@/context/floatingMathInput";
 
 const props = defineProps<{
   blockTree?: BlockTree;
+  itemId?: DisplayItemId;
   block: Block;
   readonly?: boolean;
   highlightTerms?: string[];
   highlightRefs?: BlockId[];
 }>();
 
-const { blockEditor, blocksManager } = BlocksContext.useContext();
+const { blocksManager, blockEditor } = BlocksContext.useContext()!;
+const fmic = FloatingMathInputContext.useContext();
 const taskQueue = useTaskQueue();
 const docJson = shallowRef<any | null>(null);
 const pmWrapper = ref<InstanceType<typeof ProseMirror> | null>(null);
-const { selectedBlockIds } = BlockSelectDragContext.useContext();
 const nodeViews: EditorProps["nodeViews"] = {
   mathInline(node, view, getPos) {
-    return new MathInlineKatex(node, view, getPos);
+    return new MathInlineKatex(node, view, getPos, fmic);
   },
 };
+const schema = computed(() => getPmSchema({ getBlockRef: blocksManager.getBlockRef }));
 
 const onDocChanged = ({
   newDoc,
@@ -94,22 +100,21 @@ const onDocChanged = ({
   );
 };
 
-const customPluginsGenerator = (getEditorView: () => EditorView | null, readonly: boolean) => {
-  const getBlockId = () => props.block.id;
+const buildPlugins = (ctx: PmPluginCtx) => {
+  const getItemId = () => props.itemId;
   const getBlockTree = () => props.blockTree ?? null;
 
-  if (props.readonly) {
-    return [];
-  } else {
-    return [
-      inputRules({
-        rules: [openRefSuggestions(getEditorView), turnToCodeBlock(getBlockId, getBlockTree)],
-      }),
-      mkKeymapPlugin(),
-      mkPasteImagePlugin(),
-      mkPasteTextPlugin(),
-    ];
-  }
+  const plugins = props.readonly
+    ? []
+    : [
+        inputRules({
+          rules: [openRefSuggestions(ctx), turnToCodeBlock(ctx)],
+        }),
+        mkKeymapPlugin(ctx),
+        mkPasteImagePlugin(ctx),
+        mkPasteTextPlugin(ctx),
+      ];
+  return plugins;
 };
 
 watch(
@@ -130,21 +135,23 @@ watch(
 );
 
 onMounted(() => {
-  // 加载时，向 blockTree 注册 editorView
-  const blockId = props.block.id;
-  const editorView = pmWrapper.value?.getEditorView();
-  if (editorView) {
-    props.blockTree?.registerEditorView(blockId, editorView);
+  if (props.itemId) {
+    // 加载时，向 blockTree 注册 editorView
+    const editorView = pmWrapper.value?.getEditorView();
+    if (editorView) {
+      props.blockTree?.registerEditorView(props.itemId, editorView);
+    }
   }
 });
 
 onUnmounted(() => {
-  // 卸载时，从 blockTree 注销 editorView
-  const blockId = props.block.id;
-  const editorView = pmWrapper.value?.getEditorView();
-  if (editorView) {
-    props.blockTree?.unregisterEditorView(blockId, editorView);
-    editorView.destroy();
+  if (props.itemId) {
+    // 卸载时，从 blockTree 注销 editorView
+    const editorView = pmWrapper.value?.getEditorView();
+    if (editorView) {
+      props.blockTree?.unregisterEditorView(props.itemId, editorView);
+      editorView.destroy();
+    }
   }
 });
 </script>

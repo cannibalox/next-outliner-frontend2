@@ -8,8 +8,8 @@ import type { Block } from "./blocks/view-layer/blocksManager";
 import IndexContext from ".";
 
 const RefSuggestionsContext = createContext(() => {
-  const { blocksManager } = BlocksContext.useContext();
-  const { search } = IndexContext.useContext();
+  const { blocksManager } = BlocksContext.useContext()!;
+  const { search } = IndexContext.useContext()!;
   const showPos = ref<{ x: number; y: number } | null>(null);
   const open = computed({
     get: () => showPos.value !== null,
@@ -68,10 +68,6 @@ const RefSuggestionsContext = createContext(() => {
     withScrollSuppressed,
     openRefSuggestions,
   };
-
-  // 注册到全局
-  globalThis.getRefSuggestionsContext = () => ctx;
-
   return ctx;
 });
 

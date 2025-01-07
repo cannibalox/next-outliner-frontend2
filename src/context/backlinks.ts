@@ -6,11 +6,13 @@ import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import BlocksContext from "./blocks/blocks";
 import { z } from "zod";
 import IndexContext from ".";
+import FieldsManagerContext from "./fieldsManager";
 
 const BacklinksContext = createContext(() => {
-  const { registerSettingGroup, registerSettingItem } = SettingsContext.useContext();
-  const { blocksManager } = BlocksContext.useContext();
-  const { getBacklinks } = IndexContext.useContext();
+  const { registerSettingGroup, registerSettingItem } = SettingsContext.useContext()!;
+  const { blocksManager } = BlocksContext.useContext()!;
+  const { getBacklinks } = IndexContext.useContext()!;
+  const { getFieldValues } = FieldsManagerContext.useContext()!;
 
   const blockIdValidator = (value: string) => {
     if (!value) return "没有指定块 ID";
@@ -77,7 +79,6 @@ const BacklinksContext = createContext(() => {
   // 这种阴间的情况
   const getAllAliases = (blockId: BlockId, includeSelf = true) => {
     const ret: BlockId[] = includeSelf ? [blockId] : [];
-    const { getFieldValues } = getFieldsManagerContext()!;
     const fieldValues = getFieldValues(blockId) ?? {};
     // 情况 1：
     // - this block
@@ -135,7 +136,6 @@ const BacklinksContext = createContext(() => {
     getAllAliases,
     getBacklinksConsideringAliases,
   };
-  globalThis.getBacklinksContext = () => ctx;
   return ctx;
 });
 

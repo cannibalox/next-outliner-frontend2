@@ -5,7 +5,7 @@ import { useRoute } from "vue-router";
 import { joinPathSegments } from "@/common/helper-functions/path";
 
 const PathsContext = createContext(() => {
-  const { serverUrl } = ServerInfoContext.useContext();
+  const { serverUrl } = ServerInfoContext.useContext()!;
   const route = useRoute();
 
   const dbBasePath = computed(() => route.params.location as string);
@@ -19,7 +19,6 @@ const PathsContext = createContext(() => {
     attachmentsFolderName,
     attachmentsBasePath,
   };
-  globalThis.getPathsContext = () => ctx;
   return ctx;
 });
 

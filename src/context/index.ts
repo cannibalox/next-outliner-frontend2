@@ -7,10 +7,12 @@ import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 // @ts-ignore
 import Document from "@/../node_modules/flexsearch/dist/module/document";
 import { calcMatchScore, hybridTokenize, splitByCjk } from "@/utils/tokenize";
+import kbViewRegistry from "./kbViewRegistry";
 
 const IndexContext = createContext(() => {
   const eventBus = useEventBus();
-  const { blocksManager } = BlocksContext.useContext();
+  const { blocksManager } = BlocksContext.useContext()!;
+  const { register } = kbViewRegistry.useContext()!;
 
   //////// Mirrors, Virtuals, Occurs ////////
   const mirrors = shallowReactive(new Map<BlockId, Set<BlockId>>());
@@ -246,7 +248,7 @@ const IndexContext = createContext(() => {
     getOccurs,
     getBacklinks,
   };
-  globalThis.getIndexContext = () => ctx;
+  register("index", ctx);
   return ctx;
 });
 

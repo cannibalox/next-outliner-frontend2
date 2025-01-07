@@ -6,7 +6,7 @@ import { AllSelection, EditorState, NodeSelection, TextSelection } from "prosemi
 import { plainTextToTextContent } from "@/utils/pm";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import { Node } from "prosemirror-model";
-import { pmSchema } from "@/components/prosemirror/pmSchema";
+import { getPmSchema } from "@/components/prosemirror/pmSchema";
 import { toggleMark } from "prosemirror-commands";
 import { useTaskQueue } from "@/plugins/taskQueue";
 import LastFocusContext from "./lastFocus";
@@ -24,6 +24,8 @@ import {
 } from "@codemirror/commands";
 import { ref } from "vue";
 import SettingsContext from "./settings";
+import { DI_FILTERS } from "./blockTree";
+import { EditorView as CmEditorView } from "@codemirror/view";
 
 export type KeyBinding<P extends Array<any> = any[]> = {
   run: (...params: P) => boolean;
@@ -143,10 +145,10 @@ export function generateKeydownHandlerSimple(bindings: { [key: string]: SimpleKe
 
 const KeymapContext = createContext(() => {
   const taskQueue = useTaskQueue();
-  const { lastFocusedBlock, lastFocusedBlockTree, lastFocusedEditorView, lastFocusedBlockId } =
-    LastFocusContext.useContext();
-  const { blockEditor, blocksManager } = BlocksContext.useContext();
-  const { registerSettingGroup } = SettingsContext.useContext();
+  const { lastFocusedBlockTree, lastFocusedDiId } = LastFocusContext.useContext()!;
+  const { blockEditor, blocksManager } = BlocksContext.useContext()!;
+  const { registerSettingGroup } = SettingsContext.useContext()!;
+  const schema = getPmSchema({ getBlockRef: blocksManager.getBlockRef });
 
   const prosemirrorKeymap = ref<{ [p: string]: KeyBinding }>({
     "Mod-z": {
@@ -168,52 +170,54 @@ const KeymapContext = createContext(() => {
     Enter: {
       run: () => {
         taskQueue.addTask(async () => {
-          const block = lastFocusedBlock.value;
           const tree = lastFocusedBlockTree.value;
-          const view = lastFocusedEditorView.value;
-          if (!block || !tree || !(view instanceof PmEditorView)) return;
+          const diId = lastFocusedDiId.value;
+          if (!tree || !diId) return;
+
+          const view = tree.getEditorView(diId);
+          const di = tree.getDi(diId);
+          if (!(view instanceof PmEditorView) || !di || !DI_FILTERS.isBlockDi(di)) return;
 
           const sel = view.state.selection;
           const docEnd = AllSelection.atEnd(view.state.doc);
-          const rootBlockIds = tree.getRootBlockIds();
-          const onRoot = rootBlockIds.includes(block.id);
+          const onRoot = di.block.id === tree.getRootBlockId();
 
           // 1. 在块末尾按 Enter，则在下方创建空块
           if (sel.eq(docEnd)) {
             const pos = onRoot
               ? blockEditor.normalizePos({
-                  parentId: block.id,
+                  parentId: di.block.id,
                   childIndex: "last-space",
                 })
               : blockEditor.normalizePos({
-                  baseBlockId: block.id,
+                  baseBlockId: di.block.id,
                   offset: 1,
                 });
             if (!pos) return;
             (document.activeElement as HTMLElement).blur(); // 操作前先失去焦点，防止闪烁
-            const { focusNext } =
-              blockEditor.insertNormalBlock({
-                pos,
-                content: plainTextToTextContent(""),
-              }) ?? {};
-            if (focusNext && tree) {
+            blockEditor.insertNormalBlock({
+              pos,
+              content: plainTextToTextContent("", schema),
+            });
+            if (tree) {
               await tree.nextUpdate();
-              await tree.focusBlock(focusNext);
+              const nextDi = tree.getDiBelow(diId, DI_FILTERS.isBlockDi);
+              nextDi && tree.focusDi(nextDi[0].itemId);
             }
           } else if (sel.head == 0) {
             // 2. 在块开头按 Enter，则在上方创建空块
             if (onRoot) return; // 不处理根块的情况
             const pos = blockEditor.normalizePos({
-              baseBlockId: block.id,
+              baseBlockId: di.block.id,
               offset: 0,
             });
             if (!pos) return;
             (document.activeElement as HTMLElement).blur(); // 操作前先失去焦点，防止闪烁
-            const { focusNext } =
-              blockEditor.insertNormalBlock({ pos, content: plainTextToTextContent("") }) ?? {};
-            if (focusNext && tree) {
+            blockEditor.insertNormalBlock({ pos, content: plainTextToTextContent("", schema) });
+            if (tree) {
               await tree.nextUpdate();
-              await tree.focusBlock(focusNext);
+              const nextDi = tree.getDiAbove(diId, DI_FILTERS.isBlockDi);
+              nextDi && tree.focusDi(nextDi[0].itemId);
             }
           } else {
             // 3. 中间按 Enter，上面创建一个新块，将光标左边的内容挪到新块中
@@ -224,14 +228,14 @@ const KeymapContext = createContext(() => {
             // 删去挪移到新块中的内容
             const tr = blocksManager.createBlockTransaction({ type: "ui" });
             blockEditor.changeBlockContent({
-              blockId: block.id,
+              blockId: di.block.id,
               content: [BLOCK_CONTENT_TYPES.TEXT, newThisDoc.toJSON()],
               tr,
               commit: false,
             });
             // 上方插入块
             const pos = blockEditor.normalizePos({
-              baseBlockId: block.id,
+              baseBlockId: di.block.id,
               offset: 0,
             });
             if (!pos) return;
@@ -246,9 +250,8 @@ const KeymapContext = createContext(() => {
 
             if (tree) {
               await tree.nextUpdate();
-              await tree.focusBlock(block.id);
-              // 将光标移至开头
-              tree.moveCursorToBegin(block.id);
+              tree.focusDi(di.itemId);
+              tree.moveCursorToBegin(di.itemId); // 将光标移至开头
             }
           }
         });
@@ -258,7 +261,7 @@ const KeymapContext = createContext(() => {
     },
     "Shift-Enter": {
       run: (state: EditorState, dispatch: EditorView["dispatch"]) => {
-        const brNode = pmSchema.nodes.hardBreak.create();
+        const brNode = schema.nodes.hardBreak.create();
         const tr = state.tr.replaceSelectionWith(brNode);
         dispatch(tr);
         return true;
@@ -270,14 +273,17 @@ const KeymapContext = createContext(() => {
         deleteUfeffBeforeCursor(state, dispatch!);
 
         taskQueue.addTask(async () => {
-          const block = lastFocusedBlock.value;
           const tree = lastFocusedBlockTree.value;
-          const view = lastFocusedEditorView.value;
-          if (!block || !tree || !(view instanceof PmEditorView)) return;
+          const diId = lastFocusedDiId.value;
+          if (!tree || !diId) return;
 
-          const blockAbove = tree.getBlockAbove(block.id);
-          const blockBelow = tree.getBlockBelow(block.id);
-          const focusNext = blockAbove?.id || blockBelow?.id;
+          const view = tree.getEditorView(diId);
+          const di = tree.getDi(diId);
+          if (!(view instanceof PmEditorView) || !di || !DI_FILTERS.isBlockDi(di)) return;
+
+          const diAbove = tree.getDiAbove(diId, DI_FILTERS.isBlockDi);
+          const diBelow = tree.getDiBelow(diId, DI_FILTERS.isBlockDi);
+          const focusNext = diAbove?.[0].itemId || diBelow?.[0].itemId;
 
           const sel = view.state.selection;
           // 1. 如果选中了东西，则执行默认逻辑（删除选区）
@@ -286,47 +292,50 @@ const KeymapContext = createContext(() => {
           // 2. 当前块为空，直接删掉这个块
           if (view.state.doc.content.size == 0) {
             (document.activeElement as HTMLElement).blur(); // 操作前先失去焦点，防止闪烁
-            blockEditor.deleteBlock({ blockId: block.id });
+            blockEditor.deleteBlock({ blockId: di.block.id });
             if (focusNext && tree) {
               await tree.nextUpdate();
-              await tree.focusBlock(focusNext);
-              // 删掉这个块后，将光标移至 focusNext 末尾？
-              tree.moveCursorToTheEnd(focusNext);
+              await tree.focusDi(focusNext);
+              tree.moveCursorToTheEnd(focusNext); // 删掉这个块后，将光标移至 focusNext 末尾
             }
             return;
-          } else if (sel.from == 0 && blockAbove) {
+          } else if (sel.from == 0 && diAbove) {
             // 3. 尝试将这个块与上一个块合并
             // 仅当上一个块也是文本块，与自己同级，并且没有孩子时允许合并
-            if (
-              blockAbove.content[0] != BLOCK_CONTENT_TYPES.TEXT ||
-              blockAbove.childrenIds.length > 0 ||
-              block.parentId != blockAbove.parentId
-            )
-              return;
-            if (blockAbove.content[0] != BLOCK_CONTENT_TYPES.TEXT) return;
-            (document.activeElement as HTMLElement).blur(); // 操作前先失去焦点，防止闪烁
-            const aboveDoc = Node.fromJSON(pmSchema, blockAbove.content[1]);
-            const thisDoc = view.state.doc;
-            const newThisContent = aboveDoc.content.append(thisDoc.content);
-            const newThisDoc = pmSchema.nodes.doc.create(null, newThisContent);
-            const tr = blocksManager.createBlockTransaction({ type: "ui" });
-            blockEditor.changeBlockContent({
-              blockId: block.id,
-              content: [BLOCK_CONTENT_TYPES.TEXT, newThisDoc.toJSON()],
-              tr,
-              commit: false,
-            });
-            blockEditor.deleteBlock({ blockId: blockAbove.id, tr, commit: false });
-            tr.commit();
-            if (tree) {
-              await tree.nextUpdate();
-              // 将光标移至正确位置
-              const view = tree.getEditorView(block.id);
-              if (view instanceof PmEditorView) {
-                const sel = TextSelection.create(view.state.doc, aboveDoc.content.size);
-                const tr = view.state.tr.setSelection(sel);
-                view.dispatch(tr);
-                view.focus();
+            if (DI_FILTERS.isBlockDi(diAbove[0])) {
+              const blockAbove = diAbove[0].block;
+              if (
+                blockAbove.content[0] != BLOCK_CONTENT_TYPES.TEXT ||
+                blockAbove.childrenIds.length > 0 ||
+                di.block.parentId != blockAbove.parentId
+              )
+                return;
+              if (blockAbove.content[0] != BLOCK_CONTENT_TYPES.TEXT) return;
+
+              (document.activeElement as HTMLElement).blur(); // 操作前先失去焦点，防止闪烁
+              const aboveDoc = Node.fromJSON(schema, blockAbove.content[1]);
+              const thisDoc = view.state.doc;
+              const newThisContent = aboveDoc.content.append(thisDoc.content);
+              const newThisDoc = schema.nodes.doc.create(null, newThisContent);
+              const tr = blocksManager.createBlockTransaction({ type: "ui" });
+              blockEditor.changeBlockContent({
+                blockId: di.block.id,
+                content: [BLOCK_CONTENT_TYPES.TEXT, newThisDoc.toJSON()],
+                tr,
+                commit: false,
+              });
+              blockEditor.deleteBlock({ blockId: blockAbove.id, tr, commit: false });
+              tr.commit();
+              if (tree) {
+                await tree.nextUpdate();
+                // 将光标移至正确位置
+                const view = tree.getEditorView(di.itemId);
+                if (view instanceof PmEditorView) {
+                  const sel = TextSelection.create(view.state.doc, aboveDoc.content.size);
+                  const tr = view.state.tr.setSelection(sel);
+                  view.dispatch(tr);
+                  view.focus();
+                }
               }
             }
             return;
@@ -341,14 +350,17 @@ const KeymapContext = createContext(() => {
       run: (state, dispatch) => {
         deleteUfeffAfterCursor(state, dispatch!);
 
-        const block = lastFocusedBlock.value;
         const tree = lastFocusedBlockTree.value;
-        const view = lastFocusedEditorView.value;
-        if (!block || !tree || !(view instanceof PmEditorView)) return false;
+        const diId = lastFocusedDiId.value;
+        if (!tree || !diId) return false;
 
-        const blockAbove = tree.getBlockAbove(block.id);
-        const blockBelow = tree.getBlockBelow(block.id);
-        const focusNext = blockBelow?.id || blockAbove?.id;
+        const view = tree.getEditorView(diId);
+        const di = tree.getDi(diId);
+        if (!(view instanceof PmEditorView) || !di || !DI_FILTERS.isBlockDi(di)) return false;
+
+        const diAbove = tree.getDiAbove(diId, DI_FILTERS.isBlockDi);
+        const diBelow = tree.getDiBelow(diId, DI_FILTERS.isBlockDi);
+        const focusNext = diBelow?.[0].itemId || diAbove?.[0].itemId;
 
         const sel = view.state.selection;
         const docEnd = AllSelection.atEnd(view.state.doc);
@@ -358,17 +370,18 @@ const KeymapContext = createContext(() => {
         // 2. 当前块为空，直接删掉这个块
         if (view.state.doc.content.size == 0) {
           taskQueue.addTask(async () => {
-            blockEditor.deleteBlock({ blockId: block.id });
+            blockEditor.deleteBlock({ blockId: di.block.id });
             if (focusNext && tree) {
               await tree.nextUpdate();
-              await tree.focusBlock(focusNext);
+              await tree.focusDi(focusNext);
             }
           });
           return true;
-        } else if (sel.eq(docEnd) && blockBelow) {
+        } else if (sel.eq(docEnd) && diBelow && DI_FILTERS.isBlockDi(diBelow[0])) {
           // 3. 如果下一个块是空块，则直接删除下一个块
+          const blockBelow = diBelow[0].block;
           if (blockBelow.content[0] === BLOCK_CONTENT_TYPES.TEXT) {
-            const belowDoc = Node.fromJSON(pmSchema, blockBelow.content[1]);
+            const belowDoc = Node.fromJSON(schema, blockBelow.content[1]);
             if (belowDoc.content.size === 0) {
               taskQueue.addTask(async () => {
                 blockEditor.deleteBlock({ blockId: blockBelow.id });
@@ -380,30 +393,30 @@ const KeymapContext = createContext(() => {
           // 当下一个块也是文本块，与自己同级，并且自己没有孩子时允许合并
           if (
             blockBelow.content[0] !== BLOCK_CONTENT_TYPES.TEXT ||
-            block.childrenIds.length > 0 ||
-            block.parentId != blockBelow.parentId
+            di.block.childrenIds.length > 0 ||
+            di.block.parentId !== blockBelow.parentId
           )
             return false;
           taskQueue.addTask(async () => {
             if (blockBelow.content[0] !== BLOCK_CONTENT_TYPES.TEXT) return;
-            const belowDoc = Node.fromJSON(pmSchema, blockBelow.content[1]);
+            const belowDoc = Node.fromJSON(schema, blockBelow.content[1]);
             const thisDoc = view.state.doc;
             const newBelowContent = thisDoc.content.append(belowDoc.content);
-            const newBelowDoc = pmSchema.nodes.doc.create(null, newBelowContent);
+            const newBelowDoc = schema.nodes.doc.create(null, newBelowContent);
             const tr = blocksManager.createBlockTransaction({ type: "ui" });
             blockEditor.changeBlockContent({
-              blockId: block.id,
+              blockId: blockBelow.id,
               content: [BLOCK_CONTENT_TYPES.TEXT, newBelowDoc.toJSON()],
               tr,
               commit: false,
             });
-            blockEditor.deleteBlock({ blockId: blockBelow.id, tr, commit: false });
+            blockEditor.deleteBlock({ blockId: di.block.id, tr, commit: false });
             tr.commit();
             if (tree) {
               await tree.nextUpdate();
-              await tree.focusBlock(blockBelow.id);
+              await tree.focusDi(diBelow[0].itemId);
               // 将光标移至正确位置
-              const view = tree.getEditorView(block.id);
+              const view = tree.getEditorView(diBelow[0].itemId);
               if (view instanceof PmEditorView) {
                 const sel = TextSelection.create(view.state.doc, thisDoc.content.size);
                 const tr = view.state.tr.setSelection(sel);
@@ -421,9 +434,14 @@ const KeymapContext = createContext(() => {
     "Mod-ArrowUp": {
       run: () => {
         taskQueue.addTask(async () => {
-          const block = lastFocusedBlock.value;
-          if (!block || block.fold) return;
-          await blockEditor.toggleFold(block.id, true);
+          const diId = lastFocusedDiId.value;
+          const tree = lastFocusedBlockTree.value;
+          if (!diId || !tree) return;
+
+          const di = tree.getDi(diId);
+          if (di?.type === "basic-block") {
+            await blockEditor.toggleFold(di.block.id, true);
+          } // what about other types?
         });
         return true;
       },
@@ -433,9 +451,14 @@ const KeymapContext = createContext(() => {
     "Mod-ArrowDown": {
       run: () => {
         taskQueue.addTask(async () => {
-          const block = lastFocusedBlock.value;
-          if (!block || !block.fold) return;
-          await blockEditor.toggleFold(block.id, false);
+          const diId = lastFocusedDiId.value;
+          const tree = lastFocusedBlockTree.value;
+          if (!diId || !tree) return;
+
+          const di = tree.getDi(diId);
+          if (di?.type === "basic-block") {
+            await blockEditor.toggleFold(di.block.id, false);
+          } // what about other types?
         });
         return true;
       },
@@ -445,37 +468,22 @@ const KeymapContext = createContext(() => {
     "Alt-ArrowUp": {
       run: () => {
         taskQueue.addTask(async () => {
-          const block = lastFocusedBlock.value;
+          const diId = lastFocusedDiId.value;
           const tree = lastFocusedBlockTree.value;
-          if (!block || !tree) return;
+          if (!diId || !tree) return;
+
+          const di = tree.getDi(diId);
+          if (!di || !DI_FILTERS.isBlockDi(di)) return;
 
           const pos = blockEditor.normalizePos({
-            baseBlockId: block.id,
+            baseBlockId: di.block.id,
             offset: -1,
           });
           if (!pos) return;
-          const { focusNext } = blockEditor.moveBlock({ blockId: block.id, pos }) ?? {};
+          blockEditor.moveBlock({ blockId: di.block.id, pos });
 
-          if (focusNext && tree) {
-            await tree.nextUpdate();
-            tree.focusBlock(focusNext);
-          }
-        });
-        return true;
-      },
-      preventDefault: true,
-      stopPropagation: true,
-    },
-    // 移动到父块
-    "Mod-ArrowLeft": {
-      run: () => {
-        taskQueue.addTask(async () => {
-          const block = lastFocusedBlock.value;
-          const parent = block?.parentRef.value;
-          if (!parent) return;
-          const tree = lastFocusedBlockTree.value;
-          if (!tree) return;
-          tree.focusBlock(parent.id);
+          await tree.nextUpdate();
+          tree.focusDi(diId);
         });
         return true;
       },
@@ -485,21 +493,22 @@ const KeymapContext = createContext(() => {
     "Alt-ArrowDown": {
       run: () => {
         taskQueue.addTask(async () => {
-          const block = lastFocusedBlock.value;
+          const diId = lastFocusedDiId.value;
           const tree = lastFocusedBlockTree.value;
-          if (!block || !tree) return;
+          if (!diId || !tree) return;
+
+          const di = tree.getDi(diId);
+          if (!di || !DI_FILTERS.isBlockDi(di)) return;
 
           const pos = blockEditor.normalizePos({
-            baseBlockId: block.id,
+            baseBlockId: di.block.id,
             offset: 2,
           });
           if (!pos) return;
-          const { focusNext } = blockEditor.moveBlock({ blockId: block.id, pos }) ?? {};
+          blockEditor.moveBlock({ blockId: di.block.id, pos });
 
-          if (focusNext && tree) {
-            await tree.nextUpdate();
-            tree.focusBlock(focusNext);
-          }
+          await tree.nextUpdate();
+          tree.focusDi(diId);
         });
         return true;
       },
@@ -509,15 +518,16 @@ const KeymapContext = createContext(() => {
     Tab: {
       run: () => {
         taskQueue.addTask(async () => {
-          const block = lastFocusedBlock.value;
+          const diId = lastFocusedDiId.value;
           const tree = lastFocusedBlockTree.value;
-          if (!block || !tree) return;
+          if (!diId || !tree) return;
 
-          blockEditor.promoteBlock({ blockId: block.id });
-          if (tree) {
-            await tree.nextUpdate();
-            tree.focusBlock(block.id);
-          }
+          const di = tree.getDi(diId);
+          if (!di || !DI_FILTERS.isBlockDi(di)) return;
+
+          blockEditor.promoteBlock({ blockId: di.block.id });
+          await tree.nextUpdate();
+          tree.focusDi(diId);
         });
         return true;
       },
@@ -527,15 +537,16 @@ const KeymapContext = createContext(() => {
     "Shift-Tab": {
       run: () => {
         taskQueue.addTask(async () => {
-          const block = lastFocusedBlock.value;
+          const diId = lastFocusedDiId.value;
           const tree = lastFocusedBlockTree.value;
-          if (!block || !tree) return;
+          if (!diId || !tree) return;
 
-          blockEditor.demoteBlock({ blockId: block.id });
-          if (tree) {
-            await tree.nextUpdate();
-            tree.focusBlock(block.id);
-          }
+          const di = tree.getDi(diId);
+          if (!di || !DI_FILTERS.isBlockDi(di)) return;
+
+          blockEditor.demoteBlock({ blockId: di.block.id });
+          await tree.nextUpdate();
+          tree.focusDi(diId);
         });
         return true;
       },
@@ -544,19 +555,22 @@ const KeymapContext = createContext(() => {
     },
     ArrowUp: {
       run: () => {
-        const block = lastFocusedBlock.value;
         const tree = lastFocusedBlockTree.value;
-        const view = lastFocusedEditorView.value;
-        if (!block || !tree || !(view instanceof PmEditorView)) return false;
+        const diId = lastFocusedDiId.value;
+        if (!tree || !diId) return false;
+
+        const view = tree.getEditorView(diId);
+        const di = tree.getDi(diId);
+        if (!(view instanceof PmEditorView) || !di || !DI_FILTERS.isBlockDi(di)) return false;
 
         if (tree && view.endOfTextblock("up")) {
           const oldPos = view.state.selection.anchor;
           const coord = view.coordsAtPos(oldPos);
-          const prevBlock = tree.getBlockAbove(block.id);
-          if (!prevBlock) return false;
-          tree.focusBlock(prevBlock.id);
+          const diAbove = tree.getDiAbove(diId, DI_FILTERS.isBlockDi);
+          if (!diAbove) return false;
+          tree.focusDi(diAbove[0].itemId);
           // 调整光标位置
-          const newEditorView = tree.getEditorView(prevBlock.id);
+          const newEditorView = tree.getEditorView(diAbove[0].itemId);
           if (!(newEditorView instanceof PmEditorView)) return false;
           const newPos =
             newEditorView.posAtCoords({
@@ -576,19 +590,22 @@ const KeymapContext = createContext(() => {
     },
     ArrowDown: {
       run: () => {
-        const block = lastFocusedBlock.value;
         const tree = lastFocusedBlockTree.value;
-        const view = lastFocusedEditorView.value;
-        if (!block || !tree || !(view instanceof PmEditorView)) return false;
+        const diId = lastFocusedDiId.value;
+        if (!tree || !diId) return false;
+
+        const view = tree.getEditorView(diId);
+        const di = tree.getDi(diId);
+        if (!(view instanceof PmEditorView) || !di || !DI_FILTERS.isBlockDi(di)) return false;
 
         if (tree && view.endOfTextblock("down")) {
           const oldPos = view.state.selection.anchor;
           const coord = view.coordsAtPos(oldPos);
-          const nextBlock = tree.getBlockBelow(block.id);
-          if (!nextBlock) return false;
-          tree.focusBlock(nextBlock.id);
+          const diBelow = tree.getDiBelow(diId, DI_FILTERS.isBlockDi);
+          if (!diBelow) return false;
+          tree.focusDi(diBelow[0].itemId);
           // 调整光标位置
-          const newEditorView = tree.getEditorView(nextBlock.id);
+          const newEditorView = tree.getEditorView(diBelow[0].itemId);
           if (!(newEditorView instanceof PmEditorView)) return false;
           const newPos =
             newEditorView.posAtCoords({
@@ -609,7 +626,7 @@ const KeymapContext = createContext(() => {
     "Mod-m": {
       run: (state, dispatch, view) => {
         if (dispatch == null) return false;
-        const node = pmSchema.nodes.mathInline.create({ src: "" });
+        const node = schema.nodes.mathInline.create({ src: "" });
         const tr = state.tr.replaceSelectionWith(node);
         const pos = tr.doc.resolve(
           tr.selection.anchor - (tr.selection as any).$anchor.nodeBefore.nodeSize,
@@ -623,40 +640,39 @@ const KeymapContext = createContext(() => {
     },
     "Mod-Shift-m": {
       run: (state, dispatch, view) => {
+        const diId = lastFocusedDiId.value;
+        const tree = lastFocusedBlockTree.value;
+        if (!diId || !tree) return false;
+
+        const di = tree.getDi(diId);
+        if (!di || !DI_FILTERS.isBlockDi(di)) return false;
         const empty = state.doc.content.size == 0;
+
         if (empty) {
-          const tree = lastFocusedBlockTree.value;
           // 将这个空块变为公式块
           taskQueue.addTask(async () => {
-            const blockId = lastFocusedBlockId.value;
-            if (blockId == null) return;
             blockEditor.changeBlockContent({
-              blockId: blockId,
+              blockId: di.block.id,
               content: [BLOCK_CONTENT_TYPES.MATH, ""],
             });
             // 聚焦块
-            if (tree) {
-              await tree.nextUpdate();
-              tree.focusBlock(blockId, { scrollIntoView: true });
-            }
+            await tree.nextUpdate();
+            tree.focusDi(diId, { scrollIntoView: true });
           });
         } else {
           // 下方插入公式块
           taskQueue.addTask(async () => {
-            const blockId = lastFocusedBlockId.value;
-            if (blockId == null) return;
             const pos = blockEditor.normalizePos({
-              baseBlockId: blockId,
+              baseBlockId: di.block.id,
               offset: 1,
             });
             if (pos == null) return;
-            const tree = lastFocusedBlockTree.value;
-            const { focusNext } =
-              blockEditor.insertNormalBlock({ pos, content: [BLOCK_CONTENT_TYPES.MATH, ""] }) ?? {};
+            blockEditor.insertNormalBlock({ pos, content: [BLOCK_CONTENT_TYPES.MATH, ""] });
             // 聚焦到刚插入的块
-            if (tree && focusNext) {
+            const diBelow = tree.getDiBelow(diId, DI_FILTERS.isBlockDi);
+            if (diBelow) {
               await tree.nextUpdate();
-              tree.focusBlock(focusNext, { scrollIntoView: true });
+              tree.focusDi(diBelow[0].itemId, { scrollIntoView: true });
             }
           });
         }
@@ -668,15 +684,19 @@ const KeymapContext = createContext(() => {
     ArrowLeft: {
       run: (state, dispatch, view) => {
         skipOneUfeffBeforeCursor(state, dispatch!);
-        const block = lastFocusedBlock.value;
-        if (!block) return false;
+        const diId = lastFocusedDiId.value;
         const tree = lastFocusedBlockTree.value;
+        if (!diId || !tree) return false;
+
+        const di = tree.getDi(diId);
+        if (!di || !DI_FILTERS.isBlockDi(di)) return false;
+
         const atBeg = state.selection.empty && state.selection.anchor == 0;
         if (tree && atBeg) {
-          const prevBlock = tree.getPredecessorBlock(block.id);
-          if (!prevBlock) return false;
-          tree.focusBlock(prevBlock.id);
-          tree.moveCursorToTheEnd(prevBlock.id);
+          const predDi = tree.getPredecessorDi(diId);
+          if (!predDi) return false;
+          tree.focusDi(predDi[0].itemId);
+          tree.moveCursorToTheEnd(predDi[0].itemId);
           return true;
         }
         return false;
@@ -687,15 +707,19 @@ const KeymapContext = createContext(() => {
     ArrowRight: {
       run: (state, dispatch, view) => {
         skipOneUfeffAfterCursor(state, dispatch!);
-        const block = lastFocusedBlock.value;
-        if (!block) return false;
+        const diId = lastFocusedDiId.value;
         const tree = lastFocusedBlockTree.value;
+        if (!diId || !tree) return false;
+
+        const di = tree.getDi(diId);
+        if (!di || !DI_FILTERS.isBlockDi(di)) return false;
+
         const atEnd = state.selection.empty && state.selection.anchor == state.doc.content.size;
         if (tree && atEnd) {
-          const nextBlock = tree.getSuccessorBlock(block.id);
-          if (!nextBlock) return false;
-          tree.focusBlock(nextBlock.id);
-          tree.moveCursorToTheEnd(nextBlock.id);
+          const nextDi = tree.getSuccessorDi(diId);
+          if (!nextDi) return false;
+          tree.focusDi(nextDi[0].itemId);
+          tree.moveCursorToTheEnd(nextDi[0].itemId);
           return true;
         }
         return false;
@@ -704,22 +728,22 @@ const KeymapContext = createContext(() => {
       stopPropagation: true,
     },
     "Mod-b": {
-      run: toggleMark(pmSchema.marks.bold),
+      run: toggleMark(schema.marks.bold),
       preventDefault: true,
       stopPropagation: true,
     },
     "Mod-i": {
-      run: toggleMark(pmSchema.marks.italic),
+      run: toggleMark(schema.marks.italic),
       preventDefault: true,
       stopPropagation: true,
     },
     "Mod-`": {
-      run: toggleMark(pmSchema.marks.code),
+      run: toggleMark(schema.marks.code),
       preventDefault: true,
       stopPropagation: true,
     },
     "Mod-=": {
-      run: toggleMark(pmSchema.marks.highlight, { bg: "bg4" }),
+      run: toggleMark(schema.marks.highlight, { bg: "bg4" }),
       preventDefault: true,
       stopPropagation: true,
     },
@@ -728,20 +752,24 @@ const KeymapContext = createContext(() => {
   const codemirrorKeymap = ref<{ [p: string]: CmKeyBinding }>({
     ArrowLeft: {
       key: "ArrowLeft",
-      run: (view) => {
-        const block = lastFocusedBlock.value;
+      run: () => {
+        const diId = lastFocusedDiId.value;
         const tree = lastFocusedBlockTree.value;
-        if (!block || !tree) return false;
+        if (!diId || !tree) return false;
+
+        const di = tree.getDi(diId);
+        const view = tree.getEditorView(diId);
+        if (!(view instanceof CmEditorView) || !di || !DI_FILTERS.isBlockDi(di)) return false;
+
         const sel = view.state.selection;
         if (sel.ranges.length == 1) {
           const range0 = sel.ranges[0];
+          // 如果光标在块的开始，则按左方向键聚焦到上一个块
           if (range0.from == range0.to && range0.from == 0) {
-            const blockId = block.id;
-            const focusNext = tree?.getBlockAbove(blockId)?.id;
-            if (focusNext && tree) {
-              tree.focusBlock(focusNext);
-              tree.moveCursorToTheEnd(focusNext);
-            }
+            const predDi = tree.getPredecessorDi(diId);
+            if (!predDi) return false;
+            tree.focusDi(predDi[0].itemId);
+            tree.moveCursorToTheEnd(predDi[0].itemId);
             return true;
           }
         }
@@ -751,21 +779,25 @@ const KeymapContext = createContext(() => {
     },
     ArrowRight: {
       key: "ArrowRight",
-      run: (view) => {
-        const block = lastFocusedBlock.value;
+      run: () => {
+        const diId = lastFocusedDiId.value;
         const tree = lastFocusedBlockTree.value;
-        if (!block || !tree) return false;
-        const docLength = view.state.doc.length;
+        if (!diId || !tree) return false;
+
+        const di = tree.getDi(diId);
+        const view = tree.getEditorView(diId);
+        if (!(view instanceof CmEditorView) || !di || !DI_FILTERS.isBlockDi(di)) return false;
+
         const sel = view.state.selection;
+        const docLength = view.state.doc.length;
         if (sel.ranges.length == 1) {
           const range0 = sel.ranges[0];
+          // 如果光标在块的末尾，则按右方向键聚焦到下一个块
           if (range0.from == range0.to && range0.from == docLength) {
-            const blockId = block.id;
-            const focusNext = tree?.getBlockBelow(blockId)?.id;
-            if (focusNext && tree) {
-              tree.focusBlock(focusNext);
-              tree.moveCursorToBegin(focusNext);
-            }
+            const succDi = tree.getSuccessorDi(diId);
+            if (!succDi) return false;
+            tree.focusDi(succDi[0].itemId);
+            tree.moveCursorToTheEnd(succDi[0].itemId);
             return true;
           }
         }
@@ -775,21 +807,26 @@ const KeymapContext = createContext(() => {
     },
     ArrowUp: {
       key: "ArrowUp",
-      run: (view) => {
-        const block = lastFocusedBlock.value;
+      run: () => {
+        const diId = lastFocusedDiId.value;
         const tree = lastFocusedBlockTree.value;
-        if (!block || !tree) return false;
+        if (!diId || !tree) return false;
+
+        const di = tree.getDi(diId);
+        const view = tree.getEditorView(diId);
+        if (!(view instanceof CmEditorView) || !di || !DI_FILTERS.isBlockDi(di)) return false;
+
         const sel = view.state.selection;
         if (sel.ranges.length == 1) {
           const range0 = sel.ranges[0];
+          // 如果光标在块的开始，则按上方向键聚焦到上一个块
           if (range0.from == range0.to) {
             const selLine = view.state.doc.lineAt(range0.from).number;
             if (selLine == 1) {
-              const blockId = block.id;
-              const focusNext = tree?.getBlockAbove(blockId)?.id;
-              if (focusNext && tree) {
-                tree.focusBlock(focusNext);
-              }
+              const diAbove = tree.getDiAbove(diId);
+              if (!diAbove) return false;
+              tree.focusDi(diAbove[0].itemId);
+              tree.moveCursorToTheEnd(diAbove[0].itemId);
               return true;
             }
           }
@@ -800,22 +837,27 @@ const KeymapContext = createContext(() => {
     },
     ArrowDown: {
       key: "ArrowDown",
-      run: (view) => {
-        const block = lastFocusedBlock.value;
+      run: () => {
+        const diId = lastFocusedDiId.value;
         const tree = lastFocusedBlockTree.value;
-        if (!block || !tree) return false;
+        if (!diId || !tree) return false;
+
+        const di = tree.getDi(diId);
+        const view = tree.getEditorView(diId);
+        if (!(view instanceof CmEditorView) || !di || !DI_FILTERS.isBlockDi(di)) return false;
+
         const lineNumber = view.state.doc.lines;
         const sel = view.state.selection;
         if (sel.ranges.length == 1) {
           const range0 = sel.ranges[0];
+          // 如果光标在块的末尾，则按下方向键聚焦到下一个块
           if (range0.from == range0.to) {
             const selLine = view.state.doc.lineAt(range0.from).number;
             if (selLine == lineNumber) {
-              const blockId = block.id;
-              const focusNext = tree?.getBlockBelow(blockId)?.id;
-              if (focusNext && tree) {
-                tree.focusBlock(focusNext);
-              }
+              const diBelow = tree.getDiBelow(diId);
+              if (!diBelow) return false;
+              tree.focusDi(diBelow[0].itemId);
+              tree.moveCursorToBegin(diBelow[0].itemId);
               return true;
             }
           }
@@ -826,19 +868,25 @@ const KeymapContext = createContext(() => {
     },
     Backspace: {
       key: "Backspace",
-      run: (view) => {
-        const block = lastFocusedBlock.value;
+      run: () => {
+        const diId = lastFocusedDiId.value;
         const tree = lastFocusedBlockTree.value;
-        if (!block || !tree) return false;
+        if (!diId || !tree) return false;
+
+        const di = tree.getDi(diId);
+        const view = tree.getEditorView(diId);
+        if (!(view instanceof CmEditorView) || !di || !DI_FILTERS.isBlockDi(di)) return false;
+
+        // 删除空块
         const docLength = view.state.doc.length;
         if (docLength == 0) {
-          const blockId = block.id;
-          const focusNext = tree?.getBlockAbove(blockId)?.id;
+          const diAbove = tree.getDiAbove(diId);
           taskQueue.addTask(async () => {
-            blockEditor.deleteBlock({ blockId });
-            if (focusNext && tree) {
+            blockEditor.deleteBlock({ blockId: di.block.id });
+            if (diAbove) {
               await tree.nextUpdate();
-              tree.focusBlock(focusNext);
+              tree.focusDi(diAbove[0].itemId);
+              tree.moveCursorToTheEnd(diAbove[0].itemId);
             }
           });
           return true;
@@ -849,19 +897,24 @@ const KeymapContext = createContext(() => {
     },
     Delete: {
       key: "Delete",
-      run: (view) => {
-        const block = lastFocusedBlock.value;
+      run: () => {
+        const diId = lastFocusedDiId.value;
         const tree = lastFocusedBlockTree.value;
-        if (!block || !tree) return false;
+        if (!diId || !tree) return false;
+
+        const di = tree.getDi(diId);
+        const view = tree.getEditorView(diId);
+        if (!(view instanceof CmEditorView) || !di || !DI_FILTERS.isBlockDi(di)) return false;
+
         const docLength = view.state.doc.length;
         if (docLength == 0) {
-          const blockId = block.id;
-          const focusNext = tree?.getBlockBelow(blockId)?.id;
+          const diBelow = tree.getDiBelow(diId);
           taskQueue.addTask(async () => {
-            blockEditor.deleteBlock({ blockId });
-            if (focusNext && tree) {
+            blockEditor.deleteBlock({ blockId: di.block.id });
+            if (diBelow) {
               await tree.nextUpdate();
-              tree.focusBlock(focusNext);
+              tree.focusDi(diBelow[0].itemId);
+              tree.moveCursorToBegin(diBelow[0].itemId);
             }
           });
           return true;
@@ -1004,8 +1057,6 @@ const KeymapContext = createContext(() => {
     moveCodemirrorKeybinding,
     moveGlobalKeybinding,
   };
-  // 通过 globalThis 暴露给组件外使用
-  globalThis.getKeymapContext = () => ctx;
   return ctx;
 });
 

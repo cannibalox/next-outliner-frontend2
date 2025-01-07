@@ -5,7 +5,7 @@ import SettingsContext from "./settings";
 import useWritableComputedRef from "@/utils/useWritableComputedRef";
 
 export const TimeMachineContext = createContext(() => {
-  const { registerSettingItem, registerSettingGroup } = SettingsContext.useContext();
+  const { registerSettingItem, registerSettingGroup } = SettingsContext.useContext()!;
 
   registerSettingGroup({
     key: "timeMachine",

@@ -1,12 +1,12 @@
-import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import { Plugin } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
+import type { PmPluginCtx } from "./pluginContext";
 
-export const mkHighlightRefsPlugin = (getBlockIds: () => BlockId[] | null | undefined) =>
+export const mkHighlightRefsPlugin = (ctx: PmPluginCtx) =>
   new Plugin({
     props: {
       decorations: (state) => {
-        const blockIds = getBlockIds();
+        const blockIds = ctx.getHighlightRefs();
         if (!blockIds || blockIds.length == 0) return null;
         const decorations: Decoration[] = [];
         state.doc.content.descendants((node, pos) => {

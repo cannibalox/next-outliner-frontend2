@@ -3,6 +3,7 @@
     class="block-item"
     :data-item-type="itemType"
     :data-block-id="block.id"
+    :data-item-id="itemId"
     :data-block-level="level"
     :data-block-ref-color="block.metadata?.blockRefColor"
     :class="{ hasChildren, fold, selected, [itemType]: true }"
@@ -12,7 +13,7 @@
       <div class="indent-line" v-for="i in level" :key="i" :data-level="i"></div>
     </div>
     <div class="relative block-content-container">
-      <div class="block-buttons">
+      <div class="block-buttons" v-if="!hideContextMenu">
         <BlockContextMenu :block-id="block.id">
           <div class="more-button">
             <MoreHorizontal />
@@ -30,6 +31,7 @@
 
       <BlockContent
         :block="block"
+        :item-id="itemId"
         :block-tree="blockTree"
         :readonly="readonly"
         :highlight-terms="highlightTerms"
@@ -41,7 +43,7 @@
 
     <!-- 拖拽时，显示拖拽指示线 -->
     <div
-      v-if="draggingDropPos?.blockId === block.id"
+      v-if="draggingDropPos?.itemId === itemId"
       class="absolute bottom-[-2px] left-0 h-[2px] rounded w-[40%] bg-blue-500"
       :style="{ marginLeft: draggingDropPos.relIndent + 'px' }"
     ></div>
@@ -64,7 +66,7 @@ import BlockContent from "../block-contents/BlockContent.vue";
 import BlockContextMenu from "../contextmenu/BlockContextMenu.vue";
 import IndexContext from "@/context";
 import BacklinksCounter from "../backlinks-counter/BacklinksCounter.vue";
-import type { DisplayItem } from "@/utils/display-item";
+import type { DisplayItem, DisplayItemId } from "@/utils/display-item";
 
 const props = withDefaults(
   defineProps<{
@@ -72,37 +74,37 @@ const props = withDefaults(
     block: Block;
     level: number;
     hideFoldButton?: boolean;
+    hideContextMenu?: boolean;
     hideBullet?: boolean;
     readonly?: boolean;
     highlightTerms?: string[];
     highlightRefs?: BlockId[];
     itemType?: DisplayItem["type"];
+    itemId?: DisplayItemId;
     fold?: boolean;
     handleClickFoldButton?: () => void;
   }>(),
   {
     blockTree: undefined,
     hideFoldButton: false,
+    hideContextMenu: false,
     hideBullet: false,
     readonly: false,
     highlightTerms: () => [],
     highlightRefs: () => [],
     itemType: "basic-block",
+    itemId: undefined,
     fold: undefined,
     handleClickFoldButton: undefined,
   },
 );
 
 const taskQueue = useTaskQueue();
-const { blockEditor } = BlocksContext.useContext();
-const { lastFocusedBlockId, lastFocusedBlockTreeId } = LastFocusContext.useContext();
-const { mainRootBlockId } = MainTreeContext.useContext();
-const {
-  selectedBlockIds,
-  draggingDropPos,
-  dragging: isDragging,
-} = BlockSelectDragContext.useContext();
-const { getMirrors } = IndexContext.useContext();
+const { blockEditor } = BlocksContext.useContext()!;
+const { lastFocusedDiId, lastFocusedBlockTree } = LastFocusContext.useContext()!;
+const { mainRootBlockId } = MainTreeContext.useContext()!;
+const { selectedBlockIds, draggingDropPos, dragging } = BlockSelectDragContext.useContext()!;
+const { getMirrors } = IndexContext.useContext()!;
 
 // computed
 const mirrorIds = computed(() => getMirrors(props.block.id));
@@ -115,13 +117,11 @@ const selected = computed(() => selectedBlockIds.value.allNonFolded.includes(pro
 
 // handlers
 const handleFocusIn = () => {
-  const blockId = props.block.id;
-  const blockTreeId = props.blockTree?.getId() ?? null;
-  lastFocusedBlockId.value = blockId;
-  lastFocusedBlockTreeId.value = blockTreeId;
+  lastFocusedDiId.value = props.itemId ?? null;
+  lastFocusedBlockTree.value = props.blockTree ?? null;
   // 一个块获得焦点时，清除块选择
   // 但是当拖拽时，不清除块选择
-  if (!isDragging.value) {
+  if (!dragging.value) {
     selectedBlockIds.value = { topLevelOnly: [], allNonFolded: [] };
   }
 };

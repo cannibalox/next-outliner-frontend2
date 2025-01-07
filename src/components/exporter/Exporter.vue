@@ -83,7 +83,7 @@ const {
   exportSubtreeToMarkdown,
   exportSubtreeToPdf,
   exportSubtreeToPlainText,
-} = ExporterContext.useContext();
+} = ExporterContext.useContext()!;
 
 const selectedFormat = ref("html");
 const previewContent = computed(() => {

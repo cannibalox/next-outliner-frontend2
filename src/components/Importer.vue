@@ -45,7 +45,7 @@ import { importBlocks, parseV1Backup } from "@/utils/import";
 const file = ref<File | null>(null);
 const open = defineModel<boolean>("open");
 const status = ref<"idle" | "importing" | "success" | "error">("idle");
-const { blocksManager } = BlocksContext.useContext();
+const { blocksManager } = BlocksContext.useContext()!;
 
 const handleFileChange = (e: Event) => {
   const input = e.target as HTMLInputElement;

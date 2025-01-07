@@ -64,7 +64,7 @@ const {
   updateSuggestions,
   contentClass,
   handleKeydown,
-} = BlockMoverContext.useContext();
+} = BlockMoverContext.useContext()!;
 
 const queryTerms = computed(() => {
   if (query.value.length == 0) return [];

@@ -44,7 +44,7 @@ import HistoryContext from "@/context/history";
 import { computed } from "vue";
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "../ui/context-menu";
 
-const { currentIndex, historyItems, goPrev, goNext } = HistoryContext.useContext();
+const { currentIndex, historyItems, goPrev, goNext } = HistoryContext.useContext()!;
 const goPrevDisabled = computed(() => currentIndex.value <= 0);
 const goNextDisabled = computed(() => currentIndex.value >= historyItems.value.length);
 </script>

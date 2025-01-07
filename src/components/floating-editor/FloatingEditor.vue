@@ -6,7 +6,7 @@
         v-if="openedBlockId"
         class="h-full"
         id="floating-editor"
-        :root-block-ids="[openedBlockId]"
+        :root-block-id="openedBlockId"
         :root-block-level="0"
         :padding-bottom="0"
       >
@@ -24,7 +24,7 @@ import Popover from "../ui/popover/Popover.vue";
 import PopoverContent from "../ui/popover/PopoverContent.vue";
 import PopoverTrigger from "../ui/popover/PopoverTrigger.vue";
 
-const { showPos, open, openedBlockId } = FloatingEditorContext.useContext();
+const { showPos, open, openedBlockId } = FloatingEditorContext.useContext()!;
 
 watch(open, async () => {
   await nextTick();

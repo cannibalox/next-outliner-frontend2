@@ -7,8 +7,8 @@ import BlocksContext from "./blocks/blocks";
 import { nextTick } from "vue";
 
 export const FusionCommandContext = createContext(() => {
-  const { blocksManager } = BlocksContext.useContext();
-  const { search } = IndexContext.useContext();
+  const { blocksManager } = BlocksContext.useContext()!;
+  const { search } = IndexContext.useContext()!;
 
   const inputText = ref("");
   const mode = computed(() => (inputText.value.startsWith("/") ? "searchCommand" : "searchBlock"));
@@ -60,7 +60,6 @@ export const FusionCommandContext = createContext(() => {
     updateBlockSearchResult,
     openFusionCommand,
   };
-  globalThis.getFusionCommandContext = () => ctx;
   return ctx;
 });
 

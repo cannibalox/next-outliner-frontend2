@@ -43,7 +43,7 @@ const emit = defineEmits<{
   (e: "click-path-segment", blockId: BlockId): void;
 }>();
 
-const { blocksManager } = BlocksContext.useContext();
+const { blocksManager } = BlocksContext.useContext()!;
 
 const normalizedPath = computed(() => {
   const path = [...blocksManager.getBlockPath(props.blockId)];

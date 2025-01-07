@@ -1,7 +1,7 @@
 import { createContext } from "@/utils/createContext";
 import BlocksContext from "./blocks/blocks";
 import { DOMSerializer, Node } from "prosemirror-model";
-import { pmSchema } from "@/components/prosemirror/pmSchema";
+import { getPmSchema } from "@/components/prosemirror/pmSchema";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import type { Block } from "./blocks/view-layer/blocksManager";
 import { ref, toRaw } from "vue";
@@ -9,7 +9,7 @@ import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import prettify from "html-prettify";
 
 const ExporterContext = createContext(() => {
-  const { blocksManager } = BlocksContext.useContext();
+  const { blocksManager } = BlocksContext.useContext()!;
 
   const open = ref(false);
   const blockId = ref<BlockId | undefined>(undefined);
@@ -44,7 +44,8 @@ const ExporterContext = createContext(() => {
     options.nonFoldOnly ??= false;
 
     const rootEl = document.createElement("ul");
-    const pmSerializer = DOMSerializer.fromSchema(pmSchema);
+    const schema = getPmSchema({ getBlockRef: blocksManager.getBlockRef });
+    const pmSerializer = DOMSerializer.fromSchema(schema);
 
     const dfs = (block: Block, containerEl: HTMLElement) => {
       if (block.fold && options.nonFoldOnly) return;
@@ -52,7 +53,7 @@ const ExporterContext = createContext(() => {
       const li = document.createElement("li");
       const content = block.content;
       if (content[0] === BLOCK_CONTENT_TYPES.TEXT) {
-        const docNode = Node.fromJSON(pmSchema, block.content[1]);
+        const docNode = Node.fromJSON(schema, block.content[1]);
         const frag = pmSerializer.serializeFragment(docNode.content);
         li.appendChild(frag);
       }
@@ -108,7 +109,6 @@ const ExporterContext = createContext(() => {
     exportSubtreeToMarkdown,
     exportSubtreeToPdf,
   };
-  globalThis.getExporterContext = () => ctx;
   return ctx;
 });
 

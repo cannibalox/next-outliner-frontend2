@@ -5,7 +5,7 @@ import { computed, ref } from "vue";
 import PathsContext from "./paths";
 
 const AttachmentsManagerContext = createContext(() => {
-  const { dbBasePath, attachmentsBasePath, attachmentsFolderName } = PathsContext.useContext();
+  const { dbBasePath, attachmentsBasePath, attachmentsFolderName } = PathsContext.useContext()!;
   const open = ref(false);
   // /dbBasePath/attachments 下的所有文件
   const files = ref<Dirents>({});

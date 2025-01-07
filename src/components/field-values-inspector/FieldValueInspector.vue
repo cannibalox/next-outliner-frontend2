@@ -19,10 +19,12 @@ import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import { computed } from "vue";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../ui/dialog";
 import FieldValueInspectorContext from "@/context/fieldValueInspector";
+import FieldsManagerContext from "@/context/fieldsManager";
 
-const { open, blockId } = FieldValueInspectorContext.useContext();
+const { open, blockId } = FieldValueInspectorContext.useContext()!;
+const { getFieldValues } = FieldsManagerContext.useContext()!;
+
 const fieldValues = computed(() => {
-  const { getFieldValues } = getFieldsManagerContext()!;
   if (!blockId.value) return {};
   return getFieldValues(blockId.value);
 });

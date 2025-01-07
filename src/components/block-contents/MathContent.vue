@@ -17,16 +17,18 @@ import { useTaskQueue } from "@/plugins/taskQueue";
 import BlocksContext from "@/context/blocks/blocks";
 import FloatingMathInputContext from "@/context/floatingMathInput";
 import type { Block } from "@/context/blocks/view-layer/blocksManager";
+import type { DisplayItemId } from "@/utils/display-item";
 
 const props = defineProps<{
   blockTree?: BlockTree;
   block: Block;
   readonly?: boolean;
+  itemId?: DisplayItemId;
 }>();
 
 const taskQueue = useTaskQueue();
-const { blockEditor } = BlocksContext.useContext();
-const floatingMathInputContext = FloatingMathInputContext.useContext();
+const { blockEditor } = BlocksContext.useContext()!;
+const floatingMathInputContext = FloatingMathInputContext.useContext()!;
 const $contentEl = ref<HTMLElement | null>(null);
 let currSrc = ""; // 当前的 src
 
@@ -70,19 +72,15 @@ const showMathEditor = () => {
 const skipLeft = () => {
   const tree = props.blockTree;
   if (!tree) return;
-  const blockAbove = tree.getBlockAbove(props.block.id);
-  if (blockAbove) {
-    tree.focusBlock(blockAbove.id, { scrollIntoView: true });
-  }
+  const diAbove = tree.getDiAbove(props.itemId!);
+  diAbove && tree.focusDi(diAbove[0].itemId, { scrollIntoView: true });
 };
 
 const skipRight = () => {
   const tree = props.blockTree;
   if (!tree) return;
-  const blockBelow = tree.getBlockBelow(props.block.id);
-  if (blockBelow) {
-    tree.focusBlock(blockBelow.id, { scrollIntoView: true });
-  }
+  const diBelow = tree.getDiBelow(props.itemId!);
+  diBelow && tree.focusDi(diBelow[0].itemId, { scrollIntoView: true });
 };
 
 const deleteThis = () => {

@@ -157,17 +157,20 @@ import type { BlockPos } from "@/context/blocks/view-layer/blocksEditor";
 import { plainTextToTextContent } from "@/utils/pm";
 import type { Block } from "@/context/blocks/view-layer/blocksManager";
 import { fsClearScannedImage } from "@/common/api-call/fs";
+import type { DisplayItemId } from "@/utils/display-item";
+import { getPmSchema } from "../prosemirror/pmSchema";
 
 const props = defineProps<{
   blockTree?: BlockTree;
   block: Block;
+  itemId?: DisplayItemId;
 }>();
 
-const { useImage } = ImagesContext.useContext();
+const { useImage } = ImagesContext.useContext()!;
 const imageElRef = ref<HTMLImageElement | null>(null);
 const imageElContainerRef = ref<HTMLDivElement | null>(null);
 const taskQueue = useTaskQueue();
-const { blockEditor } = BlocksContext.useContext();
+const { blockEditor, blocksManager } = BlocksContext.useContext()!;
 let imageLeft = 0; // 拖曳开始时，记录图片左侧的位置，用于计算宽度
 
 const handleKeydownOnCursorContainer = generateKeydownHandlerSimple({
@@ -187,18 +190,19 @@ const handleKeydownOnCursorContainer = generateKeydownHandlerSimple({
   Enter: {
     run: (e) => {
       if (e.isComposing || e.keyCode === 229) return false;
+      const itemId = props.itemId;
+      const tree = props.blockTree;
+      if (!itemId || !tree) return false;
       taskQueue.addTask(async () => {
         const pos: BlockPos = {
           baseBlockId: props.block.id,
           offset: 1,
         };
-        const tree = props.blockTree;
-        const { focusNext } =
-          blockEditor.insertNormalBlock({ pos, content: plainTextToTextContent("") }) ?? {};
-        if (tree && focusNext) {
-          await tree.nextUpdate();
-          tree.focusBlock(focusNext);
-        }
+        const schema = getPmSchema({ getBlockRef: blocksManager.getBlockRef });
+        blockEditor.insertNormalBlock({ pos, content: plainTextToTextContent("", schema) });
+        const diBelow = tree.getDiBelow(itemId);
+        await tree.nextUpdate();
+        diBelow && tree.focusDi(diBelow[0].itemId);
       });
       return true;
     },
@@ -210,10 +214,8 @@ const handleKeydownOnCursorContainer = generateKeydownHandlerSimple({
       if (e.isComposing || e.keyCode === 229) return false;
       const tree = props.blockTree;
       if (!tree) return false;
-      const blockBelow = tree.getBlockBelow(props.block.id);
-      if (blockBelow) {
-        tree.focusBlock(blockBelow.id);
-      }
+      const diBelow = tree.getDiBelow(props.itemId!);
+      diBelow && tree.focusDi(diBelow[0].itemId);
       return true;
     },
     stopPropagation: true,
@@ -224,10 +226,8 @@ const handleKeydownOnCursorContainer = generateKeydownHandlerSimple({
       if (e.isComposing || e.keyCode === 229) return false;
       const tree = props.blockTree;
       if (!tree) return false;
-      const blockAbove = tree.getBlockAbove(props.block.id);
-      if (blockAbove) {
-        tree.focusBlock(blockAbove.id);
-      }
+      const diAbove = tree.getDiAbove(props.itemId!);
+      diAbove && tree.focusDi(diAbove[0].itemId);
       return true;
     },
     stopPropagation: true,
@@ -238,10 +238,8 @@ const handleKeydownOnCursorContainer = generateKeydownHandlerSimple({
       if (e.isComposing || e.keyCode === 229) return false;
       const tree = props.blockTree;
       if (!tree) return false;
-      const blockBefore = tree.getPredecessorBlock(props.block.id);
-      if (blockBefore) {
-        tree.focusBlock(blockBefore.id);
-      }
+      const diBefore = tree.getPredecessorDi(props.itemId!);
+      diBefore && tree.focusDi(diBefore[0].itemId);
       return true;
     },
     stopPropagation: true,
@@ -252,10 +250,8 @@ const handleKeydownOnCursorContainer = generateKeydownHandlerSimple({
       if (e.isComposing || e.keyCode === 229) return false;
       const tree = props.blockTree;
       if (!tree) return false;
-      const blockAfter = tree.getSuccessorBlock(props.block.id);
-      if (blockAfter) {
-        tree.focusBlock(blockAfter.id);
-      }
+      const diAfter = tree.getSuccessorDi(props.itemId!);
+      diAfter && tree.focusDi(diAfter[0].itemId);
       return true;
     },
     stopPropagation: true,

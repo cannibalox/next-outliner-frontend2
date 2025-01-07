@@ -100,8 +100,8 @@ import { KbInfoContext } from "@/context/kbinfo";
 import NewKbDialog from "./NewKbDialog.vue";
 import DeleteKbDialog from "./DeleteKbDialog.vue";
 
-const { serverUrl, logout } = ServerInfoContext.useContext();
-const { kbs, refreshKbList } = KbInfoContext.useContext();
+const { serverUrl, logout } = ServerInfoContext.useContext()!;
+const { kbs, refreshKbList } = KbInfoContext.useContext()!;
 
 watch(
   serverUrl,

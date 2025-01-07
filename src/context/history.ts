@@ -9,7 +9,7 @@ import { Selection } from "prosemirror-state";
 import { EditorSelection } from "@codemirror/state";
 
 export type HistoryItem = {
-  focusedBlockId: string;
+  focusedDiId: string;
   rootBlockId: string;
   selection: any; // JSONfied selection
 };
@@ -21,20 +21,21 @@ const HistoryContext = createContext(() => {
   const canGoPrev = computed(() => currentIndex.value > 0);
   const canGoNext = computed(() => currentIndex.value < historyItems.value.length);
 
-  const { mainRootBlockId } = MainTreeContext.useContext();
-  const { getBlockTree } = BlockTreeContext.useContext();
-  const { lastFocusedBlockId, lastFocusedEditorView } = LastFocusContext.useContext();
+  const { mainRootBlockId } = MainTreeContext.useContext()!;
+  const { getBlockTree } = BlockTreeContext.useContext()!;
+  const { lastFocusedDiId, lastFocusedBlockTree } = LastFocusContext.useContext()!;
 
   const captureHistoryItem = (): HistoryItem | null => {
-    if (!lastFocusedBlockId.value) return null;
-    const selection = !lastFocusedEditorView.value
-      ? null
-      : lastFocusedEditorView.value instanceof PmEditorView ||
-          lastFocusedEditorView.value instanceof CmEditorView
-        ? lastFocusedEditorView.value.state.selection.toJSON()
+    const tree = lastFocusedBlockTree.value;
+    const diId = lastFocusedDiId.value;
+    if (!tree || !diId) return null;
+    const view = tree.getEditorView(diId);
+    const selection =
+      view instanceof PmEditorView || view instanceof CmEditorView
+        ? view.state.selection.toJSON()
         : null;
     return {
-      focusedBlockId: lastFocusedBlockId.value,
+      focusedDiId: diId,
       rootBlockId: mainRootBlockId.value,
       selection,
     };
@@ -56,7 +57,7 @@ const HistoryContext = createContext(() => {
     const tree = getBlockTree("main");
     if (!tree) return;
     // 聚焦到 item 中指定的块，并恢复 selection
-    tree.focusBlock(item.focusedBlockId, { highlight: true, expandIfFold: true });
+    tree.focusDi(item.focusedDiId, { highlight: true, expandIfFold: true });
     // 恢复 selection 会导致一些奇怪的 bug，暂时禁用
     // tree.nextUpdate(() => {
     //   const view = tree.getEditorView(item.focusedBlockId);
@@ -97,7 +98,6 @@ const HistoryContext = createContext(() => {
     canGoPrev,
     canGoNext,
   };
-  globalThis.getHistoryContext = () => ctx;
   return ctx;
 });
 

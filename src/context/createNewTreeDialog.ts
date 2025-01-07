@@ -23,7 +23,6 @@ const createCreateNewTreeDialogContext = createContext(() => {
     openCreateNewTreeDialog,
     closeCreateNewTreeDialog,
   };
-  globalThis.getCreateNewTreeDialogContext = () => ctx;
   return ctx;
 });
 

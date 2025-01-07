@@ -3,23 +3,23 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, onUnmounted, ref, watch } from "vue";
-import { EditorView, keymap, type KeyBinding } from "@codemirror/view";
-import { Compartment, EditorSelection, EditorState, type Extension } from "@codemirror/state";
-import { LanguageDescription } from "@codemirror/language";
-import { mkContentChangePlugin } from "./plugins/content-change";
-import { languages } from "@codemirror/language-data";
-import { basicLight } from "./themes/basicLight";
-import { basicDark } from "./themes/basicDark";
-import { updateHighlightTerms } from "./plugins/highlight-matches";
 import ThemeContext from "@/context/theme";
+import { LanguageDescription } from "@codemirror/language";
+import { languages } from "@codemirror/language-data";
+import { Compartment, EditorSelection, EditorState, type Extension } from "@codemirror/state";
+import { EditorView, keymap, type KeyBinding } from "@codemirror/view";
 import { minimalSetup } from "codemirror";
+import { onMounted, onUnmounted, ref, watch } from "vue";
+import { mkContentChangePlugin } from "./plugins/content-change";
+import { updateHighlightTerms } from "./plugins/highlight-matches";
+import { basicDark } from "./themes/basicDark";
+import { basicLight } from "./themes/basicLight";
 
 const props = defineProps<{
   theme?: string;
   readonly?: boolean;
   lang: string;
-  extensionsGenerator?: () => Extension[];
+  extensionsBuilder?: () => Extension[];
   highlightTerms?: string[];
   onSrcChanged?: (newSrc: string, oldSrc?: string) => void;
   keymap?: { [key: string]: KeyBinding };
@@ -37,7 +37,7 @@ const $wrapper = ref<HTMLElement | null>(null);
 const languageCompartment = new Compartment();
 const themeCompartment = new Compartment();
 const keymapCompartment = new Compartment();
-const { theme: globalTheme } = ThemeContext.useContext();
+const themeContext = ThemeContext.useContext();
 
 const registeredThemes = {
   light: basicLight,
@@ -90,7 +90,7 @@ watch(() => props.lang, configureLanguage);
 
 const configureTheme = (themeName: string | undefined) => {
   if (!editorView) return;
-  const theme = themeName ?? globalTheme.value;
+  const theme = themeName ?? themeContext?.theme.value ?? "dark";
   const themePlugin = (registeredThemes as any)[theme];
   if (themePlugin) {
     editorView.dispatch({
@@ -112,7 +112,7 @@ const configureKeymap = (keymapObj: { [key: string]: KeyBinding } | undefined) =
 watch(() => props.keymap, configureKeymap);
 
 const mkExtensions = () => {
-  const customExtension = props.extensionsGenerator?.() ?? [];
+  const customExtension = props.extensionsBuilder?.() ?? [];
 
   if (props.readonly)
     return [
@@ -150,7 +150,7 @@ onMounted(() => {
   });
 
   configureLanguage(props.lang ?? "");
-  configureTheme(props.theme ?? globalTheme.value);
+  configureTheme(props.theme);
   configureKeymap(props.keymap ?? {});
 });
 

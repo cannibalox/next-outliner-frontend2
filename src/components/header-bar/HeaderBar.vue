@@ -122,20 +122,20 @@ import HistoryContext from "@/context/history";
 import LeftButtons from "./LeftButtons.vue";
 
 const { sidePaneOpen, sidePaneDir, sidePaneWidth, enableSidePaneAnimation } =
-  SidebarContext.useContext();
-const { open: openSettingsPanel } = SettingsPanelContext.useContext();
-const { open: openAttachmentsManager } = AttachmentsManagerContext.useContext();
+  SidebarContext.useContext()!;
+const { open: openSettingsPanel } = SettingsPanelContext.useContext()!;
+const { open: openAttachmentsManager } = AttachmentsManagerContext.useContext()!;
 // const { menuPaneOpen } = MenubarContext.useContext();
-const { theme, toggleTheme } = ThemeContext.useContext();
-const { focusModeEnabled } = FocusModeContext.useContext();
-const { timeMachineOpen } = TimeMachineContext.useContext();
-const { openFusionCommand } = FusionCommandContext.useContext();
-const { synced } = BlocksContext.useContext();
-const { mainRootBlockId } = MainTreeContext.useContext();
-const { logout } = ServerInfoContext.useContext();
+const { theme, toggleTheme } = ThemeContext.useContext()!;
+const { focusModeEnabled } = FocusModeContext.useContext()!;
+const { timeMachineOpen } = TimeMachineContext.useContext()!;
+const { openFusionCommand } = FusionCommandContext.useContext()!;
+const { synced } = BlocksContext.useContext()!;
+const { mainRootBlockId } = MainTreeContext.useContext()!;
+const { logout } = ServerInfoContext.useContext()!;
 const openImporter = ref(false);
 const { t } = useI18n();
-const { goPrev, goNext, canGoPrev, canGoNext } = HistoryContext.useContext();
+const { goPrev, goNext, canGoPrev, canGoNext } = HistoryContext.useContext()!;
 
 const handleClickPathSegment = (blockId: BlockId) => {
   mainRootBlockId.value = blockId;

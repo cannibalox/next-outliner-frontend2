@@ -100,7 +100,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import TimeMachineContext from "@/context/timeMachine";
 
-const { timeMachineOpen } = TimeMachineContext.useContext();
+const { timeMachineOpen } = TimeMachineContext.useContext()!;
 
 const buttons = [
   {

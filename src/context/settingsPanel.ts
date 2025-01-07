@@ -3,7 +3,7 @@ import { ref } from "vue";
 import SettingsContext from "./settings";
 
 const SettingsPanelContext = createContext(() => {
-  const settingsContext = SettingsContext.useContext();
+  const settingsContext = SettingsContext.useContext()!;
   const open = ref(false);
   const fstKey = Object.keys(settingsContext.settingGroups.value)[0];
   const activeGroupKey = ref(fstKey);
@@ -12,7 +12,6 @@ const SettingsPanelContext = createContext(() => {
     open,
     activeGroupKey,
   };
-  globalThis.getSettingsPanelContext = () => ctx;
   return ctx;
 });
 

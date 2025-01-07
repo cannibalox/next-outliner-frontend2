@@ -1,21 +1,25 @@
-import {EditorView as PmEditorView} from "prosemirror-view";
-import {Node} from "prosemirror-model";
-import katex, {type KatexOptions} from "katex";
-import {AllSelection, NodeSelection, TextSelection} from "prosemirror-state";
-import {pmSchema} from "../pmSchema";
+import type FloatingMathInputContext from "@/context/floatingMathInput";
+import katex, { type KatexOptions } from "katex";
+import { Node } from "prosemirror-model";
+import { AllSelection, NodeSelection, TextSelection } from "prosemirror-state";
+import { EditorView as PmEditorView } from "prosemirror-view";
+
+type CTX = ReturnType<typeof FloatingMathInputContext.useContext>;
 
 export class MathInlineKatex {
   readonly dom: HTMLSpanElement;
   private readonly pmView: PmEditorView;
   private readonly getPos: Function;
   private readonly katexContainer: HTMLSpanElement;
-  private readonly onBlur: Function =
-    (_: any) => { this.deselect(); };
+  private readonly ctx: CTX;
+  private readonly onBlur: Function = (_: any) => {
+    this.deselect();
+  };
 
   private src: string = "";
 
   // Katex 渲染选项
-  private static readonly KATEX_RENDER_OPTION : KatexOptions = {
+  private static readonly KATEX_RENDER_OPTION: KatexOptions = {
     displayMode: false,
     throwOnError: false,
   };
@@ -38,9 +42,7 @@ export class MathInlineKatex {
     const node = this.pmView.state.doc.nodeAt(this.getPos());
     if (!node) return; // TODO: 这里不应该为空
     const src = node.attrs.src;
-    const floatingMathInputContext = globalThis.getFloatingMathInputContext();
-    if (!floatingMathInputContext) return;
-    floatingMathInputContext.openFloatingMathInput(
+    this.ctx!.openFloatingMathInput(
       this.katexContainer,
       src,
       (newSrc: string) => {
@@ -58,12 +60,13 @@ export class MathInlineKatex {
   private syncToProseMirror() {
     // 将更新后的公式写回 node 中
     const pos = this.getPos();
-    const newNode = pmSchema.nodes.mathInline.create({src: this.src});
+    const schema = this.pmView.state.schema;
+    const newNode = schema.nodes.mathInline.create({ src: this.src });
     const tr = this.pmView.state.tr.replaceRangeWith(pos, pos + 1, newNode);
     tr.setSelection(NodeSelection.create(tr.doc, pos)); // 保持选中状态
     return tr;
   }
-  
+
   private skipRight() {
     const pos = this.getPos();
     const tr = this.syncToProseMirror();
@@ -100,11 +103,12 @@ export class MathInlineKatex {
     this.pmView.dispatch(tr);
     this.pmView.focus();
   }
-  
-  constructor(node: Node, view: PmEditorView, getPos: Function) {
+
+  constructor(node: Node, view: PmEditorView, getPos: Function, ctx: CTX) {
     this.pmView = view;
     this.getPos = getPos;
     this.dom = document.createElement("span");
+    this.ctx = ctx;
 
     // 创建 katexContainer，并使用 katex 渲染公式
     const src = node.attrs.src;

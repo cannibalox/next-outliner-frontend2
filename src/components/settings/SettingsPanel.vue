@@ -90,6 +90,6 @@ import FontSelector from "./FontSelector.vue";
 import BlockIdInputComp from "./BlockIdInputComp.vue";
 
 const { locale } = useI18n();
-const { open, activeGroupKey } = SettingsPanelContext.useContext();
-const { settingGroups, getAllSettingItemsInGroup } = SettingsContext.useContext();
+const { open, activeGroupKey } = SettingsPanelContext.useContext()!;
+const { settingGroups, getAllSettingItemsInGroup } = SettingsContext.useContext()!;
 </script>

@@ -14,10 +14,13 @@ import ToastAction from "@/components/ui/toast/ToastAction.vue";
 import { generateKeydownHandlerSimple } from "./keymap";
 import { blockRefToTextContent } from "@/utils/pm";
 import IndexContext from ".";
+import { DI_FILTERS } from "./blockTree";
+import LastFocusContext from "./lastFocus";
 
 const BlockMoverContext = createContext(() => {
-  const { blocksManager } = BlocksContext.useContext();
-  const { search } = IndexContext.useContext();
+  const { blocksManager, blockEditor } = BlocksContext.useContext()!;
+  const { lastFocusedBlockTree, lastFocusedDiId } = LastFocusContext.useContext()!;
+  const { search } = IndexContext.useContext()!;
   const showPos = ref<{ x: number; y: number } | null>(null);
   const open = computed({
     get: () => showPos.value !== null,
@@ -58,18 +61,19 @@ const BlockMoverContext = createContext(() => {
 
   const cb = (blockId: BlockId | null) => {
     if (blockId == null) return;
-    const { lastFocusedBlockId, lastFocusedBlockTree } = globalThis.getLastFocusContext() ?? {};
-    if (lastFocusedBlockId?.value == null) return;
-    const movedBlockId = lastFocusedBlockId.value;
+    const tree = lastFocusedBlockTree.value;
+    const diId = lastFocusedDiId.value;
+    const di = diId ? tree?.getDi(diId) : null;
+    if (!tree || !diId || !di || !DI_FILTERS.isBlockDi(di)) return;
+    const movedBlockId = di.block.id;
+
     const taskQueue = useTaskQueue();
     const targetPos: BlockPos = {
       parentId: blockId,
       childIndex: "last-space",
     };
     taskQueue.addTask(async () => {
-      const { blockEditor } = globalThis.getBlocksContext() ?? {};
       if (blockEditor == null) return;
-      const tree = lastFocusedBlockTree?.value;
       if (leaveRef) {
         blockEditor.insertNormalBlock({
           pos: {
@@ -80,7 +84,7 @@ const BlockMoverContext = createContext(() => {
         });
       }
       // leave mirror TODO
-      const { focusNext } = blockEditor.moveBlock({ blockId: movedBlockId, pos: targetPos }) ?? {};
+      blockEditor.moveBlock({ blockId: movedBlockId, pos: targetPos });
       toast({
         title: t("kbView.blockMover.moveSuccess", { count: 1 }),
         action: h(
@@ -89,9 +93,8 @@ const BlockMoverContext = createContext(() => {
             altText: t("kbView.blockMover.focusMovedBlock"),
             onClick: (e: MouseEvent) => {
               e.stopPropagation();
-              if (tree && focusNext) {
-                tree.focusBlock(focusNext, { highlight: true, expandIfFold: true });
-              }
+              // TODO
+              tree.focusDi(diId, { highlight: true, expandIfFold: true });
             },
           },
           {
@@ -234,10 +237,6 @@ const BlockMoverContext = createContext(() => {
     handleKeydown,
     contentClass,
   };
-
-  // 注册到全局
-  globalThis.getBlockMoverContext = () => ctx;
-
   return ctx;
 });
 

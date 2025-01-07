@@ -32,7 +32,7 @@ const {
   uploadStatus,
   currentPathSegments,
   dbBasePath,
-} = AttachmentsManagerContext.useContext();
+} = AttachmentsManagerContext.useContext()!;
 
 const pendingFiles = ref<File[]>([]);
 

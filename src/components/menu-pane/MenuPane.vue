@@ -48,7 +48,6 @@
 
 <script setup lang="ts">
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import MenubarContext from "@/context/menubar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import FavoriteContext from "@/context/favorite";
 import { Button } from "../ui/button";
@@ -60,10 +59,14 @@ import { KbInfoContext } from "@/context/kbinfo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { computed, ref } from "vue";
 import type { Block } from "@/context/blocks/view-layer/blocksManager";
+import MenubarContext from "@/context/menubar";
+import BlockTree from "../BlockTree.vue";
+import BlockTreeContext from "@/context/blockTree";
 
-const { menuPaneOpen } = MenubarContext.useContext();
-const { favoriteBlocks, favoriteBlockIds } = FavoriteContext.useContext();
-const { currKbInfo, kbs } = KbInfoContext.useContext();
+const { menuPaneOpen } = MenubarContext.useContext()!;
+const { favoriteBlocks, favoriteBlockIds } = FavoriteContext.useContext()!;
+const { currKbInfo, kbs } = KbInfoContext.useContext()!;
+const { getBlockTree } = BlockTreeContext.useContext()!;
 
 const favoriteTab = ref<HTMLElement | null>(null);
 
@@ -78,11 +81,10 @@ const avatarFallback = computed(() => {
 });
 
 const handleClickFavoriteBlock = (block: Block) => {
-  const { getBlockTree } = globalThis.getBlockTreeContext() ?? {};
-  if (!getBlockTree) return;
   const blockTree = getBlockTree("main");
   if (!blockTree) return;
-  blockTree.focusBlock(block.id);
+  const di = blockTree.findDi((item) => item.type === "basic-block" && item.block.id === block.id);
+  di && blockTree.focusDi(di.itemId);
   menuPaneOpen.value = false;
 };
 

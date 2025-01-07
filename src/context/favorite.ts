@@ -6,7 +6,7 @@ import type { Block } from "./blocks/view-layer/blocksManager";
 import { useLocalStorage } from "@vueuse/core";
 
 const FavoriteContext = createContext(() => {
-  const { blocksManager } = BlocksContext.useContext();
+  const { blocksManager } = BlocksContext.useContext()!;
 
   const favoriteBlockIds = useLocalStorage<BlockId[]>("favoriteBlockIds", []);
   const favoriteBlocks = computed({
