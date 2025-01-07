@@ -445,53 +445,55 @@ const getIndentSize = () => {
 };
 
 const handlePointerUpOrLeave = (e: PointerEvent) => {
-  dndCtx.dragging.value = false;
-  if (movingBlocks) {
-    const taskQueue = useTaskQueue();
-    // 拖动结束，将选中的块移动到拖动结束的位置
-    const draggingDropPos = dndCtx.draggingDropPos.value;
-    if (!draggingDropPos) return;
-    const { itemId, absLevel } = draggingDropPos;
-    const di = getDi(itemId);
-    if (!di || !DI_FILTERS.isBlockDi(di)) return;
-    const selected = dndCtx.selectedBlockIds.value;
-    const blockLevel = blocksManager.getBlockLevel(di.block.id);
-    if (absLevel > blockLevel) {
-      // 将 selected 插入到 block 的子级
-      taskQueue.addTask(() => {
-        const pos = blockEditor.normalizePos({
-          parentId: di.block.id,
-          childIndex: "first",
+  try {
+    if (movingBlocks) {
+      const taskQueue = useTaskQueue();
+      // 拖动结束，将选中的块移动到拖动结束的位置
+      const draggingDropPos = dndCtx.draggingDropPos.value;
+      if (!draggingDropPos) return;
+      const { itemId, absLevel } = draggingDropPos;
+      const di = getDi(itemId);
+      if (!di || !DI_FILTERS.isBlockDi(di)) return;
+      const selected = dndCtx.selectedBlockIds.value;
+      const blockLevel = blocksManager.getBlockLevel(di.block.id);
+      if (absLevel > blockLevel) {
+        // 将 selected 插入到 block 的子级
+        taskQueue.addTask(() => {
+          const pos = blockEditor.normalizePos({
+            parentId: di.block.id,
+            childIndex: "first",
+          });
+          if (!pos) return;
+          blockEditor.moveBlocks({
+            blockIds: selected.topLevelOnly,
+            pos,
+          });
         });
-        if (!pos) return;
-        blockEditor.moveBlocks({
-          blockIds: selected.topLevelOnly,
-          pos,
+      } else {
+        // 将 selected 插入到 block 的下方（与 block 同级）
+        taskQueue.addTask(() => {
+          const pos = blockEditor.normalizePos({
+            baseBlockId: di.block.id,
+            offset: 1,
+          });
+          if (!pos) return;
+          blockEditor.moveBlocks({
+            blockIds: selected.topLevelOnly,
+            pos,
+          });
         });
-      });
-    } else {
-      // 将 selected 插入到 block 的下方（与 block 同级）
-      taskQueue.addTask(() => {
-        const pos = blockEditor.normalizePos({
-          baseBlockId: di.block.id,
-          offset: 1,
-        });
-        if (!pos) return;
-        blockEditor.moveBlocks({
-          blockIds: selected.topLevelOnly,
-          pos,
-        });
-      });
+      }
     }
+  } finally {
+    pointerDownDi = null;
+    pointerDownTime = null;
+    movingBlocks = false;
+    dndCtx.dragging.value = false;
+    dndCtx.draggingDropPos.value = null;
+    document.removeEventListener("pointermove", handlePointerMove);
+    document.removeEventListener("pointerup", handlePointerUpOrLeave);
+    document.removeEventListener("pointerleave", handlePointerUpOrLeave);
   }
-
-  pointerDownDi = null;
-  pointerDownTime = null;
-  movingBlocks = false;
-  dndCtx.draggingDropPos.value = null;
-  document.removeEventListener("pointermove", handlePointerMove);
-  document.removeEventListener("pointerup", handlePointerUpOrLeave);
-  document.removeEventListener("pointerleave", handlePointerUpOrLeave);
 };
 
 const clearDraggingDropPos = () => {
@@ -509,6 +511,26 @@ const handlePointerMove = useThrottleFn((e: PointerEvent) => {
 
   // 1. 拖动
   if (movingBlocks) {
+    // 如果是在拖动块，并且目前没有选中任何块
+    // 则将光标按下时的块加入选中
+    if (dndCtx.selectedBlockIds.value.topLevelOnly.length === 0) {
+      if (!pointerDownDi || !DI_FILTERS.isBlockDi(pointerDownDi)) return; // IMPOSSIBLE
+      const newSelected = {
+        topLevelOnly: [pointerDownDi.block.id],
+        allNonFolded: [] as BlockId[],
+      };
+      blocksManager.forDescendants({
+        rootBlockId: pointerDownDi.block.id,
+        rootBlockLevel: 0,
+        nonFoldOnly: true,
+        includeSelf: true,
+        onEachBlock: (b) => {
+          newSelected.allNonFolded.push(b.id);
+        },
+      });
+      dndCtx.selectedBlockIds.value = newSelected;
+    }
+
     const hoveredBlockItem = getHoveredElementWithClass(e.target, "block-item");
     const hoveredItemId = hoveredBlockItem?.dataset["itemId"];
     // 指针悬停的块的缩进层级，相对于 rootBlockLevel
@@ -576,7 +598,8 @@ const handlePointerMove = useThrottleFn((e: PointerEvent) => {
       }
       dndCtx.draggingDropPos.value = {
         itemId: hoveredItemId,
-        relIndent: clippedLevel * (width + rightMargin) + width,
+        relIndent:
+          (clippedLevel - (props.enlargeRootBlock ? 1 : 0)) * (width + rightMargin) + width,
         absLevel: clippedLevel + props.rootBlockLevel, // 加上 rootBlockLevel 才是绝对层级
       };
     }
@@ -676,27 +699,7 @@ const handlePointerDown = (e: PointerEvent) => {
   dndCtx.dragging.value = false;
   // 如果按下的是块的 bullet，则认为是拖动，否则认为是框选
   const hoveredBullet = getHoveredElementWithClass(e.target, "bullet");
-  if (hoveredBullet) {
-    movingBlocks = true;
-    // 如果是在拖动块，并且目前没有选中任何块
-    // 则将当前块加入选中
-    if (dndCtx.selectedBlockIds.value.topLevelOnly.length === 0) {
-      const newSelected = {
-        topLevelOnly: [di.block.id],
-        allNonFolded: [] as BlockId[],
-      };
-      blocksManager.forDescendants({
-        rootBlockId: di.block.id,
-        rootBlockLevel: 0,
-        nonFoldOnly: true,
-        includeSelf: true,
-        onEachBlock: (b) => {
-          newSelected.allNonFolded.push(b.id);
-        },
-      });
-      dndCtx.selectedBlockIds.value = newSelected;
-    }
-  }
+  if (hoveredBullet) movingBlocks = true;
 
   document.addEventListener("pointermove", handlePointerMove);
   document.addEventListener("pointerup", handlePointerUpOrLeave);

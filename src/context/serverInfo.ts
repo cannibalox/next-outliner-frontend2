@@ -8,6 +8,17 @@ import { JwtPayloadSchema } from "@/common/type-and-schemas/jwtPayload";
 import { z } from "zod";
 import router from "@/router";
 
+const normalizeServerUrl = (serverUrl: string) => {
+  // add protocol if not exists
+  // localhost:8080 -> https://localhost:8080
+  // http://localhost:8080 -> http://localhost:8080 (unchange)
+  // https://localhost:8080 -> https://localhost:8080 (unchange)
+  if (!serverUrl.startsWith("http://") && !serverUrl.startsWith("https://")) {
+    return `https://${serverUrl}`;
+  }
+  return serverUrl;
+};
+
 export const ServerInfoContext = createContext(() => {
   // 使用 localStorage 存储 token
   const token = useLocalStorage("token", "");
@@ -59,7 +70,7 @@ export const ServerInfoContext = createContext(() => {
 
   const axiosInstance = computed(() => {
     return axios.create({
-      baseURL: `http://${serverUrl.value}`,
+      baseURL: normalizeServerUrl(serverUrl.value),
       timeout: 10000,
       headers: {
         Authorization: token.value,
