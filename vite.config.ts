@@ -21,6 +21,10 @@ export default defineConfig({
     topLevelAwait(),
     // vueDevTools(),
   ],
+  worker: {
+    // @ts-expect-error
+    plugins: [wasm(), topLevelAwait()],
+  },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

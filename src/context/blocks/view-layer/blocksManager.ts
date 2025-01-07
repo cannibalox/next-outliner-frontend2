@@ -22,6 +22,7 @@ import createUndoManager from "./undoManager";
 import type { DisplayItemId } from "@/utils/display-item";
 import LastFocusContext from "@/context/lastFocus";
 import MainTreeContext from "@/context/mainTree";
+import BlockTreeContext from "@/context/blockTree";
 
 ///////////////////////////////////////////////////////////////////
 // blocksManager 负责管理视图层的所有块，其职责有二：
@@ -263,6 +264,7 @@ export const createBlocksManager = (syncLayer: SyncLayer) => {
 
   const { lastFocusedBlockTree, lastFocusedDiId } = LastFocusContext.useContext()!;
   const { mainRootBlockId } = MainTreeContext.useContext()!;
+  const { getBlockTree } = BlockTreeContext.useContext()!;
 
   // 记录所有文档是否已经同步
   // 记录所有文档是否已经同步
@@ -833,6 +835,8 @@ export const createBlocksManager = (syncLayer: SyncLayer) => {
 
   const { undo, redo, addUndoPoint, clearUndoRedoHistory } = createUndoManager({
     createBlockTransaction,
+    mainRootBlockId,
+    getBlockTree,
   });
 
   return {

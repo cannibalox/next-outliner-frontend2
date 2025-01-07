@@ -1,16 +1,15 @@
-import { ref, toRaw, type Ref } from "vue";
 import type { BlockData } from "@/common/type-and-schemas/block/block-data";
-import type { BlockInfo } from "@/common/type-and-schemas/block/block-info";
 import type { BlockId } from "@/common/type-and-schemas/block/block-id";
-import type { BlockOrigin } from "../view-layer/blocksManager";
+import type { BlockInfo } from "@/common/type-and-schemas/block/block-info";
+import { createPromise } from "@/utils/promise";
 import mitt from "mitt";
+import type { BlockOrigin } from "../view-layer/blocksManager";
 import type {
   MapChange,
   SyncLayerTransaction,
   SyncWorkerInMsg,
   SyncWorkerOutMsg,
 } from "./syncWorker";
-import { createPromise } from "@/utils/promise";
 
 ///////////////////////////////////////////////////////////////////
 // SyncLayer 是对 syncWorker 的很薄的一层封装

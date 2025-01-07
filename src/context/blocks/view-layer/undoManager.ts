@@ -1,4 +1,4 @@
-import { shallowReactive } from "vue";
+import { shallowReactive, type ShallowRef } from "vue";
 import type { BlockOrigin, BlockTransaction } from "./blocksManager";
 import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import { useEventBus } from "@/plugins/eventbus";
@@ -6,9 +6,12 @@ import { EditorView as PmEditorView } from "prosemirror-view";
 import { EditorView as CmEditorView } from "@codemirror/view";
 import { EditorSelection } from "@codemirror/state";
 import { Selection } from "prosemirror-state";
+import type { BlockTree } from "@/context/blockTree";
 
 type UndoManagerCtx = {
   createBlockTransaction: (origin: BlockOrigin) => BlockTransaction;
+  getBlockTree: (treeId: string) => BlockTree | undefined;
+  mainRootBlockId: ShallowRef<BlockId | null>;
 };
 
 // 记录事务开始或结束时的一些状态
@@ -102,12 +105,10 @@ function createUndoManager(ctx: UndoManagerCtx) {
     setTimeout(() => {
       try {
         // 恢复 rootBlockId
-        const { mainRootBlockId } = getMainTreeContext()!;
-        mainRootBlockId.value = rootBlockId;
+        ctx.mainRootBlockId.value = rootBlockId ?? null;
 
-        const { getBlockTree } = getBlockTreeContext()!;
         if (focusedTreeId) {
-          const tree = getBlockTree(focusedTreeId);
+          const tree = ctx.getBlockTree(focusedTreeId);
           if (tree) {
             // 恢复 focusedItem 和 selection
             if (focusedItemId) {
@@ -168,12 +169,10 @@ function createUndoManager(ctx: UndoManagerCtx) {
     setTimeout(() => {
       try {
         // 恢复 rootBlockId
-        const { mainRootBlockId } = getMainTreeContext()!;
-        mainRootBlockId.value = rootBlockId;
+        ctx.mainRootBlockId.value = rootBlockId ?? null;
 
-        const { getBlockTree } = getBlockTreeContext()!;
         if (focusedTreeId) {
-          const tree = getBlockTree(focusedTreeId);
+          const tree = ctx.getBlockTree(focusedTreeId);
           if (tree) {
             // 恢复 focusedItem 和 selection
             if (focusedItemId) {
