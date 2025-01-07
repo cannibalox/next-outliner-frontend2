@@ -3,6 +3,8 @@
     class="text-content block-content"
     ref="pmWrapper"
     v-model:doc="docJson"
+    :item-id="itemId"
+    :block-tree="blockTree"
     :schema="schema"
     :readonly="readonly"
     :plugins-builder="buildPlugins"
