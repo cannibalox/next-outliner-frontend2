@@ -1,10 +1,13 @@
 import { createContext } from "@/utils/createContext";
-import SettingsContext from "./settings";
-import { useLocalStorage } from "@vueuse/core";
+import useLocalStorage2 from "@/utils/useLocalStorage";
 import useWritableComputedRef from "@/utils/useWritableComputedRef";
+import { computed } from "vue";
+import ServerInfoContext from "./serverInfo";
+import SettingsContext from "./settings";
 
 const BasicSettingsContext = createContext(() => {
   const { registerSettingGroup, registerSettingItem } = SettingsContext.useContext()!;
+  const { kbPrefix } = ServerInfoContext.useContext()!;
 
   registerSettingGroup({
     key: "basic",
@@ -13,11 +16,12 @@ const BasicSettingsContext = createContext(() => {
     },
   });
 
-  const textFontFamilyKey = "basic.textFontFamily";
+  const textFontFamilyId = "basic.textFontFamily";
+  const textFontFamilyKey = computed(() => `${kbPrefix.value}${textFontFamilyId}`);
   const textFontFamilyDefaultValue = "";
-  const textFontFamily = useLocalStorage(textFontFamilyKey, textFontFamilyDefaultValue);
+  const textFontFamily = useLocalStorage2(textFontFamilyKey, textFontFamilyDefaultValue);
   registerSettingItem({
-    id: textFontFamilyKey,
+    id: textFontFamilyId,
     groupKey: "basic",
     label: {
       zh: "正文字体",
@@ -32,11 +36,12 @@ const BasicSettingsContext = createContext(() => {
     },
   });
 
-  const uiFontFamilyKey = "basic.uiFontFamily";
+  const uiFontFamilyId = "basic.uiFontFamily";
+  const uiFontFamilyKey = computed(() => `${kbPrefix.value}${uiFontFamilyId}`);
   const uiFontFamilyDefaultValue = "";
-  const uiFontFamily = useLocalStorage(uiFontFamilyKey, uiFontFamilyDefaultValue);
+  const uiFontFamily = useLocalStorage2(uiFontFamilyKey, uiFontFamilyDefaultValue);
   registerSettingItem({
-    id: uiFontFamilyKey,
+    id: uiFontFamilyId,
     groupKey: "basic",
     label: {
       zh: "界面字体",
@@ -51,14 +56,15 @@ const BasicSettingsContext = createContext(() => {
     },
   });
 
-  const monospaceFontFamilyKey = "basic.monospaceFontFamily";
+  const monospaceFontFamilyId = "basic.monospaceFontFamily";
+  const monospaceFontFamilyKey = computed(() => `${kbPrefix.value}${monospaceFontFamilyId}`);
   const monospaceFontFamilyDefaultValue = "";
-  const monospaceFontFamily = useLocalStorage(
+  const monospaceFontFamily = useLocalStorage2(
     monospaceFontFamilyKey,
     monospaceFontFamilyDefaultValue,
   );
   registerSettingItem({
-    id: monospaceFontFamilyKey,
+    id: monospaceFontFamilyId,
     groupKey: "basic",
     label: {
       zh: "代码块字体",
@@ -73,14 +79,15 @@ const BasicSettingsContext = createContext(() => {
     },
   });
 
-  const enableFloatingEditorKey = "basic.enableFloatingEditor";
+  const enableFloatingEditorId = "basic.enableFloatingEditor";
+  const enableFloatingEditorKey = computed(() => `${kbPrefix.value}${enableFloatingEditorId}`);
   const enableFloatingEditorDefaultValue = false;
-  const enableFloatingEditor = useLocalStorage(
+  const enableFloatingEditor = useLocalStorage2(
     enableFloatingEditorKey,
     enableFloatingEditorDefaultValue,
   );
   registerSettingItem({
-    id: enableFloatingEditorKey,
+    id: enableFloatingEditorId,
     groupKey: "basic",
     label: {
       zh: "启用浮动编辑器",

@@ -1,11 +1,13 @@
 import { createContext } from "@/utils/createContext";
-import { useLocalStorage } from "@vueuse/core";
-import { computed, ref } from "vue";
-import SettingsContext from "./settings";
+import useLocalStorage2 from "@/utils/useLocalStorage";
 import useWritableComputedRef from "@/utils/useWritableComputedRef";
+import { computed, ref } from "vue";
+import ServerInfoContext from "./serverInfo";
+import SettingsContext from "./settings";
 
 export const TimeMachineContext = createContext(() => {
   const { registerSettingItem, registerSettingGroup } = SettingsContext.useContext()!;
+  const { kbPrefix } = ServerInfoContext.useContext()!;
 
   registerSettingGroup({
     key: "timeMachine",
@@ -22,7 +24,8 @@ export const TimeMachineContext = createContext(() => {
     weekly: 1 as number | null,
   };
   const autoBackupId = `timeMachine.autoBackup`;
-  const autoBackupInterval = useLocalStorage(autoBackupId, autoBackupDefaultValue);
+  const autoBackupIdKey = computed(() => `${kbPrefix.value}${autoBackupId}`);
+  const autoBackupInterval = useLocalStorage2(autoBackupIdKey, autoBackupDefaultValue);
 
   const autoBackupKeepNumberDefaultValue = {
     hourly: 10 as number | null,
@@ -30,8 +33,9 @@ export const TimeMachineContext = createContext(() => {
     weekly: 10 as number | null,
   };
   const autoBackupKeepNumberId = `timeMachine.autoBackupKeepNumber`;
-  const autoBackupKeepNumber = useLocalStorage(
-    autoBackupKeepNumberId,
+  const autoBackupKeepNumberIdKey = computed(() => `${kbPrefix.value}${autoBackupKeepNumberId}`);
+  const autoBackupKeepNumber = useLocalStorage2(
+    autoBackupKeepNumberIdKey,
     autoBackupKeepNumberDefaultValue,
   );
 
@@ -142,7 +146,8 @@ export const TimeMachineContext = createContext(() => {
 
   const inactiveThresholdDefaultValue = 30;
   const inactiveThresholdId = `timeMachine.inactiveThreshold`;
-  const inactiveThreshold = useLocalStorage(inactiveThresholdId, inactiveThresholdDefaultValue);
+  const inactiveThresholdIdKey = computed(() => `${kbPrefix.value}${inactiveThresholdId}`);
+  const inactiveThreshold = useLocalStorage2(inactiveThresholdIdKey, inactiveThresholdDefaultValue);
   registerSettingItem({
     id: inactiveThresholdId,
     groupKey: "timeMachine",

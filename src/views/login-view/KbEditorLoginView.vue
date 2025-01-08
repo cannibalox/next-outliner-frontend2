@@ -147,7 +147,7 @@ import { Check, CircleCheck, Loader2, LoaderCircle, RefreshCcw, X } from "lucide
 import { ref } from "vue";
 import { z } from "zod";
 
-const { serverUrl, token } = ServerInfoContext.useContext()!;
+const { serverUrl, buildTokenKey } = ServerInfoContext.useContext()!;
 const password = ref<string>("");
 const selectedKbLocation = ref<string | undefined>(undefined);
 const { kbs, refreshKbList } = KbInfoContext.useContext()!;
@@ -218,7 +218,11 @@ const login = async () => {
   });
   if (res.success) {
     loginStatus.value = "loginSuccess";
-    token.value = res.data!.token;
+    // 不要直接写 token
+    // 因为此时 params 还没更新，token 的 key 还没生成
+    const tokenKey = buildTokenKey(serverUrl.value, selectedKbLocation.value!);
+    localStorage.setItem(tokenKey, res.data.token);
+    console.log("tokenKey", tokenKey, res.data.token, localStorage.getItem(tokenKey));
     setTimeout(() => {
       const p1 = encodeURIComponent(serverUrl.value);
       const p2 = encodeURIComponent(selectedKbLocation.value!);

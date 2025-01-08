@@ -1,5 +1,5 @@
 import { computed } from "vue";
-import { useRoute, useRouter } from "vue-router"
+import { useRoute, useRouter } from "vue-router";
 import { z } from "zod";
 
 const paramsSchema = z.object({
@@ -20,7 +20,6 @@ export const useRouterParams = () => {
         rootBLockId: route.params.rootBLockId,
         focusedBlockId: route.params.focusedBlockId,
       });
-      console.log("params.get", validationResult);
       if (!validationResult.success) {
         // todo
         return;
@@ -46,10 +45,10 @@ export const useRouterParams = () => {
           location: location ? encodeURIComponent(location) : undefined,
           rootBLockId: rootBLockId ? encodeURIComponent(rootBLockId) : undefined,
           focusedBlockId: focusedBlockId ? encodeURIComponent(focusedBlockId) : undefined,
-        }
-      })
-    }
+        },
+      });
+    },
   });
 
   return params;
-}
+};

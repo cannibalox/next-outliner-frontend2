@@ -49,10 +49,12 @@ const router = createRouter({
       path: "/kb/:serverUrl/:location/:rootBlockId?/:focusedBlockId?",
       component: KbView,
       beforeEnter: (to, from, next) => {
-        const serverInfoContext = globalThis.getServerInfoContext();
-        const tokenPayload = serverInfoContext?.tokenPayload?.value;
+        const { extractTokenPayload, buildTokenKey, logout } = globalThis.getServerInfoContext()!;
         const targetServerUrl = to.params.serverUrl as string;
         const targetLocation = to.params.location as string;
+        const tokenKey = buildTokenKey(targetServerUrl, targetLocation);
+        const token = localStorage.getItem(tokenKey);
+        const tokenPayload = token ? extractTokenPayload(token) : null;
         // invalid or missing token
         if (
           !tokenPayload ||
@@ -60,7 +62,7 @@ const router = createRouter({
           tokenPayload.serverUrl !== targetServerUrl ||
           tokenPayload.location !== targetLocation
         ) {
-          serverInfoContext?.logout();
+          logout();
           next({ path: "/login/kb-editor" });
         } else {
           next();

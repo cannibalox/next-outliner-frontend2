@@ -1,18 +1,19 @@
+import { getPmSchema } from "@/components/prosemirror/pmSchema";
+import { useToast } from "@/components/ui/toast/use-toast";
+import { useTaskQueue } from "@/plugins/taskQueue";
 import { createContext } from "@/utils/createContext";
-import SettingsContext from "./settings";
-import { useLocalStorage } from "@vueuse/core";
+import { contentNodesToPmNode, plainTextToTextContent } from "@/utils/pm";
+import useLocalStorage2 from "@/utils/useLocalStorage";
 import useWritableComputedRef from "@/utils/useWritableComputedRef";
+import dayjs from "dayjs";
+import { computed, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import IndexContext from ".";
 import BlocksContext from "./blocks/blocks";
-import { watch } from "vue";
 import { INTERNAL_BLOCK_PARENT_ID } from "./blocks/view-layer/blocksManager";
-import { contentNodesToPmNode, plainTextToTextContent } from "@/utils/pm";
-import dayjs from "dayjs";
-import { useToast } from "@/components/ui/toast/use-toast";
-import { useI18n } from "vue-i18n";
-import { useTaskQueue } from "@/plugins/taskQueue";
 import BlockTreeContext from "./blockTree";
-import { getPmSchema } from "@/components/prosemirror/pmSchema";
+import ServerInfoContext from "./serverInfo";
+import SettingsContext from "./settings";
 
 const DAILY_NOTE_TAG = "day";
 
@@ -24,6 +25,7 @@ const DailyNoteContext = createContext(() => {
   const { t } = useI18n();
   const taskQueue = useTaskQueue();
   const { getBlockTree } = BlockTreeContext.useContext()!;
+  const { kbPrefix } = ServerInfoContext.useContext()!;
 
   // 确保存在 day 块可以用作标签
   // TODo: 只执行一次添加
@@ -62,11 +64,12 @@ const DailyNoteContext = createContext(() => {
     label: { zh: "每日笔记" },
   });
 
-  const defaultDateFormatKey = "dailynote.defaultDateFormat";
+  const defaultDateFormatId = "dailynote.defaultDateFormat";
+  const defaultDateFormatKey = computed(() => `${kbPrefix.value}${defaultDateFormatId}`);
   const defaultDateFormatDefaultValue = "YYYY-MM-DD";
-  const defaultDateFormat = useLocalStorage(defaultDateFormatKey, defaultDateFormatDefaultValue);
+  const defaultDateFormat = useLocalStorage2(defaultDateFormatKey, defaultDateFormatDefaultValue);
   registerSettingItem({
-    id: defaultDateFormatKey,
+    id: defaultDateFormatId,
     groupKey: "dailynote",
     defaultValue: defaultDateFormatDefaultValue,
     label: { zh: "默认日期格式" },
@@ -75,14 +78,17 @@ const DailyNoteContext = createContext(() => {
     componentType: { type: "textInput" },
   });
 
-  const parentBlockOfNewDailyNoteKey = "dailynote.parentBlockOfNewDailyNote";
+  const parentBlockOfNewDailyNoteId = "dailynote.parentBlockOfNewDailyNote";
+  const parentBlockOfNewDailyNoteKey = computed(
+    () => `${kbPrefix.value}${parentBlockOfNewDailyNoteId}`,
+  );
   const parentBlockOfNewDailyNoteDefaultValue = "";
-  const parentBlockOfNewDailyNote = useLocalStorage(
+  const parentBlockOfNewDailyNote = useLocalStorage2(
     parentBlockOfNewDailyNoteKey,
     parentBlockOfNewDailyNoteDefaultValue,
   );
   registerSettingItem({
-    id: parentBlockOfNewDailyNoteKey,
+    id: parentBlockOfNewDailyNoteId,
     groupKey: "dailynote",
     defaultValue: parentBlockOfNewDailyNoteDefaultValue,
     label: { zh: "每日笔记的存放位置" },

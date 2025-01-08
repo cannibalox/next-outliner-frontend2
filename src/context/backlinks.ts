@@ -1,18 +1,21 @@
-import { createContext } from "@/utils/createContext";
-import SettingsContext from "./settings";
-import { useLocalStorage } from "@vueuse/core";
-import useWritableComputedRef from "@/utils/useWritableComputedRef";
 import type { BlockId } from "@/common/type-and-schemas/block/block-id";
-import BlocksContext from "./blocks/blocks";
+import { createContext } from "@/utils/createContext";
+import useLocalStorage2 from "@/utils/useLocalStorage";
+import useWritableComputedRef from "@/utils/useWritableComputedRef";
+import { computed } from "vue";
 import { z } from "zod";
 import IndexContext from ".";
+import BlocksContext from "./blocks/blocks";
 import FieldsManagerContext from "./fieldsManager";
+import ServerInfoContext from "./serverInfo";
+import SettingsContext from "./settings";
 
 const BacklinksContext = createContext(() => {
   const { registerSettingGroup, registerSettingItem } = SettingsContext.useContext()!;
   const { blocksManager } = BlocksContext.useContext()!;
   const { getBacklinks } = IndexContext.useContext()!;
   const { getFieldValues } = FieldsManagerContext.useContext()!;
+  const { kbPrefix } = ServerInfoContext.useContext()!;
 
   const blockIdValidator = (value: string) => {
     if (!value) return "没有指定块 ID";
@@ -28,14 +31,15 @@ const BacklinksContext = createContext(() => {
     },
   });
 
-  const showBacklinksCounterKey = "backlinks.showCounter";
+  const showBacklinksCounterId = "backlinks.showCounter";
+  const showBacklinksCounterKey = computed(() => `${kbPrefix.value}${showBacklinksCounterId}`);
   const showBacklinksCounterDefaultValue = true;
-  const showBacklinksCounter = useLocalStorage(
+  const showBacklinksCounter = useLocalStorage2(
     showBacklinksCounterKey,
     showBacklinksCounterDefaultValue,
   );
   registerSettingItem({
-    id: showBacklinksCounterKey,
+    id: showBacklinksCounterId,
     groupKey: "backlinks",
     label: {
       zh: "块右侧显示反向链接个数",
@@ -50,11 +54,12 @@ const BacklinksContext = createContext(() => {
     },
   });
 
-  const putNewBlockAtKey = "backlinks.putNewBlockAt";
+  const putNewBlockAtId = "backlinks.putNewBlockAt";
+  const putNewBlockAtKey = computed(() => `${kbPrefix.value}${putNewBlockAtId}`);
   const putNewBlockAtDefaultValue = "";
-  const putNewBlockAt = useLocalStorage(putNewBlockAtKey, putNewBlockAtDefaultValue);
+  const putNewBlockAt = useLocalStorage2(putNewBlockAtKey, putNewBlockAtDefaultValue);
   registerSettingItem({
-    id: putNewBlockAtKey,
+    id: putNewBlockAtId,
     groupKey: "backlinks",
     label: {
       zh: "新块插入位置",

@@ -1,12 +1,12 @@
-import { createContext } from "@/utils/createContext";
-import axios from "axios";
-import { computed, ref } from "vue";
-import { useRoute } from "vue-router";
-import { watch } from "vue";
-import { useLocalStorage } from "@vueuse/core";
 import { JwtPayloadSchema } from "@/common/type-and-schemas/jwtPayload";
-import { z } from "zod";
 import router from "@/router";
+import { createContext } from "@/utils/createContext";
+import { useRouterParams } from "@/utils/routerParams";
+import useLocalStorage2 from "@/utils/useLocalStorage";
+import axios from "axios";
+import { computed, ref, watch } from "vue";
+import { useRoute } from "vue-router";
+import { z } from "zod";
 
 const normalizeServerUrl = (serverUrl: string) => {
   // add protocol if not exists
@@ -20,14 +20,25 @@ const normalizeServerUrl = (serverUrl: string) => {
 };
 
 export const ServerInfoContext = createContext(() => {
-  // 使用 localStorage 存储 token
-  const token = useLocalStorage("token", "");
   const serverUrl = ref<string>("");
   const route = useRoute();
+  const params = useRouterParams();
+  const kbPrefix = computed(() => {
+    const serverUrl = params.value?.serverUrl;
+    const location = params.value?.location;
+    if (!serverUrl || !location) return null;
+    return `${serverUrl}-${location}-`;
+  });
 
-  const tokenPayload = computed(() => {
-    if (!token.value) return null;
-    const base64Url = token.value.split(".")[1];
+  // token 存在 localStorage 中
+  // 但存储的键需要根据 serverUrl 和 location 生成
+  // 因此我们监听 serverUrl 和 location，并从 localStorage 中获取 token
+  const buildTokenKey = (serverUrl: string, location: string) => `${serverUrl}-${location}-token`;
+  const tokenKey = computed(() => buildTokenKey(params.value!.serverUrl!, params.value!.location!));
+  const token = useLocalStorage2(tokenKey, "");
+
+  const extractTokenPayload = (token: string) => {
+    const base64Url = token.split(".")[1];
     const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
     const jsonPayload = decodeURIComponent(
       window
@@ -50,6 +61,11 @@ export const ServerInfoContext = createContext(() => {
       .pipe(JwtPayloadSchema)
       .safeParse(jsonPayload);
     return validationResult.success ? validationResult.data : null;
+  };
+
+  const tokenPayload = computed(() => {
+    if (!token.value) return null;
+    return extractTokenPayload(token.value);
   });
 
   const logout = () => {
@@ -84,7 +100,10 @@ export const ServerInfoContext = createContext(() => {
 
   const ctx = {
     token,
+    buildTokenKey,
     tokenPayload,
+    extractTokenPayload,
+    kbPrefix,
     serverUrl,
     getAxios,
     logout,

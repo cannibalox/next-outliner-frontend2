@@ -1,25 +1,46 @@
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import { createContext } from "@/utils/createContext";
-import { useLocalStorage } from "@vueuse/core";
-import { computed, ref } from "vue";
+import useLocalStorage2 from "@/utils/useLocalStorage";
+import { computed, ref, watch } from "vue";
 import BlocksContext from "./blocks/blocks";
 import type { Block } from "./blocks/view-layer/blocksManager";
-import type { BlockId } from "@/common/type-and-schemas/block/block-id";
-import { watch } from "vue";
+import ServerInfoContext from "./serverInfo";
 
 export const SidebarContext = createContext(() => {
   const { blocksManager } = BlocksContext.useContext()!;
+  const { kbPrefix } = ServerInfoContext.useContext()!;
 
-  const sidePaneOpen = useLocalStorage("sidePaneOpen", false);
-  const sidePaneDir = useLocalStorage("sidePaneDir", "right");
-  const sidePaneWidth = useLocalStorage("sidePaneWidth", 500);
-  const sidePaneHeight = useLocalStorage("sidePaneHeight", 300);
+  const localStorageIds = {
+    sidePaneOpen: "sidePaneOpen",
+    sidePaneDir: "sidePaneDir",
+    sidePaneWidth: "sidePaneWidth",
+    sidePaneHeight: "sidePaneHeight",
+    sidePaneBlockIds: "sidePaneBlockIds",
+    sidePaneCurrentBlockId: "sidePaneCurrentBlockId",
+  };
+
+  const localStorageKeys = {
+    sidePaneOpen: computed(() => `${kbPrefix.value}${localStorageIds.sidePaneOpen}`),
+    sidePaneDir: computed(() => `${kbPrefix.value}${localStorageIds.sidePaneDir}`),
+    sidePaneWidth: computed(() => `${kbPrefix.value}${localStorageIds.sidePaneWidth}`),
+    sidePaneHeight: computed(() => `${kbPrefix.value}${localStorageIds.sidePaneHeight}`),
+    sidePaneBlockIds: computed(() => `${kbPrefix.value}${localStorageIds.sidePaneBlockIds}`),
+    sidePaneCurrentBlockId: computed(
+      () => `${kbPrefix.value}${localStorageIds.sidePaneCurrentBlockId}`,
+    ),
+  };
+
+  const sidePaneOpen = useLocalStorage2(localStorageKeys.sidePaneOpen, false);
+  const sidePaneDir = useLocalStorage2(localStorageKeys.sidePaneDir, "right");
+  const sidePaneWidth = useLocalStorage2(localStorageKeys.sidePaneWidth, 500);
+  const sidePaneHeight = useLocalStorage2(localStorageKeys.sidePaneHeight, 300);
   const enableSidePaneAnimation = ref(true);
-  const sidePaneBlockIds = useLocalStorage("sidePaneBlockIds", <BlockId[]>[]);
-  const sidePaneCurrentBlockId = useLocalStorage("sidePaneCurrentBlockId", "");
+  const sidePaneBlockIds = useLocalStorage2(localStorageKeys.sidePaneBlockIds, <BlockId[]>[]);
+  const sidePaneCurrentBlockId = useLocalStorage2(localStorageKeys.sidePaneCurrentBlockId, "");
   const dir = ref("left");
 
   const sidePaneBlocks = computed(() => {
-    return sidePaneBlockIds.value
+    return (sidePaneBlockIds.value as BlockId[])
       .map((id) => blocksManager.getBlock(id))
       .filter((b): b is Block => !!b);
   });

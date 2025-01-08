@@ -32,7 +32,7 @@ import type { EditorProps, EditorViewCustomEvents } from "prosemirror-view";
 import "prosemirror-view/style/prosemirror.css";
 import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { openRefSuggestions } from "../prosemirror/input-rules/openRefSuggestions";
-import { turnToCodeBlock } from "../prosemirror/input-rules/turn-to-code-block";
+import { turnToCodeBlock } from "../prosemirror/input-rules/turnToCodeblock";
 import { MathInlineKatex } from "../prosemirror/node-views/inlineMath";
 import { mkKeymapPlugin } from "../prosemirror/plugins/keymap";
 import { mkPasteImagePlugin } from "../prosemirror/plugins/pasteImage";
@@ -41,6 +41,7 @@ import type { PmPluginCtx } from "../prosemirror/plugins/pluginContext";
 import { getPmSchema } from "../prosemirror/pmSchema";
 import FloatingMathInputContext from "@/context/floatingMathInput";
 import HistoryContext from "@/context/history";
+import { turnToInlineCode } from "../prosemirror/input-rules/turnToInlineBlock";
 
 const props = defineProps<{
   blockTree?: BlockTree;
@@ -118,7 +119,7 @@ const buildPlugins = (ctx: PmPluginCtx) => {
     ? []
     : [
         inputRules({
-          rules: [openRefSuggestions(ctx), turnToCodeBlock(ctx)],
+          rules: [openRefSuggestions(ctx), turnToCodeBlock(ctx), turnToInlineCode(ctx)],
         }),
         mkKeymapPlugin(ctx),
         mkPasteImagePlugin(ctx),
