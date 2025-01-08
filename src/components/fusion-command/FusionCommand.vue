@@ -155,8 +155,7 @@ const gotoFocused = () => {
   const tree = blockTreeContext.getBlockTree("main");
   if (!tree) return false;
   open.value = false;
-  const di = tree.findDi((item) => item.type === "basic-block" && item.block.id === focusBlock.id);
-  di && tree.focusDi(di.itemId, { highlight: true, expandIfFold: true });
+  tree.focusBlock(focusBlock.id, { highlight: true, expandIfFold: true });
 };
 
 const handleKeydown = generateKeydownHandlerSimple({

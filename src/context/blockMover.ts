@@ -93,8 +93,7 @@ const BlockMoverContext = createContext(() => {
             altText: t("kbView.blockMover.focusMovedBlock"),
             onClick: (e: MouseEvent) => {
               e.stopPropagation();
-              // TODO
-              tree.focusDi(diId, { highlight: true, expandIfFold: true });
+              tree.focusBlock(movedBlockId, { highlight: true, expandIfFold: true });
             },
           },
           {

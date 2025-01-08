@@ -81,10 +81,9 @@ const avatarFallback = computed(() => {
 });
 
 const handleClickFavoriteBlock = (block: Block) => {
-  const blockTree = getBlockTree("main");
-  if (!blockTree) return;
-  const di = blockTree.findDi((item) => item.type === "basic-block" && item.block.id === block.id);
-  di && blockTree.focusDi(di.itemId);
+  const tree = getBlockTree("main");
+  if (!tree) return;
+  tree.focusBlock(block.id);
   menuPaneOpen.value = false;
 };
 

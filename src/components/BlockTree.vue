@@ -118,6 +118,7 @@ import BlockSelectDragContext from "@/context/blockSelect";
 import {
   BlockTreeContext,
   DI_FILTERS,
+  type BlockFocusOptions,
   type BlockTree,
   type BlockTreeEventMap,
   type BlockTreeProps,
@@ -307,14 +308,9 @@ const scrollDiIntoView = (itemId: DisplayItemId): boolean => {
 };
 
 const focusDi = async (itemId: DisplayItemId, options: DiFocusOptions = {}) => {
-  let { scrollIntoView, highlight, expandIfFold } = options;
+  let { scrollIntoView, highlight } = options;
   scrollIntoView ??= true;
   highlight ??= false;
-  expandIfFold ??= false;
-
-  if (expandIfFold) {
-    // TODO ...
-  }
 
   if (scrollIntoView) {
     const success = scrollDiIntoView(itemId);
@@ -353,6 +349,23 @@ const focusDi = async (itemId: DisplayItemId, options: DiFocusOptions = {}) => {
       diEl.classList.remove("highlight-fade");
     }, 3000);
   }
+};
+
+const focusBlock = async (blockId: BlockId, options: BlockFocusOptions = {}) => {
+  let { scrollIntoView, highlight, expandIfFold } = options;
+  scrollIntoView ??= true;
+  highlight ??= false;
+  expandIfFold ??= false;
+
+  if (expandIfFold) {
+    await blockEditor.locateBlock(blockId, controller);
+  }
+
+  await timeout(0);
+  // TODO：只检查 basic-block 是否合适？
+  const di = findDi((item) => item.type === "basic-block" && item.block.id === blockId);
+  if (!di) return;
+  await focusDi(di.itemId, { scrollIntoView, highlight });
 };
 
 const findDi = (filter: (item: DisplayItem) => boolean) => {
@@ -416,6 +429,7 @@ const controller: BlockTree = {
   getDiBelow,
 
   focusDi,
+  focusBlock,
   getDomOfDi,
 
   moveCursorToTheEnd,

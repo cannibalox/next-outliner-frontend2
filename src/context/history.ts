@@ -57,7 +57,7 @@ const HistoryContext = createContext(() => {
     const tree = getBlockTree("main");
     if (!tree) return;
     // 聚焦到 item 中指定的块，并恢复 selection
-    tree.focusDi(item.focusedDiId, { highlight: true, expandIfFold: true });
+    tree.focusDi(item.focusedDiId, { highlight: true });
     // 恢复 selection 会导致一些奇怪的 bug，暂时禁用
     // tree.nextUpdate(() => {
     //   const view = tree.getEditorView(item.focusedBlockId);

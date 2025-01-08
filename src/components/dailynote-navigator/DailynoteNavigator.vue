@@ -96,11 +96,7 @@ const handleClickCell = (date: Date) => {
   const blockId = dateToDailyNote.value[dateStr];
   const tree = getBlockTree("main");
   if (!tree) return;
-  if (blockId) {
-    const di = tree.findDi((item) => item.type === "basic-block" && item.block.id === blockId);
-    di && tree.focusDi(di.itemId);
-  } else {
-    createDailyNote(date);
-  }
+  if (blockId) tree.focusBlock(blockId);
+  else createDailyNote(date);
 };
 </script>

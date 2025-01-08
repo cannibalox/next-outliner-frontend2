@@ -28,6 +28,11 @@ export interface BlockTreeProps {
 export type DiFocusOptions = {
   scrollIntoView?: boolean;
   highlight?: boolean;
+};
+
+export type BlockFocusOptions = {
+  scrollIntoView?: boolean;
+  highlight?: boolean;
   expandIfFold?: boolean;
 };
 
@@ -76,7 +81,8 @@ export type BlockTree = {
     filter?: (item: DisplayItem) => boolean,
   ) => [DisplayItem, number] | null;
 
-  focusDi: (itemId: DisplayItemId, options?: DiFocusOptions) => void;
+  focusDi: (itemId: DisplayItemId, options?: DiFocusOptions) => Promise<void>;
+  focusBlock: (blockId: BlockId, options?: BlockFocusOptions) => Promise<void>;
   getDomOfDi: (itemId: string) => HTMLElement | null;
 
   moveCursorToTheEnd: (itemId: DisplayItemId) => void;

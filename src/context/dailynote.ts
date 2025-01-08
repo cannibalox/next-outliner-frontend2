@@ -138,10 +138,7 @@ const DailyNoteContext = createContext(() => {
         }) ?? {};
       if (newNormalBlockId) {
         await main.nextUpdate();
-        const di = main.findDi(
-          (item) => item.type === "basic-block" && item.block.id === newNormalBlockId,
-        );
-        di && main.focusDi(di.itemId);
+        main.focusBlock(newNormalBlockId, { highlight: true, expandIfFold: true });
       }
     });
   };

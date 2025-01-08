@@ -86,10 +86,7 @@ export const getPmSchema = (ctx: SchemaCtx) => {
             ctx.pushHistoryItem?.(); // 记录历史
             const tree = ctx.getMainTree?.();
             if (!tree) return;
-            const di = tree.findDi(
-              (item) => item.type === "basic-block" && item.block.id === toBlockId,
-            );
-            di && tree.focusDi(di.itemId, { highlight: true, expandIfFold: true });
+            tree.focusBlock(toBlockId, { highlight: true, expandIfFold: true });
           });
 
           // 鼠标悬浮时，尝试打开浮动编辑器
