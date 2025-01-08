@@ -11,7 +11,7 @@
       paddingBottom: sidePaneOpen && sidePaneDir === 'bottom' ? `${sidePaneHeight}px` : '0px',
       transition: enableSidePaneAnimation ? 'padding 500ms var(--tf)' : 'none',
     }"
-    :root-block-id="mainRootBlockId"
+    :root-block-ids="[mainRootBlockId]"
     :root-block-level="0"
     :padding-top="60"
     :enlarge-root-block="true"

@@ -104,6 +104,13 @@
           :block-id="itemData.blockId"
           :level="itemData.level"
         ></MissingBlockItem>
+        <SidePaneItemHeader
+          v-if="itemData.type == 'side-pane-header'"
+          :key="itemData.itemId"
+          :block-tree="controller"
+          :block-id="itemData.blockId"
+          :item-id="itemData.itemId"
+        ></SidePaneItemHeader>
       </template>
       <template #footer> </template>
     </virt-list>
@@ -154,11 +161,13 @@ import MissingBlockItem from "./display-items/MissingBlockItem.vue";
 import RootBlockItem from "./display-items/RootBlockItem.vue";
 import BacklinksContext from "@/context/backlinks";
 import IndexContext from "@/context";
+import SidePaneItemHeader from "./display-items/SidePaneItemHeader.vue";
 
 const props = withDefaults(defineProps<BlockTreeProps>(), {
   virtual: true,
   showBacklinks: true,
   showPotentialLinks: true,
+  addSidePaneHeader: false,
   enlargeRootBlock: false,
   paddingBottom: 200,
   paddingTop: 0,
@@ -185,7 +194,7 @@ const updateDisplayItems = () => {
   const blockTreeId = props.id;
   console.time(`calc displayItems ${blockTreeId}`);
   displayItems.value = generateDisplayItems({
-    rootBlockId: props.rootBlockId,
+    rootBlockIds: props.rootBlockIds,
     rootBlockLevel: props.rootBlockLevel,
     enlargeRootBlock: props.enlargeRootBlock,
     blocksManager,
@@ -194,6 +203,7 @@ const updateDisplayItems = () => {
     expandedBP: expandedBP.value,
     getBacklinksContext: () => backlinksContext,
     getIndexContext: () => indexContext,
+    addSidePaneHeader: props.addSidePaneHeader,
   });
   console.timeEnd(`calc displayItems ${blockTreeId}`);
 
@@ -210,7 +220,7 @@ const updateDisplayItems = () => {
 };
 
 watch(expandedBP, updateDisplayItems, { deep: true });
-watch([() => props.rootBlockId, changeRef], updateDisplayItems, {
+watch([() => props.rootBlockIds, changeRef], updateDisplayItems, {
   immediate: true,
 });
 
@@ -409,7 +419,7 @@ const controller: BlockTree = {
   getProps: () => props,
   getId: () => props.id,
   getDom: () => $blockTree.value!,
-  getRootBlockId: () => props.rootBlockId,
+  getRootBlockIds: () => props.rootBlockIds,
   getDisplayItems: () => displayItems.value!,
   getDi,
   findDi,

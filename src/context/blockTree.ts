@@ -16,8 +16,9 @@ export type BlockTreeEventMap = {
 export interface BlockTreeProps {
   id: string;
   virtual?: boolean;
-  rootBlockId: BlockId;
+  rootBlockIds: BlockId[];
   rootBlockLevel: number;
+  addSidePaneHeader?: boolean;
   enlargeRootBlock?: boolean;
   showBacklinks?: boolean;
   showPotentialLinks?: boolean;
@@ -49,7 +50,7 @@ export type BlockTree = {
   getProps: () => BlockTreeProps;
   getId: () => string;
   getDom: () => HTMLElement;
-  getRootBlockId: () => BlockId;
+  getRootBlockIds: () => BlockId[];
   getDisplayItems: () => DisplayItem[];
   getDi: (itemId: DisplayItemId) => DisplayItem | null;
   findDi: (filter: (item: DisplayItem) => boolean) => DisplayItem | null;

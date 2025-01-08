@@ -1,64 +1,66 @@
 <template>
   <div class="right-pane z-20 overflow-hidden flex flex-col">
-    <div class="flex items-center justify-center gap-x-2 mt-2 mb-2">
-      <Button :disabled="!hasPrev" variant="outline" size="icon" @click="goPrev">
-        <ChevronLeft class="size-4 stroke-muted-foreground" />
-      </Button>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" class="h-8 min-w-[200px]">
-            <BlockPath
-              class="pointer-events-none"
-              :include-self="true"
-              :block-id="sidePaneCurrentBlockId"
-            />
-            <!-- <ChevronsUpDown class="size-4 ml-2 stroke-muted-foreground" /> -->
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuGroup>
-            <DropdownMenuItem
-              v-for="block in sidePaneBlocks"
-              :key="block.id"
-              :onClick="() => (sidePaneCurrentBlockId = block.id)"
-            >
-              <BlockPath class="pointer-events-none" :include-self="true" :block-id="block.id" />
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <Button :disabled="!hasNext" variant="outline" size="icon" @click="goNext">
-        <ChevronRight class="size-4 stroke-muted-foreground" />
-      </Button>
-    </div>
+    <div class="flex items-center justify-between py-[10px] px-[8px] mr-2">
+      <div>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Button variant="ghost" size="icon" @click="sidePaneOpen = false">
+              <ChevronsRight class="size-5 stroke-[1.8]" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent> </TooltipContent>
+        </Tooltip>
 
-    <div class="h-0 flex-grow overflow-y-hidden overflow-x-hidden">
-      <Transition @leave="handleLeave" @enter="handleEnter" :css="false">
-        <BlockTree
-          v-if="sidePaneCurrentBlockId"
-          class="h-full mr-1"
-          :key="sidePaneCurrentBlockId"
-          :id="`side-pane-${sidePaneCurrentBlockId}`"
-          :root-block-id="sidePaneCurrentBlockId"
-          :root-block-level="0"
-          :paddingBottom="20"
-        />
-      </Transition>
-    </div>
+        <Tooltip v-if="sidePaneDir === 'bottom'">
+          <TooltipTrigger as-child>
+            <Button variant="ghost" size="icon" @click="sidePaneDir = 'right'">
+              <PanelRight class="size-5 stroke-[1.8]" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent> </TooltipContent>
+        </Tooltip>
 
-    <div class="absolute z-10 top-2.5 right-2">
-      <!-- More actions -->
-      <Tooltip v-for="(button, index) in buttons" :key="index">
-        <TooltipTrigger>
-          <Button variant="ghost" class="size-7 p-0" :onClick="button.onClick">
-            <component :is="button.icon" class="size-4 stroke-[1.8]" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <component :is="button.label" />
-        </TooltipContent>
-      </Tooltip>
+        <Tooltip v-if="sidePaneDir === 'right'">
+          <TooltipTrigger as-child>
+            <Button variant="ghost" size="icon" @click="sidePaneDir = 'bottom'">
+              <PanelBottom class="size-5 stroke-[1.8]" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent> </TooltipContent>
+        </Tooltip>
+      </div>
+
+      <div>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Button variant="ghost" size="icon">
+              <SortDesc class="size-5 stroke-[1.8]" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent> </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Button variant="ghost" size="icon">
+              <Filter class="size-5 stroke-[1.8]" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent> </TooltipContent>
+        </Tooltip>
+      </div>
     </div>
+    <BlockTree
+      id="side-pane"
+      class="h-full"
+      :root-block-ids="sidePaneBlockIds"
+      :root-block-level="0"
+      :add-side-pane-header="true"
+      :enlarge-root-block="false"
+      :show-backlinks="false"
+      :show-potential-links="false"
+      :padding-top="0"
+    ></BlockTree>
     <!-- drag handler -->
     <div
       v-if="sidePaneDir === 'bottom'"
@@ -80,24 +82,15 @@ import SidebarContext from "@/context/sidebar";
 import {
   ArrowDownFromLine,
   ArrowRightFromLine,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsUpDown,
-  PanelBottomClose,
-  PanelRightClose,
+  ChevronsRight,
+  Filter,
+  PanelBottom,
+  PanelRight,
+  SortDesc,
   X,
 } from "lucide-vue-next";
 import type { FunctionalComponent } from "vue";
 import BlockTree from "../BlockTree.vue";
-import BlockPath from "../BlockPath.vue";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
 
 type SidePaneButton = {
   icon: FunctionalComponent;
@@ -112,6 +105,7 @@ const {
   sidePaneHeight,
   enableSidePaneAnimation,
   sidePaneBlocks,
+  sidePaneBlockIds,
   sidePaneCurrentBlockId,
   hasPrev,
   hasNext,

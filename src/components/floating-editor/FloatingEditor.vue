@@ -6,7 +6,7 @@
         v-if="openedBlockId"
         class="h-full"
         id="floating-editor"
-        :root-block-id="openedBlockId"
+        :root-block-ids="[openedBlockId]"
         :root-block-level="0"
         :padding-bottom="0"
       >

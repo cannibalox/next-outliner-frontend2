@@ -55,24 +55,33 @@ const { t } = useI18n();
 
 // 定义按键绑定数据
 const keyBindings = {
-  [t("kbView.keybindings.normal.groupName")]: [
-    { key: "Alt/Option + ↑", description: t("kbView.keybindings.normal.swapUp") },
-    { key: "Alt/Option + ↓", description: t("kbView.keybindings.normal.swapDown") },
-    { key: "Command/Ctrl + ↓", description: t("kbView.keybindings.normal.expand") },
-    { key: "Command/Ctrl + ↑", description: t("kbView.keybindings.normal.collapse") },
-    { key: "Tab", description: t("kbView.keybindings.normal.indent") },
-    { key: "Shift + Tab", description: t("kbView.keybindings.normal.outdent") },
-    { key: "@", description: t("kbView.keybindings.normal.insertBlockRef") },
-    { key: "#", description: t("kbView.keybindings.normal.insertTag") },
-    { key: "Command/Ctrl + m", description: t("kbView.keybindings.normal.insertInlineMath") },
+  [t("kbView.keybindings.groups.commands")]: [
+    { key: "Alt/Option + ↑", description: t("kbView.keybindings.commands.swapUp") },
+    { key: "Alt/Option + ↓", description: t("kbView.keybindings.commands.swapDown") },
+    { key: "Command/Ctrl + ↓", description: t("kbView.keybindings.commands.expand") },
+    { key: "Command/Ctrl + ↑", description: t("kbView.keybindings.commands.collapse") },
+    { key: "Tab", description: t("kbView.keybindings.commands.indent") },
+    { key: "Shift + Tab", description: t("kbView.keybindings.commands.outdent") },
+    { key: "@", description: t("kbView.keybindings.commands.insertBlockRef") },
+    { key: "#", description: t("kbView.keybindings.commands.insertTag") },
+    { key: "Command/Ctrl + m", description: t("kbView.keybindings.commands.insertInlineMath") },
     {
       key: "Command/Ctrl + Shift + m",
-      description: t("kbView.keybindings.normal.insertBlockMath"),
+      description: t("kbView.keybindings.commands.insertBlockMath"),
     },
-    { key: "Command/Ctrl + b", description: t("kbView.keybindings.normal.bold") },
-    { key: "Command/Ctrl + i", description: t("kbView.keybindings.normal.italic") },
-    { key: "Command/Ctrl + `", description: t("kbView.keybindings.normal.code") },
-    { key: "Command/Ctrl + =", description: t("kbView.keybindings.normal.highlight") },
+    { key: "Command/Ctrl + b", description: t("kbView.keybindings.commands.bold") },
+    { key: "Command/Ctrl + i", description: t("kbView.keybindings.commands.italic") },
+    { key: "Command/Ctrl + `", description: t("kbView.keybindings.commands.code") },
+    { key: "Command/Ctrl + =", description: t("kbView.keybindings.commands.highlight") },
+    { key: "```<language>", description: t("kbView.keybindings.commands.toCodeblock") },
+    { key: "Command/Ctrl + z", description: t("kbView.keybindings.commands.undo") },
+    { key: "Command/Ctrl + Shift + z", description: t("kbView.keybindings.commands.redo") },
+    { key: "Shift + Enter", description: t("kbView.keybindings.commands.softBreak") },
+    { key: "Command/Ctrl + p", description: t("kbView.keybindings.commands.openFusionCommand") },
+    {
+      key: "Command/Ctrl + k",
+      description: t("kbView.keybindings.commands.addToSidePane"),
+    },
   ],
 };
 </script>

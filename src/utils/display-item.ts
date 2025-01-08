@@ -30,6 +30,7 @@ export type DisplayItem = { itemId: string } & (
   | { type: "potential-links-block"; block: Block; refBlockId: BlockId }
   | { type: "potential-links-descendant"; block: Block; level: number }
   | { type: "missing-block"; blockId: BlockId; parentId: BlockId; level: number }
+  | { type: "side-pane-header"; blockId: BlockId }
 );
 
 export type DisplayBlockItem =
@@ -40,13 +41,15 @@ export type DisplayBlockItem =
   | (DisplayItem & { type: "potential-links-descendant" });
 
 export type DisplayGeneratorContext = {
-  rootBlockId: BlockId;
+  rootBlockIds: BlockId[];
   rootBlockLevel: number;
   enlargeRootBlock: boolean;
   // 是否显示反链面板
   showBacklinks?: boolean;
   // 是否显示潜在链接面板
   showPotentialLinks?: boolean;
+  // 是否为每个 root block 添加一个 side pane header
+  addSidePaneHeader?: boolean;
   blocksManager: BlocksManager;
   expandedBP: Record<BlockId, boolean>;
   // required context
@@ -66,77 +69,156 @@ export const isBlockDi = (item: DisplayItem) => {
 
 export const generateDisplayItems = (ctx: DisplayGeneratorContext) => {
   const {
-    rootBlockId,
+    rootBlockIds,
     rootBlockLevel,
     enlargeRootBlock,
     showBacklinks,
     showPotentialLinks,
     blocksManager,
     expandedBP,
+    addSidePaneHeader,
     getBacklinksContext,
     getIndexContext,
   } = ctx;
 
   const resultCollector: DisplayItem[] = [];
 
-  const rootBlock = blocksManager.getBlock(rootBlockId);
-  if (!rootBlock) return resultCollector;
+  if (rootBlockIds.length === 1) {
+    const rootBlockId = rootBlockIds[0];
+    const rootBlock = blocksManager.getBlock(rootBlockId);
+    if (!rootBlock) return resultCollector;
 
-  if (enlargeRootBlock) {
-    resultCollector.push({
-      type: "root-block",
-      itemId: `root-block-${rootBlockId}`,
-      block: rootBlock,
+    if (addSidePaneHeader && enlargeRootBlock)
+      throw new Error("addSidePaneHeader and enlargeRootBlock cannot be true at the same time");
+
+    if (enlargeRootBlock) {
+      resultCollector.push({
+        type: "root-block",
+        itemId: `root-block-${rootBlockId}`,
+        block: rootBlock,
+      });
+    }
+
+    if (addSidePaneHeader) {
+      resultCollector.push({
+        type: "side-pane-header",
+        itemId: `side-pane-header-${rootBlockId}`,
+        blockId: rootBlockId,
+      });
+    }
+
+    blocksManager.forDescendantsWithMissingBlock({
+      rootBlockId,
+      rootBlockLevel: enlargeRootBlock ? -1 : rootBlockLevel,
+      nonFoldOnly: true,
+      includeSelf: enlargeRootBlock ? false : true,
+      onEachBlock: (block, level) => {
+        resultCollector.push({
+          type: "basic-block",
+          itemId: `block-${block.id}`,
+          block,
+          level,
+        });
+      },
+      onMissingBlock: (blockId, parentId, level) => {
+        resultCollector.push({
+          type: "missing-block",
+          itemId: `missing-block-${blockId}-${level}`,
+          blockId,
+          parentId,
+          level,
+        });
+      },
     });
+
+    // 如果要显示反链
+    let backlinks: [Set<BlockId> | undefined] = [undefined];
+    if (showBacklinks)
+      addBacklinkItems(
+        rootBlockId,
+        resultCollector,
+        blocksManager,
+        backlinks,
+        expandedBP,
+        getBacklinksContext,
+      );
+
+    // 如果要显示潜在链接
+    if (showPotentialLinks)
+      addPotentialLinksItems(
+        rootBlockId,
+        resultCollector,
+        blocksManager,
+        backlinks,
+        expandedBP,
+        getBacklinksContext,
+        getIndexContext,
+      );
+  } else if (rootBlockIds.length > 1) {
+    if (enlargeRootBlock)
+      throw new Error("enlargeRootBlock is not supported when rootBlockIds.length > 1");
+
+    for (const rootBlockId of rootBlockIds) {
+      const rootBlock = blocksManager.getBlock(rootBlockId);
+      if (!rootBlock) continue;
+
+      if (addSidePaneHeader) {
+        resultCollector.push({
+          type: "side-pane-header",
+          itemId: `side-pane-header-${rootBlockId}`,
+          blockId: rootBlockId,
+        });
+      }
+
+      blocksManager.forDescendantsWithMissingBlock({
+        rootBlockId,
+        rootBlockLevel,
+        nonFoldOnly: true,
+        includeSelf: true,
+        onEachBlock: (block, level) => {
+          resultCollector.push({
+            type: "basic-block",
+            itemId: `block-${block.id}`,
+            block,
+            level,
+          });
+        },
+        onMissingBlock: (blockId, parentId, level) => {
+          resultCollector.push({
+            type: "missing-block",
+            itemId: `missing-block-${blockId}-${level}`,
+            blockId,
+            parentId,
+            level,
+          });
+        },
+      });
+
+      // 如果要显示反链
+      let backlinks: [Set<BlockId> | undefined] = [undefined];
+      if (showBacklinks)
+        addBacklinkItems(
+          rootBlockId,
+          resultCollector,
+          blocksManager,
+          backlinks,
+          expandedBP,
+          getBacklinksContext,
+        );
+
+      // 如果要显示潜在链接
+      if (showPotentialLinks)
+        addPotentialLinksItems(
+          rootBlockId,
+          resultCollector,
+          blocksManager,
+          backlinks,
+          expandedBP,
+          getBacklinksContext,
+          getIndexContext,
+        );
+    }
   }
-
-  blocksManager.forDescendantsWithMissingBlock({
-    rootBlockId,
-    rootBlockLevel: enlargeRootBlock ? -1 : rootBlockLevel,
-    nonFoldOnly: true,
-    includeSelf: enlargeRootBlock ? false : true,
-    onEachBlock: (block, level) => {
-      resultCollector.push({
-        type: "basic-block",
-        itemId: `block-${block.id}`,
-        block,
-        level,
-      });
-    },
-    onMissingBlock: (blockId, parentId, level) => {
-      resultCollector.push({
-        type: "missing-block",
-        itemId: `missing-block-${blockId}-${level}`,
-        blockId,
-        parentId,
-        level,
-      });
-    },
-  });
-
-  // 如果要显示反链
-  let backlinks: [Set<BlockId> | undefined] = [undefined];
-  if (showBacklinks)
-    addBacklinkItems(
-      rootBlockId,
-      resultCollector,
-      blocksManager,
-      backlinks,
-      expandedBP,
-      getBacklinksContext,
-    );
-
-  // 如果要显示潜在链接
-  if (showPotentialLinks)
-    addPotentialLinksItems(
-      rootBlockId,
-      resultCollector,
-      blocksManager,
-      backlinks,
-      expandedBP,
-      getBacklinksContext,
-      getIndexContext,
-    );
 
   return resultCollector;
 };

@@ -22,10 +22,12 @@ import {
   indentMore,
   insertNewlineAndIndent,
 } from "@codemirror/commands";
-import { ref } from "vue";
+import { watch, ref } from "vue";
 import SettingsContext from "./settings";
 import { DI_FILTERS } from "./blockTree";
 import { EditorView as CmEditorView } from "@codemirror/view";
+import FusionCommandContext from "./fusionCommand";
+import SidebarContext from "./sidebar";
 
 export type KeyBinding<P extends Array<any> = any[]> = {
   run: (...params: P) => boolean;
@@ -150,6 +152,8 @@ const KeymapContext = createContext(() => {
   const { registerSettingGroup } = SettingsContext.useContext()!;
   const schema = getPmSchema({ getBlockRef: blocksManager.getBlockRef });
   const openKeybindings = ref(false);
+  const { openFusionCommand } = FusionCommandContext.useContext()!;
+  const { sidePaneOpen, sidePaneBlockIds, sidePaneCurrentBlockId } = SidebarContext.useContext()!;
 
   const prosemirrorKeymap = ref<{ [p: string]: KeyBinding }>({
     "Mod-z": {
@@ -181,7 +185,7 @@ const KeymapContext = createContext(() => {
 
           const sel = view.state.selection;
           const docEnd = AllSelection.atEnd(view.state.doc);
-          const onRoot = di.block.id === tree.getRootBlockId();
+          const onRoot = tree.getRootBlockIds().includes(di.block.id);
 
           // 1. 在块末尾按 Enter，则在下方创建空块
           if (sel.eq(docEnd)) {
@@ -947,7 +951,49 @@ const KeymapContext = createContext(() => {
     },
   });
 
-  const globalKeymap = ref<{ [p: string]: SimpleKeyBinding }>({});
+  const globalKeymap = ref<{ [p: string]: SimpleKeyBinding }>({
+    "Mod-p": {
+      run: () => {
+        const tree = lastFocusedBlockTree.value;
+        const diId = lastFocusedDiId.value;
+        if (tree && diId) {
+          const view = tree.getEditorView(diId);
+          if (view instanceof PmEditorView) {
+            const sel = view.state.selection.content();
+            const text = sel.content.textBetween(0, sel.content.size);
+            openFusionCommand(text);
+            return true;
+          }
+        }
+        openFusionCommand("");
+        return true;
+      },
+      preventDefault: true,
+      stopPropagation: true,
+    },
+    "Mod-k": {
+      run: () => {
+        const tree = lastFocusedBlockTree.value;
+        const diId = lastFocusedDiId.value;
+        if (!tree || !diId) return false;
+
+        const di = tree.getDi(diId);
+        if (!di || !DI_FILTERS.isBlockDi(di)) return false;
+
+        sidePaneOpen.value = true;
+        const index = sidePaneBlockIds.value.indexOf(di.block.id);
+        if (index === -1) {
+          sidePaneBlockIds.value.push(di.block.id);
+          sidePaneCurrentBlockId.value = di.block.id;
+        } else {
+          sidePaneCurrentBlockId.value = sidePaneBlockIds.value[index];
+        }
+        return true;
+      },
+      preventDefault: true,
+      stopPropagation: true,
+    },
+  });
 
   const getProsemirrorKeybinding = (key: string) => {
     return prosemirrorKeymap.value[key];
@@ -1038,6 +1084,18 @@ const KeymapContext = createContext(() => {
       delete globalKeymap.value[from];
     }
   };
+
+  watch(
+    globalKeymap,
+    (value, _, onCleanup) => {
+      const handler = generateKeydownHandlerSimple(value);
+      document.addEventListener("keydown", handler);
+      onCleanup(() => {
+        document.removeEventListener("keydown", handler);
+      });
+    },
+    { immediate: true },
+  );
 
   // 设置面板
 

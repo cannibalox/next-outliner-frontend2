@@ -110,6 +110,11 @@ export const messages = {
         syncing: "同步中",
         disconnected: "同步失败",
       },
+      sidePane: {
+        remove: "从侧栏移除此项",
+        prev: "聚焦到上一项",
+        next: "聚焦到下一项",
+      },
       headerBar: {
         dailynoteNavigator: "每日笔记",
         pomodoro: "番茄钟",
@@ -267,8 +272,11 @@ export const messages = {
         title: "快捷键",
         description: "所有可用的快捷键列表",
         close: "关闭",
-        normal: {
-          groupName: "常用操作",
+        groups: {
+          normal: "常用操作",
+          inCodeBlock: "代码块内特有",
+        },
+        commands: {
           swapUp: "上移",
           swapDown: "下移",
           expand: "展开",
@@ -283,9 +291,15 @@ export const messages = {
           highlight: "高亮",
           insertBlockRef: "插入块引用",
           insertTag: "插入标签",
-        },
-        inCodeBlock: {
-          groupName: "代码块内特有",
+          toCodeblock: "转换为代码块",
+          undo: "撤销",
+          redo: "重做",
+          softBreak: "软换行",
+          openFusionCommand: "打开多功能面板",
+          openAndFocusToSidePane: "打开侧边栏并聚焦 / 关闭侧边栏",
+          moveSidePane: "移动侧边栏（到右侧 / 下方）",
+          addToFavorite: "添加到收藏",
+          addToSidePane: "添加到侧边栏",
         },
       },
     },
