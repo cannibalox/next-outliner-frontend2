@@ -63,6 +63,11 @@ let baseDoc: LoroDoc | undefined;
 let blockInfoMap: LoroMap<Record<string, BlockInfo>> | undefined;
 let blockDataDocs: Map<number, LoroDoc> | undefined;
 
+const normalizeWsUrl = (url: string) => {
+  if (url.startsWith("ws://") || url.startsWith("wss://")) return url;
+  return `wss://${url}`;
+};
+
 // 响应外界的 message，派发到各个处理函数
 addEventListener("message", (message) => {
   const msg = message.data as SyncWorkerInMsg;
@@ -136,7 +141,7 @@ const connect = (serverUrl_: string, location_: string, token_: string) => {
   (async () => {
     // XXX: refactor, 将 url params 放一起
     const wsNetwork = new WebsocketClientNetwork({ location, authorization: token });
-    wsSynchronizer = new LoroWebsocketSynchronizer(`ws://${serverUrl}`, wsNetwork);
+    wsSynchronizer = new LoroWebsocketSynchronizer(normalizeWsUrl(serverUrl), wsNetwork);
     wsSynchronizer.connect();
     wsSynchronizer.addLoroDoc(BLOCK_INFO_DOC_NAME, baseDoc);
     wsSynchronizer.on("docSynced", ({ docId, hasSyncEvent }) => {
