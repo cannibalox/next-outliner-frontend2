@@ -46,12 +46,12 @@
       </Transition>
     </div>
 
-    <div class="absolute z-10 top-3 right-2">
+    <div class="absolute z-10 top-2.5 right-2">
       <!-- More actions -->
       <Tooltip v-for="(button, index) in buttons" :key="index">
         <TooltipTrigger>
-          <Button variant="ghost" size="icon" :onClick="button.onClick">
-            <component :is="button.icon" class="size-5 stroke-[1.8]" />
+          <Button variant="ghost" class="size-7 p-0" :onClick="button.onClick">
+            <component :is="button.icon" class="size-4 stroke-[1.8]" />
           </Button>
         </TooltipTrigger>
         <TooltipContent>
@@ -125,9 +125,9 @@ const buttons: SidePaneButton[] = [
     icon: () => (
       <div>
         {sidePaneDir.value === "right" ? (
-          <ArrowDownFromLine class="size-5 stroke-[1.8]" />
+          <ArrowDownFromLine class="size-4 stroke-[1.8]" />
         ) : (
-          <ArrowRightFromLine class="size-5 stroke-[1.8]" />
+          <ArrowRightFromLine class="size-4 stroke-[1.8]" />
         )}
       </div>
     ),

@@ -19,12 +19,12 @@
             <MoreHorizontal />
           </div>
         </BlockContextMenu>
-        <div class="fold-button" v-if="!hideFoldButton" @click="handleClickFoldButton">
+        <div class="fold-button" v-if="!hideFoldButton" @click.stop="handleClickFoldButton">
           <Triangle></Triangle>
         </div>
       </div>
 
-      <div class="bullet shrink-0" v-if="!hideBullet" @click="handleClickBullet">
+      <div class="bullet shrink-0" v-if="!hideBullet" @click.stop="handleClickBullet">
         <Diamond class="diamond" v-if="hasOrIsMirrors" />
         <Circle class="circle" v-else />
       </div>
