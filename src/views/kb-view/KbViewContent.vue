@@ -3,7 +3,7 @@
   <HeaderBar />
   <!-- mr-1 是为了让滚动条和屏幕边缘留出一点空隙 -->
   <BlockTree
-    v-if="synced && mainRootBlockRef"
+    v-if="synced && rootBlockRef"
     class="h-[100vh] mr-1 ml-4"
     id="main"
     :style="{
@@ -11,7 +11,7 @@
       paddingBottom: sidePaneOpen && sidePaneDir === 'bottom' ? `${sidePaneHeight}px` : '0px',
       transition: enableSidePaneAnimation ? 'padding 500ms var(--tf)' : 'none',
     }"
-    :root-block-id="mainRootBlockRef.id"
+    :root-block-id="mainRootBlockId"
     :root-block-level="0"
     :padding-top="60"
     :enlarge-root-block="true"
@@ -99,7 +99,7 @@ const { sidePaneOpen, sidePaneDir, sidePaneWidth, sidePaneHeight, enableSidePane
   SidebarContext.useContext()!;
 const { synced, blocksManager } = BlocksContext.useContext()!;
 const { mainRootBlockId } = MainTreeContext.useContext()!;
-const mainRootBlockRef = shallowRef<Block | null>(null);
+const rootBlockRef = blocksManager.getBlockRef("root");
 const { openCreateNewTreeDialog, closeCreateNewTreeDialog } =
   CreateNewTreeDialogContext.useContext()!;
 
@@ -116,15 +116,6 @@ watch(synced, (newValue, oldValue) => {
     }
   }
 });
-
-watch(
-  mainRootBlockId,
-  (newVal) => {
-    const mainRootBlockRef2 = blocksManager.getBlockRef(newVal);
-    syncRef(mainRootBlockRef, mainRootBlockRef2, { direction: "rtl" });
-  },
-  { immediate: true },
-);
 
 const handleCloseR = (el: Element, done: () => void) => {
   if (!(el instanceof HTMLElement)) return;
