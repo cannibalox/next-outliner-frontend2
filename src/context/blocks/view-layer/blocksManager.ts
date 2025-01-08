@@ -795,7 +795,7 @@ export const createBlocksManager = (syncLayer: SyncLayer) => {
         fold: false,
         parentId: "root",
         childrenIds: [],
-        content: plainTextToTextContent("", schema),
+        content: plainTextToTextContent("This is a test block", schema),
         metadata: {},
       })
       .addBlock({
@@ -804,7 +804,7 @@ export const createBlocksManager = (syncLayer: SyncLayer) => {
         fold: false,
         parentId: "root",
         childrenIds: [fstChildId],
-        content: plainTextToTextContent("", schema),
+        content: plainTextToTextContent("👋 Welcome to Next Outliner!", schema),
         metadata: {},
       })
       .commit();
