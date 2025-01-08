@@ -40,6 +40,7 @@ import { mkPasteTextPlugin } from "../prosemirror/plugins/pasteText";
 import type { PmPluginCtx } from "../prosemirror/plugins/pluginContext";
 import { getPmSchema } from "../prosemirror/pmSchema";
 import FloatingMathInputContext from "@/context/floatingMathInput";
+import HistoryContext from "@/context/history";
 
 const props = defineProps<{
   blockTree?: BlockTree;
@@ -52,6 +53,7 @@ const props = defineProps<{
 
 const { blocksManager, blockEditor } = BlocksContext.useContext()!;
 const fmic = FloatingMathInputContext.useContext();
+const historyContext = HistoryContext.useContext();
 const taskQueue = useTaskQueue();
 const docJson = shallowRef<any | null>(null);
 const pmWrapper = ref<InstanceType<typeof ProseMirror> | null>(null);
@@ -60,7 +62,13 @@ const nodeViews: EditorProps["nodeViews"] = {
     return new MathInlineKatex(node, view, getPos, fmic);
   },
 };
-const schema = computed(() => getPmSchema({ getBlockRef: blocksManager.getBlockRef }));
+const schema = computed(() =>
+  getPmSchema({
+    pushHistoryItem: historyContext ? historyContext.pushHistoryItem : undefined,
+    getMainTree: props.blockTree ? () => props.blockTree! : undefined,
+    getBlockRef: blocksManager.getBlockRef,
+  }),
+);
 
 const onDocChanged = ({
   newDoc,
