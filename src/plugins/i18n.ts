@@ -17,6 +17,7 @@ export const messages = {
           connecting: "连接中",
           connSuccess: "连接成功",
           noKbServer: "没有知识库服务器",
+          loginFailed: "登录失败",
         },
         loginStatus: {
           idle: "空闲",
@@ -46,11 +47,13 @@ export const messages = {
           invalidServerUrl: "登陆失败",
           invalidPassword: "登陆失败",
           maxAttempts: "登陆失败",
+          cannotConnectToServer: "登陆失败",
         },
         errMsg: {
           invalidServerUrl: "URL 格式不正确",
           invalidPassword: "密码错误",
           maxAttempts: "达到最大尝试次数，请稍后再试",
+          cannotConnectToServer: "无法连接到服务器",
         },
       },
     },
@@ -270,6 +273,8 @@ export const messages = {
       kbManagement: {
         allKbs: "所有知识库",
         allKbsDescription: "你可以在这里创建新知识库，删除知识库，或修改已有知识库的信息",
+        noKbs: "🤔 没有知识库",
+        noKbsDescription: '点击右上角的"创建新知识库"按钮来创建你的第一个知识库',
         kbActions: {
           edit: "编辑",
           delete: "删除",

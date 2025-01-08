@@ -50,6 +50,19 @@
           <CardContent>
             <div class="space-y-2">
               <div
+                v-if="Object.keys(kbs).length === 0"
+                class="flex flex-col items-center justify-center py-8 text-center space-y-2"
+              >
+                <div class="text-2xl font-semibold text-muted-foreground">
+                  {{ $t("adminDashboard.kbManagement.noKbs") }}
+                </div>
+                <div class="text-sm text-muted-foreground">
+                  {{ $t("adminDashboard.kbManagement.noKbsDescription") }}
+                </div>
+              </div>
+
+              <div
+                v-else
                 v-for="(info, location) in kbs"
                 :key="location"
                 class="flex items-center justify-between p-4 border rounded-lg"
@@ -82,23 +95,14 @@
 
 <script setup lang="ts">
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { LogOut, Pencil, Trash2, Plus, RefreshCcw } from "lucide-vue-next";
-import ServerInfoContext from "@/context/serverInfo";
-import { onMounted, ref, watch } from "vue";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { KbInfoContext } from "@/context/kbinfo";
-import NewKbDialog from "./NewKbDialog.vue";
+import ServerInfoContext from "@/context/serverInfo";
+import { LogOut, Pencil, Plus, RefreshCcw, Trash2 } from "lucide-vue-next";
+import { watch } from "vue";
 import DeleteKbDialog from "./DeleteKbDialog.vue";
+import NewKbDialog from "./NewKbDialog.vue";
 
 const { serverUrl, logout } = ServerInfoContext.useContext()!;
 const { kbs, refreshKbList } = KbInfoContext.useContext()!;
