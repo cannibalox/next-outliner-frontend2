@@ -24,8 +24,7 @@ export default defineConfig({
   ],
   worker: {
     format: "es",
-    // @ts-expect-error
-    plugins: [wasm(), topLevelAwait()],
+    plugins: () => [vue(), vueJsx(), wasm(), topLevelAwait()],
   },
   resolve: {
     alias: {

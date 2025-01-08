@@ -281,6 +281,8 @@ export const messages = {
           italic: "斜体",
           code: "代码",
           highlight: "高亮",
+          insertBlockRef: "插入块引用",
+          insertTag: "插入标签",
         },
         inCodeBlock: {
           groupName: "代码块内特有",

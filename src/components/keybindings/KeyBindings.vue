@@ -10,7 +10,7 @@
         <DrawerDescription>{{ $t("kbView.keybindings.description") }}</DrawerDescription>
       </DrawerHeader>
 
-      <div class="p-4 space-y-4">
+      <div class="p-4 space-y-4 max-h-[calc(90vh-150px)] overflow-y-auto">
         <div v-for="(group, groupName) in keyBindings" :key="groupName" class="space-y-2">
           <h3 class="font-medium text-muted-foreground text-sm">{{ groupName }}</h3>
           <div class="space-y-1">
@@ -62,6 +62,8 @@ const keyBindings = {
     { key: "Command/Ctrl + ↑", description: t("kbView.keybindings.normal.collapse") },
     { key: "Tab", description: t("kbView.keybindings.normal.indent") },
     { key: "Shift + Tab", description: t("kbView.keybindings.normal.outdent") },
+    { key: "@", description: t("kbView.keybindings.normal.insertBlockRef") },
+    { key: "#", description: t("kbView.keybindings.normal.insertTag") },
     { key: "Command/Ctrl + m", description: t("kbView.keybindings.normal.insertInlineMath") },
     {
       key: "Command/Ctrl + Shift + m",
