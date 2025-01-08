@@ -532,17 +532,18 @@ const handlePointerMove = useThrottleFn((e: PointerEvent) => {
     }
 
     const hoveredBlockItem = getHoveredElementWithClass(e.target, "block-item");
+
     const hoveredItemId = hoveredBlockItem?.dataset["itemId"];
     // 指针悬停的块的缩进层级，相对于 rootBlockLevel
     const hoveredBlockLevel = parseInt(hoveredBlockItem?.dataset["blockLevel"]!);
     if (!hoveredItemId) return clearDraggingDropPos();
 
+    // 禁止自己拖动到自己上
+    if (hoveredBlockItem.classList.contains("selected")) return clearDraggingDropPos();
+
     // 指针悬停处的缩进层级，相对 rootBlockLevel，不一定等于 hoveredBlockLevel！
     const { width, rightMargin } = getIndentSize();
     const pointerLevel = Math.floor((e.x + rightMargin) / (width + rightMargin));
-
-    // 正在被拖曳的块
-    const draggingBlocks = dndCtx.selectedBlockIds.value;
 
     // 判断是希望插到悬停的块上方还是下方
     const rect = hoveredBlockItem.getBoundingClientRect();
@@ -550,22 +551,18 @@ const handlePointerMove = useThrottleFn((e: PointerEvent) => {
     if (upperHalf) {
       const diAbove = getDiAbove(hoveredItemId, DI_FILTERS.isBlockDi);
       if (!diAbove || !DI_FILTERS.isBlockDi(diAbove[0])) return clearDraggingDropPos();
-      const blockAbove = diAbove[0].block;
-      const pathAboce = blocksManager.getBlockPath(blockAbove.id);
-      if (!pathAboce) return clearDraggingDropPos();
-      const levelAboce = pathAboce.length - 1 - props.rootBlockLevel;
+      const domAbove = getDomOfDi(diAbove[0].itemId)?.querySelector(".block-item");
+      if (!(domAbove instanceof HTMLElement)) return clearDraggingDropPos();
+      const levelAbove = parseInt(domAbove.dataset["blockLevel"]!);
       // 禁止将自己拖动到自己上
-      for (const id of draggingBlocks.allNonFolded) {
-        if (pathAboce.find((b) => b.id === id)) return clearDraggingDropPos();
-      }
-      const aboveFoldAndHasChild = blockAbove.fold && blockAbove.childrenIds.length > 0;
+      const aboveFold = domAbove.classList.contains("fold");
+      const aboveHasChild = domAbove.classList.contains("hasChildren");
 
-      const clippedLevel = clip(
-        pointerLevel,
-        // 如果 pred 折叠了，并且有孩子，则不允许拖成 pred 的子级
-        aboveFoldAndHasChild ? levelAboce : levelAboce + 1,
-        hoveredBlockLevel,
-      );
+      // 如果 pred 折叠了，并且有孩子，则不允许拖成 pred 的子级
+      const clipFrom = aboveFold && aboveHasChild ? levelAbove : levelAbove + 1;
+      const clipTo = hoveredBlockLevel;
+      const clippedLevel = clip(pointerLevel, clipFrom, clipTo);
+
       dndCtx.draggingDropPos.value = {
         itemId: diAbove[0].itemId,
         relIndent: clippedLevel * (width + rightMargin) + width,
@@ -574,32 +571,27 @@ const handlePointerMove = useThrottleFn((e: PointerEvent) => {
     } else {
       let clippedLevel;
       const diBelow = getDiBelow(hoveredItemId, DI_FILTERS.isBlockDi);
-      const hoveredFoldAndHasChild =
-        hoveredBlockItem.classList.contains("fold") &&
-        hoveredBlockItem.classList.contains("hasChildren");
+      const hoveredFold = hoveredBlockItem.classList.contains("fold");
+      const hoveredHasChild = hoveredBlockItem.classList.contains("hasChildren");
       if (!diBelow) {
-        // 最后一个块
-        clippedLevel = clip(
-          pointerLevel,
-          hoveredFoldAndHasChild ? hoveredBlockLevel : hoveredBlockLevel + 1,
-          1,
-        );
+        const clipFrom = hoveredFold && hoveredHasChild ? hoveredBlockLevel : hoveredBlockLevel + 1;
+        const clipTo = 1;
+        clippedLevel = clip(pointerLevel, clipFrom, clipTo);
       } else {
         if (!DI_FILTERS.isBlockDi(diBelow[0])) return clearDraggingDropPos();
-        const blockBelow = diBelow[0].block;
-        const belowPath = blocksManager.getBlockPath(blockBelow.id);
-        if (!belowPath) return clearDraggingDropPos();
-        const belowLevel = belowPath.length - 1 - props.rootBlockLevel;
-        clippedLevel = clip(
-          pointerLevel,
-          hoveredFoldAndHasChild ? hoveredBlockLevel : hoveredBlockLevel + 1,
-          belowLevel,
+        const domBelow = getDomOfDi(diBelow[0].itemId)?.querySelector(".block-item");
+        if (!(domBelow instanceof HTMLElement)) return clearDraggingDropPos();
+        const belowLevel = parseInt(domBelow.dataset["blockLevel"]!);
+        const clipFrom = hoveredFold && hoveredHasChild ? hoveredBlockLevel : hoveredBlockLevel + 1;
+        const clipTo = belowLevel;
+        clippedLevel = clip(pointerLevel, clipFrom, clipTo);
+        console.log(
+          `pointerLevel: ${pointerLevel}, clipFrom: ${clipFrom}, clipTo: ${clipTo}, clippedLevel: ${clippedLevel}`,
         );
       }
       dndCtx.draggingDropPos.value = {
         itemId: hoveredItemId,
-        relIndent:
-          (clippedLevel - (props.enlargeRootBlock ? 1 : 0)) * (width + rightMargin) + width,
+        relIndent: clippedLevel * (width + rightMargin) + width,
         absLevel: clippedLevel + props.rootBlockLevel, // 加上 rootBlockLevel 才是绝对层级
       };
     }
