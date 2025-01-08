@@ -24,7 +24,7 @@ export default defineConfig({
   ],
   worker: {
     format: "es",
-    plugins: () => [vue(), vueJsx(), wasm(), topLevelAwait()],
+    plugins: () => [wasm(), topLevelAwait()],
   },
   resolve: {
     alias: {

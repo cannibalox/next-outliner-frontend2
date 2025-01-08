@@ -14,7 +14,7 @@ import { plainTextToTextContent } from "@/utils/pm";
 import dayjs from "dayjs";
 import { nanoid } from "nanoid";
 import { Node } from "prosemirror-model";
-import { computed, ref, type ShallowRef, shallowRef, toRaw } from "vue";
+import { ref, type ShallowRef, shallowRef, toRaw } from "vue";
 import { z } from "zod";
 import type { SyncLayer } from "../sync-layer/syncLayer";
 import useBlockTransaction from "./blockTransaction";

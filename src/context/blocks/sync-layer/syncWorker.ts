@@ -3,10 +3,10 @@ import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import type { BlockInfo } from "@/common/type-and-schemas/block/block-info";
 import { timeout } from "@/utils/time";
 import { LoroDoc, type LoroMap } from "loro-crdt";
-import { type BlockOrigin } from "../view-layer/blocksManager";
 import { WebsocketClientNetwork } from "./wsClientNetwork";
 import { LoroWebsocketSynchronizer } from "./wsSynchronizer";
 import { BLOCK_DATA_DOC_NAME_PREFIX, BLOCK_INFO_DOC_NAME, DATA_MAP_NAME } from "@/common/constants";
+import { type BlockOrigin } from "@/common/type-and-schemas/block/block-origin";
 
 ///////////////////////////////////////////////////////////////////
 // syncWorker 是同步层的实现，负责与服务端通信
