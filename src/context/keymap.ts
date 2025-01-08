@@ -149,6 +149,7 @@ const KeymapContext = createContext(() => {
   const { blockEditor, blocksManager } = BlocksContext.useContext()!;
   const { registerSettingGroup } = SettingsContext.useContext()!;
   const schema = getPmSchema({ getBlockRef: blocksManager.getBlockRef });
+  const openKeybindings = ref(false);
 
   const prosemirrorKeymap = ref<{ [p: string]: KeyBinding }>({
     "Mod-z": {
@@ -1041,6 +1042,7 @@ const KeymapContext = createContext(() => {
   // 设置面板
 
   const ctx = {
+    openKeybindings,
     prosemirrorKeymap,
     codemirrorKeymap,
     globalKeymap,

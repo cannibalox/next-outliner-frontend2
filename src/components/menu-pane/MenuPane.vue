@@ -62,6 +62,7 @@ import type { Block } from "@/context/blocks/view-layer/blocksManager";
 import MenubarContext from "@/context/menubar";
 import BlockTree from "../BlockTree.vue";
 import BlockTreeContext from "@/context/blockTree";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 
 const { menuPaneOpen } = MenubarContext.useContext()!;
 const { favoriteBlocks, favoriteBlockIds } = FavoriteContext.useContext()!;
@@ -88,7 +89,7 @@ const handleClickFavoriteBlock = (block: Block) => {
 };
 
 const handleRemoveFavoriteBlock = (block: Block) => {
-  favoriteBlockIds.value = favoriteBlockIds.value.filter((id) => id !== block.id);
+  favoriteBlockIds.value = (favoriteBlockIds.value as BlockId[]).filter((id) => id !== block.id);
 };
 </script>
 

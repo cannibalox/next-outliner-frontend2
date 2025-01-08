@@ -102,6 +102,7 @@ import {
   FolderInput,
   HelpCircle,
   History,
+  Keyboard,
   LogOut,
   Menu,
   Moon,
@@ -120,6 +121,7 @@ import HeaderBarItem from "./HeaderBarItem.vue";
 import ServerInfoContext from "@/context/serverInfo";
 import HistoryContext from "@/context/history";
 import LeftButtons from "./LeftButtons.vue";
+import KeymapContext from "@/context/keymap";
 
 const { sidePaneOpen, sidePaneDir, sidePaneWidth, enableSidePaneAnimation } =
   SidebarContext.useContext()!;
@@ -136,6 +138,7 @@ const { logout } = ServerInfoContext.useContext()!;
 const openImporter = ref(false);
 const { t } = useI18n();
 const { goPrev, goNext, canGoPrev, canGoNext } = HistoryContext.useContext()!;
+const { openKeybindings } = KeymapContext.useContext()!;
 
 const handleClickPathSegment = (blockId: BlockId) => {
   mainRootBlockId.value = blockId;
@@ -263,6 +266,11 @@ const moreOptions: HeaderBarItemType[] = [
     icon: Settings,
     label: () => t("kbView.headerBar.settings"),
     onClick: () => (openSettingsPanel.value = true),
+  },
+  {
+    icon: Keyboard,
+    label: () => t("kbView.headerBar.keybindings"),
+    onClick: () => (openKeybindings.value = true),
   },
   {
     icon: HelpCircle,

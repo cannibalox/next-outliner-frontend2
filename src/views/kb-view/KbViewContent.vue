@@ -69,6 +69,8 @@
   <!-- 属性检视器 -->
   <FieldValueInspector />
   <!-- <ImageEditor /> -->
+  <!-- keybinding 展示 -->
+  <KeyBindings />
 </template>
 
 <script setup lang="ts">
@@ -93,6 +95,7 @@ import SidebarContext from "../../context/sidebar";
 import AttachmentsManager from "@/components/attachments-mgr/AttachmentsManager.vue";
 import type { Block } from "@/context/blocks/view-layer/blocksManager";
 import { syncRef } from "@vueuse/core";
+import KeyBindings from "@/components/keybindings/KeyBindings.vue";
 // import ImageEditor from "@/components/image-editor/ImageEditor.vue";
 
 const { sidePaneOpen, sidePaneDir, sidePaneWidth, sidePaneHeight, enableSidePaneAnimation } =

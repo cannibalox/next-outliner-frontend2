@@ -132,6 +132,7 @@ export const messages = {
         timeMachine: "时光机",
         help: "帮助文档",
         exit: "退出",
+        keybindings: "查看 & 编辑快捷键",
       },
       command: {
         deleteBlock: "删除块",
@@ -261,6 +262,29 @@ export const messages = {
       history: {
         goToPrev: "后退，右键查看所有历史项目",
         goToNext: "前进，右键查看所有历史项目",
+      },
+      keybindings: {
+        title: "快捷键",
+        description: "所有可用的快捷键列表",
+        close: "关闭",
+        normal: {
+          groupName: "常用操作",
+          swapUp: "上移",
+          swapDown: "下移",
+          expand: "展开",
+          collapse: "折叠",
+          indent: "增加缩进",
+          outdent: "减少缩进",
+          insertInlineMath: "插入行内数学公式",
+          insertBlockMath: "插入块级数学公式",
+          bold: "加粗",
+          italic: "斜体",
+          code: "代码",
+          highlight: "高亮",
+        },
+        inCodeBlock: {
+          groupName: "代码块内特有",
+        },
       },
     },
     adminDashboard: {
