@@ -69,10 +69,7 @@ const BacklinksContext = createContext(() => {
     },
     defaultValue: putNewBlockAtDefaultValue,
     value: useWritableComputedRef(putNewBlockAt),
-    componentType: {
-      type: "textInput",
-      validator: blockIdValidator,
-    },
+    componentType: { type: "blockIdInput" },
   });
 
   // 暂时没有考虑

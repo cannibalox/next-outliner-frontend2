@@ -1,7 +1,7 @@
 <template>
   <Popover v-model:open="open">
     <PopoverContent
-      class="ref-suggestions-content py-2 pb-0 px-1 max-h-[300px] max-w-[300px] overflow-hidden"
+      class="ref-suggestions-content z-[999] py-2 pb-0 px-1 max-h-[300px] max-w-[300px] overflow-hidden"
       trap-focus
       tabindex="-1"
       @keydown="handleKeydown"
