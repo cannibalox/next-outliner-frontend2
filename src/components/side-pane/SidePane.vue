@@ -50,6 +50,7 @@
         </Tooltip>
       </div>
     </div>
+
     <BlockTree
       id="side-pane"
       class="h-full"
@@ -61,6 +62,7 @@
       :show-potential-links="false"
       :padding-top="0"
     ></BlockTree>
+
     <!-- drag handler -->
     <div
       v-if="sidePaneDir === 'bottom'"
@@ -114,27 +116,6 @@ const {
   dir,
 } = SidebarContext.useContext()!;
 
-const buttons: SidePaneButton[] = [
-  {
-    icon: () => (
-      <div>
-        {sidePaneDir.value === "right" ? (
-          <ArrowDownFromLine class="size-4 stroke-[1.8]" />
-        ) : (
-          <ArrowRightFromLine class="size-4 stroke-[1.8]" />
-        )}
-      </div>
-    ),
-    label: () => (sidePaneDir.value === "right" ? "侧栏移动到底部" : "侧栏移动到右侧"),
-    onClick: () => (sidePaneDir.value = sidePaneDir.value === "right" ? "bottom" : "right"),
-  },
-  {
-    icon: X,
-    label: () => "关闭侧栏",
-    onClick: () => (sidePaneOpen.value = false),
-  },
-];
-
 const handleMouseMove = (e: MouseEvent) => {
   if (sidePaneDir.value === "right") {
     sidePaneWidth.value = window.innerWidth - e.x;
@@ -173,27 +154,5 @@ const handleLeave = (el: Element, done: () => void) => {
     },
   );
   animation.onfinish = done;
-};
-
-// 进入动画
-const handleEnter = (el: Element, done: () => void) => {
-  if (!(el instanceof HTMLElement)) return;
-  const animation = el.animate(
-    [
-      {
-        opacity: 0,
-        transform: dir.value === "right" ? "translateX(100%)" : "translateX(-100%)",
-      },
-      { opacity: 1, transform: "translateX(0)" },
-    ],
-    {
-      duration: 300,
-      delay: 100,
-      easing: "cubic-bezier(0.4, 0, 0.2, 1)",
-    },
-  );
-  animation.onfinish = () => {
-    done();
-  };
 };
 </script>

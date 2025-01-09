@@ -237,7 +237,7 @@ const moveBlockLeaveRef: CommandExec = (test, blockId, event) => {
 const addToSidePane: CommandExec = (test, blockId) => {
   const notInSidePane = !!blockId && !sidePaneBlockIds.value.includes(blockId);
   if (!test && notInSidePane) {
-    sidePaneBlockIds.value.push(blockId);
+    sidePaneBlockIds.value = [...sidePaneBlockIds.value, blockId];
   }
   return !!blockId && notInSidePane;
 };

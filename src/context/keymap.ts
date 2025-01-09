@@ -983,7 +983,7 @@ const KeymapContext = createContext(() => {
         sidePaneOpen.value = true;
         const index = sidePaneBlockIds.value.indexOf(di.block.id);
         if (index === -1) {
-          sidePaneBlockIds.value.push(di.block.id);
+          sidePaneBlockIds.value = [...sidePaneBlockIds.value, di.block.id];
           sidePaneCurrentBlockId.value = di.block.id;
         } else {
           sidePaneCurrentBlockId.value = sidePaneBlockIds.value[index];
