@@ -52,7 +52,7 @@
     </div>
 
     <div
-      class="text-center flex-grow flex flex-col items-center justify-center -mt-16"
+      class="text-center flex-grow flex flex-col items-center justify-center"
       v-if="sidePaneBlockIds.length === 0"
     >
       <p class="text-2xl font-semibold text-muted-foreground">{{ $t("kbView.sidePane.empty") }}</p>
