@@ -147,7 +147,7 @@ import { Check, CircleCheck, Loader2, LoaderCircle, RefreshCcw, X } from "lucide
 import { ref } from "vue";
 import { z } from "zod";
 
-const { serverUrl, buildTokenKey } = ServerInfoContext.useContext()!;
+const { serverUrl, buildKbEditorTokenKey: buildTokenKey } = ServerInfoContext.useContext()!;
 const password = ref<string>("");
 const selectedKbLocation = ref<string | undefined>(undefined);
 const { kbs, refreshKbList } = KbInfoContext.useContext()!;

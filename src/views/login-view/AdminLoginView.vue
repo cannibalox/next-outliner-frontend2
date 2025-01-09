@@ -67,7 +67,7 @@ import { timeout } from "@/utils/time";
 import router from "@/router";
 import ServerInfoContext from "@/context/serverInfo";
 
-const { serverUrl, token } = ServerInfoContext.useContext()!;
+const { serverUrl, buildAdminTokenKey: buildTokenKey } = ServerInfoContext.useContext()!;
 const password = ref("");
 const { t } = useI18n();
 const loginStatus = ref<
@@ -101,7 +101,11 @@ const login = async () => {
   ]);
   if (resp.success) {
     loginStatus.value = "loginSuccess";
-    token.value = resp.data.token;
+    // 不要直接写 token
+    // 因为此时 params 还没更新，token 的 key 还没生成
+    const tokenKey = buildTokenKey(serverUrl.value);
+    localStorage.setItem(tokenKey, resp.data.token);
+    console.log("tokenKey", tokenKey, resp.data.token, localStorage.getItem(tokenKey));
     setTimeout(() => {
       // 2s 后跳转到 dashboard
       const p = encodeURIComponent(url);

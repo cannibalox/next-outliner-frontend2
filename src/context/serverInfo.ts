@@ -33,8 +33,17 @@ export const ServerInfoContext = createContext(() => {
   // token 存在 localStorage 中
   // 但存储的键需要根据 serverUrl 和 location 生成
   // 因此我们监听 serverUrl 和 location，并从 localStorage 中获取 token
-  const buildTokenKey = (serverUrl: string, location: string) => `${serverUrl}-${location}-token`;
-  const tokenKey = computed(() => buildTokenKey(params.value!.serverUrl!, params.value!.location!));
+  const buildAdminTokenKey = (serverUrl: string) => `${serverUrl}-admin-token`;
+  const buildKbEditorTokenKey = (serverUrl: string, location: string) =>
+    `${serverUrl}-${location}-token`;
+  const tokenKey = computed(() => {
+    const serverUrl = params.value?.serverUrl;
+    const location = params.value?.location;
+    if (serverUrl && !location)
+      return buildAdminTokenKey(serverUrl); // XXX 更详细的检查
+    else if (serverUrl && location) return buildKbEditorTokenKey(serverUrl, location);
+    else return null;
+  });
   const token = useLocalStorage2(tokenKey, "");
 
   const extractTokenPayload = (token: string) => {
@@ -100,7 +109,8 @@ export const ServerInfoContext = createContext(() => {
 
   const ctx = {
     token,
-    buildTokenKey,
+    buildKbEditorTokenKey,
+    buildAdminTokenKey,
     tokenPayload,
     extractTokenPayload,
     kbPrefix,

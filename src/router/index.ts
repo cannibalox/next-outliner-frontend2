@@ -30,15 +30,21 @@ const router = createRouter({
       path: "/admin-dashboard/:serverUrl",
       component: AdminDashboard,
       beforeEnter: (to, from, next) => {
-        const serverInfoContext = globalThis.getServerInfoContext();
-        const tokenPayload = serverInfoContext?.tokenPayload?.value;
+        const {
+          extractTokenPayload,
+          buildAdminTokenKey: buildTokenKey,
+          logout,
+        } = globalThis.getServerInfoContext()!;
         const targetServerUrl = to.params.serverUrl as string;
+        const tokenKey = buildTokenKey(targetServerUrl);
+        const token = localStorage.getItem(tokenKey);
+        const tokenPayload = token ? extractTokenPayload(token) : null;
         if (
           !tokenPayload ||
           tokenPayload.role !== "admin" ||
           tokenPayload.serverUrl !== targetServerUrl
         ) {
-          serverInfoContext?.logout();
+          logout();
           next({ path: "/login/admin" });
         } else {
           next();
@@ -49,7 +55,11 @@ const router = createRouter({
       path: "/kb/:serverUrl/:location/:rootBlockId?/:focusedBlockId?",
       component: KbView,
       beforeEnter: (to, from, next) => {
-        const { extractTokenPayload, buildTokenKey, logout } = globalThis.getServerInfoContext()!;
+        const {
+          extractTokenPayload,
+          buildKbEditorTokenKey: buildTokenKey,
+          logout,
+        } = globalThis.getServerInfoContext()!;
         const targetServerUrl = to.params.serverUrl as string;
         const targetLocation = to.params.location as string;
         const tokenKey = buildTokenKey(targetServerUrl, targetLocation);
