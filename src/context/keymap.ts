@@ -150,7 +150,6 @@ const KeymapContext = createContext(() => {
   const { lastFocusedBlockTree, lastFocusedDiId } = LastFocusContext.useContext()!;
   const { blockEditor, blocksManager } = BlocksContext.useContext()!;
   const { registerSettingGroup } = SettingsContext.useContext()!;
-  const schema = getPmSchema({ getBlockRef: blocksManager.getBlockRef });
   const openKeybindings = ref(false);
   const { openFusionCommand } = FusionCommandContext.useContext()!;
   const { addToSidePane } = SidebarContext.useContext()!;
@@ -184,6 +183,7 @@ const KeymapContext = createContext(() => {
           if (!(view instanceof PmEditorView) || !di || !DI_FILTERS.isBlockDi(di)) return;
 
           const sel = view.state.selection;
+          const schema = view.state.schema;
           const docEnd = AllSelection.atEnd(view.state.doc);
           const onRoot = tree.getRootBlockIds().includes(di.block.id);
 
@@ -266,7 +266,7 @@ const KeymapContext = createContext(() => {
     },
     "Shift-Enter": {
       run: (state: EditorState, dispatch: EditorView["dispatch"]) => {
-        const brNode = schema.nodes.hardBreak.create();
+        const brNode = state.schema.nodes.hardBreak.create();
         const tr = state.tr.replaceSelectionWith(brNode);
         dispatch(tr);
         return true;
@@ -291,6 +291,7 @@ const KeymapContext = createContext(() => {
           const focusNext = diAbove?.[0].itemId || diBelow?.[0].itemId;
 
           const sel = view.state.selection;
+          const schema = view.state.schema;
           // 1. 如果选中了东西，则执行默认逻辑（删除选区）
           if (!sel.empty) return;
 
@@ -362,6 +363,8 @@ const KeymapContext = createContext(() => {
         const view = tree.getEditorView(diId);
         const di = tree.getDi(diId);
         if (!(view instanceof PmEditorView) || !di || !DI_FILTERS.isBlockDi(di)) return false;
+
+        const schema = view.state.schema;
 
         const diAbove = tree.getDiAbove(diId, DI_FILTERS.isBlockDi);
         const diBelow = tree.getDiBelow(diId, DI_FILTERS.isBlockDi);
@@ -631,6 +634,7 @@ const KeymapContext = createContext(() => {
     "Mod-m": {
       run: (state, dispatch, view) => {
         if (dispatch == null) return false;
+        const schema = view.state.schema;
         const node = schema.nodes.mathInline.create({ src: "" });
         const tr = state.tr.replaceSelectionWith(node);
         const pos = tr.doc.resolve(
@@ -733,22 +737,38 @@ const KeymapContext = createContext(() => {
       stopPropagation: true,
     },
     "Mod-b": {
-      run: toggleMark(schema.marks.bold),
+      run: (state, dispatch, view) => {
+        const schema = view.state.schema;
+        return toggleMark(schema.marks.bold)(state, dispatch, view);
+      },
       preventDefault: true,
       stopPropagation: true,
     },
     "Mod-i": {
-      run: toggleMark(schema.marks.italic),
+      run: (state, dispatch, view) => {
+        const schema = view.state.schema;
+        return toggleMark(schema.marks.italic)(state, dispatch, view);
+      },
       preventDefault: true,
       stopPropagation: true,
     },
     "Mod-`": {
-      run: toggleMark(schema.marks.code),
+      run: (state, dispatch, view) => {
+        const schema = view.state.schema;
+        return toggleMark(schema.marks.code)(state, dispatch, view);
+      },
       preventDefault: true,
       stopPropagation: true,
     },
     "Mod-=": {
-      run: toggleMark(schema.marks.highlight, { bg: "bg4" }),
+      run: (state: EditorState, dispatch: EditorView["dispatch"], view: EditorView) => {
+        const schema = view.state.schema;
+        toggleMark(schema.marks.highlight, { bg: "bg4" })(state, dispatch, view);
+        const sel = view.state.selection;
+        const newSel = TextSelection.near(sel.$to);
+        dispatch(view.state.tr.setSelection(newSel));
+        return true;
+      },
       preventDefault: true,
       stopPropagation: true,
     },

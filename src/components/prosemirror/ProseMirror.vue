@@ -7,7 +7,13 @@ import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import BlockTreeContext, { type BlockTree } from "@/context/blockTree";
 import BlocksContext from "@/context/blocks/blocks";
 import HistoryContext from "@/context/history";
+import ImagesContext from "@/context/images";
+import KeymapContext from "@/context/keymap";
+import LastFocusContext from "@/context/lastFocus";
+import PasteDialogContext from "@/context/pasteDialog";
+import PathsContext from "@/context/paths";
 import RefSuggestionsContext from "@/context/refSuggestions";
+import type { DisplayItemId } from "@/utils/display-item";
 import { Node, Schema } from "prosemirror-model";
 import { EditorState, Plugin, Selection } from "prosemirror-state";
 import { type EditorProps, EditorView } from "prosemirror-view";
@@ -17,13 +23,6 @@ import { mkHighlightMatchesPlugin } from "./plugins/highlightMatches";
 import { mkHighlightRefsPlugin } from "./plugins/highlightRefs";
 import { mkListenDocChangedPlugin } from "./plugins/listenDocChange";
 import type { PmPluginCtx } from "./plugins/pluginContext";
-import { getPmSchema } from "./pmSchema";
-import type { DisplayItemId } from "@/utils/display-item";
-import LastFocusContext from "@/context/lastFocus";
-import PathsContext from "@/context/paths";
-import ImagesContext from "@/context/images";
-import KeymapContext from "@/context/keymap";
-import PasteDialogContext from "@/context/pasteDialog";
 
 const props = withDefaults(
   defineProps<{

@@ -2,7 +2,7 @@ import { getBasename } from "@/common/helper-functions/path";
 import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import type { Block } from "@/context/blocks/view-layer/blocksManager";
 import type { BlockTree } from "@/context/blockTree";
-import type { MarkSpec, NodeSpec, SchemaSpec } from "prosemirror-model";
+import type { MarkSpec, NodeSpec } from "prosemirror-model";
 import { Schema } from "prosemirror-model";
 import { watch, type Ref } from "vue";
 
@@ -191,7 +191,7 @@ export const getPmSchema = (ctx: SchemaCtx) => {
         group: "inline",
         selectable: false,
         parseDOM: [{ tag: "br" }],
-        toDOM() {
+        toDOM: () => {
           return ["br"];
         },
       },

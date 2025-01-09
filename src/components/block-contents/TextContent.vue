@@ -29,7 +29,6 @@ import type { DisplayItemId } from "@/utils/display-item";
 import "katex/dist/katex.css";
 import { inputRules } from "prosemirror-inputrules";
 import type { EditorProps, EditorViewCustomEvents } from "prosemirror-view";
-import "prosemirror-view/style/prosemirror.css";
 import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { openRefSuggestions } from "../prosemirror/input-rules/openRefSuggestions";
 import { turnToCodeBlock } from "../prosemirror/input-rules/turnToCodeblock";
@@ -181,31 +180,31 @@ onUnmounted(() => {
 
     // 高亮样式
     span[bg="bg1"] {
-      background-color: var(--highlight-1);
+      background-color: var(--highlight-blue);
     }
 
     span[bg="bg2"] {
-      background-color: var(--highlight-2);
+      background-color: var(--highlight-green);
     }
 
     span[bg="bg3"] {
-      background-color: var(--highlight-3);
+      background-color: var(--highlight-red);
     }
 
     span[bg="bg4"] {
-      background-color: var(--highlight-4);
+      background-color: var(--highlight-yellow);
     }
 
     span[bg="bg5"] {
-      background-color: var(--highlight-5);
+      background-color: var(--highlight-gray);
     }
 
     span[bg="bg6"] {
-      background-color: var(--highlight-6);
+      background-color: var(--highlight-orange);
     }
 
     span[bg="bg7"] {
-      background-color: var(--highlight-7);
+      background-color: var(--highlight-purple);
     }
 
     // 行内代码块样式

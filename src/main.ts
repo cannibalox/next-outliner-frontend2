@@ -6,6 +6,7 @@ import { messages } from "./plugins/i18n";
 import router from "./router";
 import App from "./views/App.vue";
 import { taskQueuePlugin } from "./plugins/taskQueue";
+import "prosemirror-view/style/prosemirror.css";
 
 const startApp = async () => {
   const i18n = createI18n({
