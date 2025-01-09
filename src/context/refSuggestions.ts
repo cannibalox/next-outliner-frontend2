@@ -16,7 +16,7 @@ const RefSuggestionsContext = createContext(() => {
     set: (val) => !val && (showPos.value = null),
   });
   const query = ref<string>("");
-  const cb = ref<((blockId: BlockId | null) => void) | null>(null);
+  const cb = ref<((blockId: BlockId | null, close: () => void) => void) | null>(null);
   const focusItemIndex = ref<number>(0);
   const suggestions = ref<ShallowRef<Block>[]>([]);
   const suppressMouseOver = ref(false); // 是否抑制 mouseover 事件
@@ -46,7 +46,7 @@ const RefSuggestionsContext = createContext(() => {
 
   const openRefSuggestions = (
     _showPos: { x: number; y: number },
-    _cb: (blockId: BlockId | null) => void,
+    _cb: (blockId: BlockId | null, close: () => void) => void,
     _initQuery?: string,
   ) => {
     cb.value = _cb;

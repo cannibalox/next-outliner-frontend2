@@ -153,7 +153,7 @@ const KeymapContext = createContext(() => {
   const schema = getPmSchema({ getBlockRef: blocksManager.getBlockRef });
   const openKeybindings = ref(false);
   const { openFusionCommand } = FusionCommandContext.useContext()!;
-  const { sidePaneOpen, sidePaneBlockIds, sidePaneCurrentBlockId } = SidebarContext.useContext()!;
+  const { addToSidePane } = SidebarContext.useContext()!;
 
   const prosemirrorKeymap = ref<{ [p: string]: KeyBinding }>({
     "Mod-z": {
@@ -980,14 +980,7 @@ const KeymapContext = createContext(() => {
         const di = tree.getDi(diId);
         if (!di || !DI_FILTERS.isBlockDi(di)) return false;
 
-        sidePaneOpen.value = true;
-        const index = sidePaneBlockIds.value.indexOf(di.block.id);
-        if (index === -1) {
-          sidePaneBlockIds.value = [...sidePaneBlockIds.value, di.block.id];
-          sidePaneCurrentBlockId.value = di.block.id;
-        } else {
-          sidePaneCurrentBlockId.value = sidePaneBlockIds.value[index];
-        }
+        addToSidePane(di.block.id);
         return true;
       },
       preventDefault: true,

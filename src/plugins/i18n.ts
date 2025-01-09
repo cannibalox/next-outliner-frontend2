@@ -120,8 +120,9 @@ export const messages = {
         setFilter: "设置过滤条件",
         setSort: "设置排序条件",
         empty: "🤔 当前侧边栏为空",
+        searchAndAdd: "搜索块并添加到侧边栏",
         emptyTip:
-          '您可以通过以下方式添加内容：\n  - 在块菜单中选择"添加到侧边栏"\n  - 使用快捷键 Command/Ctrl + K',
+          '您可以通过以下方式添加内容：\n  - 在块菜单中选择"添加到侧边栏"\n  - 使用快捷键 Command/Ctrl + K\n  - 右上角点击 "+" 按钮搜索添加块',
       },
       headerBar: {
         dailynoteNavigator: "每日笔记",

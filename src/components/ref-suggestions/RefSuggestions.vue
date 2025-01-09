@@ -23,7 +23,7 @@
           class="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 text-sm outline-none [&.focus]:bg-accent [&.focus]:text-accent-foreground"
           :class="{ focus: focusItemIndex === index }"
           @mouseover="!suppressMouseOver && (focusItemIndex = index)"
-          @click="cb?.(suggestions[focusItemIndex]?.value?.id ?? null)"
+          @click="cb?.(suggestions[focusItemIndex]?.value?.id ?? null, () => (open = false))"
         >
           <BlockContent
             :block="block.value"
@@ -130,14 +130,17 @@ const handleKeydown = generateKeydownHandlerSimple({
   Escape: {
     run: (e) => {
       if (e.isComposing || e.keyCode === 229) return false;
-      cb.value?.(null);
+      cb.value?.(null, () => (open.value = false));
       return true;
     },
   },
   Enter: {
     run: (e) => {
       if (e.isComposing || e.keyCode === 229) return false;
-      cb.value?.(suggestions.value[focusItemIndex.value]?.value?.id ?? null);
+      cb.value?.(
+        suggestions.value[focusItemIndex.value]?.value?.id ?? null,
+        () => (open.value = false),
+      );
       return true;
     },
     preventDefault: true,
@@ -148,7 +151,7 @@ const handleKeydown = generateKeydownHandlerSimple({
       if (e.isComposing || e.keyCode === 229) return false;
       if (query.value.length == 0) {
         showPos.value = null;
-        cb.value?.(null);
+        cb.value?.(null, () => (open.value = false));
         return true;
       }
       return false;

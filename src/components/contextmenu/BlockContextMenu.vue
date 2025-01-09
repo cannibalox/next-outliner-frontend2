@@ -194,7 +194,7 @@ const taskQueue = useTaskQueue();
 const { blockEditor, blocksManager } = BlocksDropdown.useContext()!;
 const { openBlockMover } = BlockMoverContext.useContext()!;
 const { favoriteBlockIds } = FavoriteContext.useContext()!;
-const { sidePaneBlockIds } = SidebarContext.useContext()!;
+const { sidePaneBlockIds, addToSidePane: addToSidePaneImpl } = SidebarContext.useContext()!;
 const { lastFocusedBlockTree } = LastFocusContext.useContext()!;
 const { openExporter } = ExporterContext.useContext()!;
 const { openFieldValuesInspector } = FieldValueInspectorContext.useContext()!;
@@ -251,7 +251,7 @@ const moveBlockLeaveRef: CommandExec = (test, blockId, event) => {
 const addToSidePane: CommandExec = (test, blockId) => {
   const notInSidePane = !!blockId && !sidePaneBlockIds.value.includes(blockId);
   if (!test && notInSidePane) {
-    sidePaneBlockIds.value = [...sidePaneBlockIds.value, blockId];
+    addToSidePaneImpl(blockId);
   }
   return !!blockId && notInSidePane;
 };

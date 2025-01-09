@@ -39,6 +39,17 @@
       <div>
         <Tooltip>
           <TooltipTrigger as-child>
+            <Button variant="ghost" size="icon" @click="openSearchAndAdd">
+              <Plus class="size-5 stroke-[1.8]" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {{ $t("kbView.sidePane.searchAndAdd") }}
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger as-child>
             <Button variant="ghost" size="icon">
               <SortDesc class="size-5 stroke-[1.8]" />
             </Button>
@@ -66,7 +77,7 @@
       v-if="sidePaneBlockIds.length === 0"
     >
       <p class="text-2xl font-semibold text-muted-foreground">{{ $t("kbView.sidePane.empty") }}</p>
-      <p class="text-sm text-muted-foreground whitespace-pre-wrap leading-6">
+      <p class="text-sm mt-2 text-muted-foreground whitespace-pre-wrap leading-6">
         {{ $t("kbView.sidePane.emptyTip") }}
       </p>
     </div>
@@ -101,9 +112,9 @@
 <script setup lang="tsx">
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import RefSuggestionsContext from "@/context/refSuggestions";
 import SidebarContext from "@/context/sidebar";
-import { ChevronsRight, Filter, PanelBottom, PanelRight, SortDesc } from "lucide-vue-next";
-import type { FunctionalComponent } from "vue";
+import { ChevronsRight, Filter, PanelBottom, PanelRight, Plus, SortDesc } from "lucide-vue-next";
 import BlockTree from "../BlockTree.vue";
 
 const {
@@ -112,15 +123,10 @@ const {
   sidePaneWidth,
   sidePaneHeight,
   enableSidePaneAnimation,
-  sidePaneBlocks,
   sidePaneBlockIds,
-  sidePaneCurrentBlockId,
-  hasPrev,
-  hasNext,
-  goPrev,
-  goNext,
-  dir,
+  addToSidePane,
 } = SidebarContext.useContext()!;
+const { openRefSuggestions } = RefSuggestionsContext.useContext()!;
 
 const handleMouseMove = (e: MouseEvent) => {
   if (sidePaneDir.value === "right") {
@@ -145,5 +151,19 @@ const handleMouseDown = (e: MouseEvent) => {
   document.addEventListener("mousemove", handleMouseMove);
   document.addEventListener("mouseup", handleMouseUpOrLeave);
   document.addEventListener("mouseleave", handleMouseUpOrLeave);
+};
+
+const openSearchAndAdd = (e: MouseEvent) => {
+  openRefSuggestions(
+    {
+      x: e.clientX,
+      y: e.clientY,
+    },
+    (blockId, close) => {
+      if (!blockId) return;
+      addToSidePane(blockId);
+      close();
+    },
+  );
 };
 </script>

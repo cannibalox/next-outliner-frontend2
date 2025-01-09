@@ -5,10 +5,12 @@ import { computed, ref, watch } from "vue";
 import BlocksContext from "./blocks/blocks";
 import type { Block } from "./blocks/view-layer/blocksManager";
 import ServerInfoContext from "./serverInfo";
+import BlockTreeContext from "./blockTree";
 
 export const SidebarContext = createContext(() => {
   const { blocksManager } = BlocksContext.useContext()!;
   const { kbPrefix } = ServerInfoContext.useContext()!;
+  const { getBlockTree } = BlockTreeContext.useContext()!;
 
   const localStorageIds = {
     sidePaneOpen: "sidePaneOpen",
@@ -16,7 +18,6 @@ export const SidebarContext = createContext(() => {
     sidePaneWidth: "sidePaneWidth",
     sidePaneHeight: "sidePaneHeight",
     sidePaneBlockIds: "sidePaneBlockIds",
-    sidePaneCurrentBlockId: "sidePaneCurrentBlockId",
   };
 
   const localStorageKeys = {
@@ -25,9 +26,6 @@ export const SidebarContext = createContext(() => {
     sidePaneWidth: computed(() => `${kbPrefix.value}${localStorageIds.sidePaneWidth}`),
     sidePaneHeight: computed(() => `${kbPrefix.value}${localStorageIds.sidePaneHeight}`),
     sidePaneBlockIds: computed(() => `${kbPrefix.value}${localStorageIds.sidePaneBlockIds}`),
-    sidePaneCurrentBlockId: computed(
-      () => `${kbPrefix.value}${localStorageIds.sidePaneCurrentBlockId}`,
-    ),
   };
 
   const sidePaneOpen = useLocalStorage2(localStorageKeys.sidePaneOpen, false);
@@ -36,8 +34,6 @@ export const SidebarContext = createContext(() => {
   const sidePaneHeight = useLocalStorage2(localStorageKeys.sidePaneHeight, 300);
   const enableSidePaneAnimation = ref(true);
   const sidePaneBlockIds = useLocalStorage2(localStorageKeys.sidePaneBlockIds, <BlockId[]>[]);
-  const sidePaneCurrentBlockId = useLocalStorage2(localStorageKeys.sidePaneCurrentBlockId, "");
-  const dir = ref("left");
 
   const sidePaneBlocks = computed(() => {
     return (sidePaneBlockIds.value as BlockId[])
@@ -45,51 +41,51 @@ export const SidebarContext = createContext(() => {
       .filter((b): b is Block => !!b);
   });
 
-  const hasPrev = computed(() => {
-    if (sidePaneCurrentBlockId.value == null) return false;
-    const index = sidePaneBlockIds.value.indexOf(sidePaneCurrentBlockId.value);
-    return index !== -1 && index > 0;
-  });
-
-  const hasNext = computed(() => {
-    if (sidePaneCurrentBlockId.value == null) return false;
-    const index = sidePaneBlockIds.value.indexOf(sidePaneCurrentBlockId.value);
-    return index !== -1 && index < sidePaneBlockIds.value.length - 1;
-  });
-
-  const goPrev = () => {
-    const index = sidePaneBlockIds.value.indexOf(sidePaneCurrentBlockId.value);
-    if (index === -1) return;
-    const nextIndex = index === 0 ? sidePaneBlockIds.value.length - 1 : index - 1;
-    sidePaneCurrentBlockId.value = sidePaneBlockIds.value[nextIndex];
-    dir.value = "left";
+  const addToSidePane = (blockId: BlockId) => {
+    if (!sidePaneOpen.value) sidePaneOpen.value = true;
+    const exists = sidePaneBlockIds.value.includes(blockId);
+    if (!exists) {
+      sidePaneBlockIds.value = [...sidePaneBlockIds.value, blockId];
+      setTimeout(() => {
+        // 等待 dom 变动
+        const tree = getBlockTree("side-pane");
+        if (!tree) return;
+        const di2 = tree.findDi((di) => di.type === "side-pane-header" && di.blockId === blockId);
+        if (!di2) return;
+        tree.focusDi(di2.itemId, { highlight: true, scrollIntoView: true });
+      });
+    } else {
+      const tree = getBlockTree("side-pane");
+      if (!tree) return;
+      const di = tree.findDi((di) => di.type === "side-pane-header" && di.blockId === blockId);
+      if (!di) return;
+      tree.focusDi(di.itemId, { highlight: true, scrollIntoView: true });
+    }
   };
 
-  const goNext = () => {
-    const index = sidePaneBlockIds.value.indexOf(sidePaneCurrentBlockId.value);
-    if (index === -1) return;
-    const nextIndex = index === sidePaneBlockIds.value.length - 1 ? 0 : index + 1;
-    sidePaneCurrentBlockId.value = sidePaneBlockIds.value[nextIndex];
-    dir.value = "right";
+  const focusNext = (blockId: BlockId) => {
+    const tree = getBlockTree("side-pane");
+    if (!tree) return;
+    const selectedIndex = sidePaneBlockIds.value.indexOf(blockId);
+    if (selectedIndex === -1) return;
+    const nextIndex = selectedIndex === sidePaneBlockIds.value.length - 1 ? 0 : selectedIndex + 1;
+    const nextId = sidePaneBlockIds.value[nextIndex];
+    const nextItem = tree.findDi((di) => di.type === "basic-block" && di.block.id === nextId);
+    if (!nextItem) return;
+    tree.focusDi(nextItem.itemId, { highlight: true, scrollIntoView: true });
   };
 
-  watch(
-    [sidePaneBlockIds, sidePaneCurrentBlockId],
-    () => {
-      if (sidePaneCurrentBlockId.value == null) {
-        if (sidePaneBlockIds.value.length > 0) {
-          sidePaneCurrentBlockId.value = sidePaneBlockIds.value[0];
-        }
-      } else if (!sidePaneBlockIds.value.includes(sidePaneCurrentBlockId.value)) {
-        if (sidePaneBlockIds.value.length > 0) {
-          sidePaneCurrentBlockId.value = sidePaneBlockIds.value[0];
-        } else {
-          sidePaneCurrentBlockId.value = null;
-        }
-      }
-    },
-    { immediate: true },
-  );
+  const focusPrev = (blockId: BlockId) => {
+    const tree = getBlockTree("side-pane");
+    if (!tree) return;
+    const selectedIndex = sidePaneBlockIds.value.indexOf(blockId);
+    if (selectedIndex === -1) return;
+    const prevIndex = selectedIndex === 0 ? sidePaneBlockIds.value.length - 1 : selectedIndex - 1;
+    const prevId = sidePaneBlockIds.value[prevIndex];
+    const prevItem = tree.findDi((di) => di.type === "basic-block" && di.block.id === prevId);
+    if (!prevItem) return;
+    tree.focusDi(prevItem.itemId, { highlight: true, scrollIntoView: true });
+  };
 
   return {
     sidePaneOpen,
@@ -99,12 +95,9 @@ export const SidebarContext = createContext(() => {
     enableSidePaneAnimation,
     sidePaneBlockIds,
     sidePaneBlocks,
-    sidePaneCurrentBlockId,
-    hasPrev,
-    hasNext,
-    goPrev,
-    goNext,
-    dir,
+    addToSidePane,
+    focusNext,
+    focusPrev,
   };
 });
 
