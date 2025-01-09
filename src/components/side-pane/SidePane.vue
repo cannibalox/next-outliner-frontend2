@@ -1,6 +1,6 @@
 <template>
   <div class="right-pane z-20 overflow-hidden flex flex-col">
-    <div class="flex items-center justify-between py-[10px] px-[8px] mr-2">
+    <div class="flex items-center flex-shrink-0 justify-between py-[10px] px-[8px] mr-2">
       <div>
         <Tooltip>
           <TooltipTrigger as-child>
@@ -52,7 +52,7 @@
     </div>
 
     <div
-      class="flex flex-col items-center justify-center h-full -mt-16 py-8 text-center space-y-2"
+      class="text-center flex-grow flex flex-col items-center justify-center -mt-16"
       v-if="sidePaneBlockIds.length === 0"
     >
       <p class="text-2xl font-semibold text-muted-foreground">{{ $t("kbView.sidePane.empty") }}</p>
