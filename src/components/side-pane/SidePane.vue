@@ -51,7 +51,18 @@
       </div>
     </div>
 
+    <div
+      class="flex flex-col items-center justify-center h-full -mt-16 py-8 text-center space-y-2"
+      v-if="sidePaneBlockIds.length === 0"
+    >
+      <p class="text-2xl font-semibold text-muted-foreground">{{ $t("kbView.sidePane.empty") }}</p>
+      <p class="text-sm text-muted-foreground whitespace-pre-wrap leading-6">
+        {{ $t("kbView.sidePane.emptyTip") }}
+      </p>
+    </div>
+
     <BlockTree
+      v-else
       id="side-pane"
       class="h-full"
       :root-block-ids="sidePaneBlockIds"
