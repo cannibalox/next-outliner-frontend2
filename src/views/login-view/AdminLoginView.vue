@@ -9,12 +9,15 @@
       <div class="grid items-center w-full gap-4">
         <div class="flex flex-col space-y-3">
           <Label> {{ $t("login.adminLogin.serverUrlLabel") }} </Label>
-          <Input v-model="serverUrl" :placeholder="$t('login.adminLogin.serverUrlPlaceholder')" />
+          <Input
+            v-model="serverUrlInputText"
+            :placeholder="$t('login.adminLogin.serverUrlPlaceholder')"
+          />
         </div>
 
         <div class="flex flex-col space-y-2">
           <Label> {{ $t("login.adminLogin.passwordLabel") }} </Label>
-          <Input v-model="password" type="password" />
+          <Input v-model="passwordInputText" type="password" />
         </div>
       </div>
 
@@ -57,7 +60,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { z } from "zod";
 import { X, Loader2, Check } from "lucide-vue-next";
@@ -66,9 +69,11 @@ import { RESP_CODES } from "@/common/constants";
 import { timeout } from "@/utils/time";
 import router from "@/router";
 import ServerInfoContext from "@/context/serverInfo";
+import { normalizeServerUrl } from "@/common/helper-functions/url";
 
 const { serverUrl, buildAdminTokenKey: buildTokenKey } = ServerInfoContext.useContext()!;
-const password = ref("");
+const serverUrlInputText = ref("");
+const passwordInputText = ref("");
 const { t } = useI18n();
 const loginStatus = ref<
   | "idle"
@@ -84,6 +89,10 @@ const errMsg = computed(() => {
   return t(`login.adminLogin.errMsg.${loginStatus.value}`);
 });
 
+watch(serverUrlInputText, (newVal) => {
+  serverUrl.value = normalizeServerUrl(newVal);
+});
+
 const login = async () => {
   loginStatus.value = "loggingIn";
   const url = serverUrl.value;
@@ -96,7 +105,7 @@ const login = async () => {
     return;
   }
   const [resp] = await Promise.all([
-    adminLogin({ serverUrl: url, password: password.value }),
+    adminLogin({ serverUrl: url, password: passwordInputText.value }),
     timeout(2000), // 等待至少两秒
   ]);
   if (resp.success) {

@@ -11,7 +11,7 @@
           <Label> {{ $t("login.kbEditorLogin.serverUrlLabel") }} </Label>
           <div class="relative">
             <Input
-              v-model="serverUrl"
+              v-model="serverUrlInputText"
               :placeholder="$t('login.kbEditorLogin.serverUrlPlaceholder')"
               @input="testConn"
             />
@@ -83,7 +83,7 @@
         <div class="flex flex-col space-y-2">
           <Label> {{ $t("login.kbEditorLogin.passwordLabel") }} </Label>
           <Input
-            v-model="password"
+            v-model="passwordInputText"
             type="password"
             :disabled="serverStatus !== 'connSuccess' || !selectedKbLocation"
             @input="loginStatus = 'idle'"
@@ -126,6 +126,7 @@
 import { kbEditorLogin } from "@/common/api-call/auth";
 import { ping } from "@/common/api-call/misc";
 import { RESP_CODES } from "@/common/constants";
+import { normalizeServerUrl } from "@/common/helper-functions/url";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -144,11 +145,12 @@ import ServerInfoContext from "@/context/serverInfo";
 import router from "@/router";
 import { useDebounceFn } from "@vueuse/core";
 import { Check, CircleCheck, Loader2, LoaderCircle, RefreshCcw, X } from "lucide-vue-next";
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { z } from "zod";
 
 const { serverUrl, buildKbEditorTokenKey: buildTokenKey } = ServerInfoContext.useContext()!;
-const password = ref<string>("");
+const serverUrlInputText = ref<string>("");
+const passwordInputText = ref<string>("");
 const selectedKbLocation = ref<string | undefined>(undefined);
 const { kbs, refreshKbList } = KbInfoContext.useContext()!;
 const serverStatus = ref<"invalidURL" | "connFailed" | "connecting" | "connSuccess" | "noKbServer">(
@@ -158,6 +160,10 @@ const loginStatus = ref<
   "idle" | "loggingIn" | "loginSuccess" | "loginFailed_InvalidPassword" | "loginFailed_Unknown"
 >("idle");
 const { toast } = useToast();
+
+watch(serverUrlInputText, (newVal) => {
+  serverUrl.value = normalizeServerUrl(newVal);
+});
 
 const testConn = useDebounceFn(async () => {
   const url = serverUrl.value;
@@ -213,7 +219,7 @@ const login = async () => {
   loginStatus.value = "loggingIn";
   const res = await kbEditorLogin({
     location: selectedKbLocation.value,
-    password: password.value,
+    password: passwordInputText.value,
     serverUrl: serverUrl.value,
   });
   if (res.success) {

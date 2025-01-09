@@ -8,17 +8,6 @@ import { computed, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { z } from "zod";
 
-const normalizeServerUrl = (serverUrl: string) => {
-  // add protocol if not exists
-  // localhost:8080 -> https://localhost:8080
-  // http://localhost:8080 -> http://localhost:8080 (unchange)
-  // https://localhost:8080 -> https://localhost:8080 (unchange)
-  if (!serverUrl.startsWith("http://") && !serverUrl.startsWith("https://")) {
-    return `https://${serverUrl}`;
-  }
-  return serverUrl;
-};
-
 export const ServerInfoContext = createContext(() => {
   const serverUrl = ref<string>("");
   const route = useRoute();
@@ -95,7 +84,7 @@ export const ServerInfoContext = createContext(() => {
 
   const axiosInstance = computed(() => {
     return axios.create({
-      baseURL: normalizeServerUrl(serverUrl.value),
+      baseURL: serverUrl.value,
       timeout: 10000,
       headers: {
         Authorization: token.value,
