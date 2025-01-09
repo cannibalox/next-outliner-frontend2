@@ -6,6 +6,7 @@ import type HistoryContext from "@/context/history";
 import type ImagesContext from "@/context/images";
 import type KeymapContext from "@/context/keymap";
 import type LastFocusContext from "@/context/lastFocus";
+import type PasteDialogContext from "@/context/pasteDialog";
 import type PathsContext from "@/context/paths";
 import type RefSuggestionsContext from "@/context/refSuggestions";
 import type { DisplayItemId } from "@/utils/display-item";
@@ -30,4 +31,5 @@ export type PmPluginCtx = {
   blocksContext: ReturnType<typeof BlocksContext.useContext>;
   refSuggestionsContext: ReturnType<typeof RefSuggestionsContext.useContext>;
   keymapContext: ReturnType<typeof KeymapContext.useContext>;
+  pasteDialogContext: ReturnType<typeof PasteDialogContext.useContext>;
 };

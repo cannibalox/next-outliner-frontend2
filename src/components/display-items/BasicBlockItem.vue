@@ -13,18 +13,18 @@
       <div class="indent-line" v-for="i in level" :key="i" :data-level="i"></div>
     </div>
     <div class="relative block-content-container">
-      <div class="block-buttons" v-if="!hideContextMenu">
-        <BlockContextMenu :block-id="block.id">
-          <div class="more-button">
-            <MoreHorizontal />
-          </div>
-        </BlockContextMenu>
+      <div class="block-buttons">
         <div class="fold-button" v-if="!hideFoldButton" @click.stop="handleClickFoldButton">
           <Triangle></Triangle>
         </div>
       </div>
 
-      <div class="bullet shrink-0" v-if="!hideBullet" @click.stop="handleClickBullet">
+      <div
+        class="bullet shrink-0"
+        v-if="!hideBullet"
+        @click.stop="handleClickBullet"
+        @contextmenu="handleContextmenu"
+      >
         <Diamond class="diamond" v-if="hasOrIsMirrors" />
         <Circle class="circle" v-else />
       </div>
@@ -67,6 +67,7 @@ import BlockContextMenu from "../contextmenu/BlockContextMenu.vue";
 import IndexContext from "@/context";
 import BacklinksCounter from "../backlinks-counter/BacklinksCounter.vue";
 import type { DisplayItem, DisplayItemId } from "@/utils/display-item";
+import BlockContextMenuContext from "@/context/blockContextMenu";
 
 const props = withDefaults(
   defineProps<{
@@ -105,6 +106,7 @@ const { lastFocusedDiId, lastFocusedBlockTree } = LastFocusContext.useContext()!
 const { mainRootBlockId } = MainTreeContext.useContext()!;
 const { selectedBlockIds, draggingDropPos, dragging } = BlockSelectDragContext.useContext()!;
 const { getMirrors } = IndexContext.useContext()!;
+const { openAt } = BlockContextMenuContext.useContext()!;
 
 // computed
 const mirrorIds = computed(() => getMirrors(props.block.id));
@@ -136,8 +138,15 @@ const handleClickFoldButton = () => {
   }
 };
 
-const handleClickBullet = () => {
+const handleClickBullet = (e: MouseEvent) => {
+  if (e.button !== 0) return; // 仅处理左键
   mainRootBlockId.value = props.block.id;
+};
+
+const handleContextmenu = (e: MouseEvent) => {
+  if (e.button !== 2) return; // 仅处理右键
+  e.preventDefault();
+  openAt({ x: e.clientX, y: e.clientY }, props.block.id);
 };
 </script>
 
@@ -219,26 +228,26 @@ const handleClickBullet = () => {
       display: flex;
       justify-content: flex-end;
 
-      .more-button {
-        height: calc(var(--editor-line-height) + var(--content-padding));
-        width: 18px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        cursor: pointer;
-        flex-shrink: 0;
-        margin-right: 4px;
-        display: none; // 默认隐藏 more button
+      // .more-button {
+      //   height: calc(var(--editor-line-height) + var(--content-padding));
+      //   width: 18px;
+      //   display: flex;
+      //   justify-content: center;
+      //   align-items: center;
+      //   cursor: pointer;
+      //   flex-shrink: 0;
+      //   margin-right: 4px;
+      //   display: none; // 默认隐藏 more button
 
-        svg {
-          stroke: var(--block-button-color);
-        }
+      //   svg {
+      //     stroke: var(--block-button-color);
+      //   }
 
-        // 如果 hover，则显示 more button
-        @at-root .block-item:hover > .block-content-container > .block-buttons .more-button {
-          display: flex;
-        }
-      }
+      //   // 如果 hover，则显示 more button
+      //   @at-root .block-item:hover > .block-content-container > .block-buttons .more-button {
+      //     display: flex;
+      //   }
+      // }
 
       .fold-button {
         height: calc(var(--editor-line-height) + var(--content-padding));

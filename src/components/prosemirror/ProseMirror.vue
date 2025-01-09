@@ -23,6 +23,7 @@ import LastFocusContext from "@/context/lastFocus";
 import PathsContext from "@/context/paths";
 import ImagesContext from "@/context/images";
 import KeymapContext from "@/context/keymap";
+import PasteDialogContext from "@/context/pasteDialog";
 
 const props = withDefaults(
   defineProps<{
@@ -64,6 +65,7 @@ const lastFocusContext = LastFocusContext.useContext();
 const pathsContext = PathsContext.useContext();
 const imagesContext = ImagesContext.useContext();
 const keymapContext = KeymapContext.useContext();
+const pasteDialogContext = PasteDialogContext.useContext();
 
 const pluginsCtx: PmPluginCtx = {
   getSchema: () => props.schema,
@@ -81,6 +83,7 @@ const pluginsCtx: PmPluginCtx = {
   imagesContext,
   pathsContext,
   keymapContext,
+  pasteDialogContext,
 };
 
 defineExpose({

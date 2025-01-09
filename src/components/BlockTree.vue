@@ -705,6 +705,8 @@ const handlePointerMove = useThrottleFn((e: PointerEvent) => {
 }, 100);
 
 const handlePointerDown = (e: PointerEvent) => {
+  // 如果是鼠标事件，仅处理左键
+  if (e.pointerType === "mouse" && e.button !== 0) return;
   const hoveredBlockItem = getHoveredElementWithClass(e.target, "block-item");
   if (!hoveredBlockItem) return;
   const diId = hoveredBlockItem.dataset["itemId"];

@@ -1,22 +1,19 @@
 <template>
-  <DropdownMenu>
-    <DropdownMenuTrigger>
-      <slot />
-    </DropdownMenuTrigger>
+  <DropdownMenu v-model:open="open">
     <DropdownMenuContent
-      class="min-w-[200px] overflow-y-auto max-h-[var(--radix-dropdown-menu-content-available-height)]"
+      class="block-contextmenu-content min-w-[200px] overflow-y-auto max-h-[var(--radix-dropdown-menu-content-available-height)]"
     >
       <DropdownMenuItem
         class="!text-red-500"
-        :disabled="!deleteBlock(true, blockId, undefined)"
-        @click="deleteBlock(false, blockId, $event)"
+        :disabled="!deleteBlock(true, clickedBlockId!, undefined)"
+        @click="deleteBlock(false, clickedBlockId!, $event)"
       >
         <Trash2 class="size-4 mr-2" />
         {{ $t("kbView.command.deleteBlock") }}
       </DropdownMenuItem>
       <DropdownMenuItem
-        :disabled="!openFieldValuesInspectorCommand(true, blockId, undefined)"
-        @click="openFieldValuesInspectorCommand(false, blockId, $event)"
+        :disabled="!openFieldValuesInspectorCommand(true, clickedBlockId!, undefined)"
+        @click="openFieldValuesInspectorCommand(false, clickedBlockId!, $event)"
       >
         <Database class="size-4 mr-2" />
         {{ $t("kbView.command.openFieldValuesInspector") }}
@@ -30,22 +27,22 @@
         {{ $t("kbView.command.copyBlockMirror") }}
       </DropdownMenuItem>
       <DropdownMenuItem
-        :disabled="!insertMirrorBelow(true, blockId, undefined)"
-        @click="insertMirrorBelow(false, blockId, $event)"
+        :disabled="!insertMirrorBelow(true, clickedBlockId!, undefined)"
+        @click="insertMirrorBelow(false, clickedBlockId!, $event)"
       >
         <FlipHorizontal class="size-4 mr-2" />
         {{ $t("kbView.command.insertMirrorBelow") }}
       </DropdownMenuItem>
       <DropdownMenuItem
-        :disabled="!addToFavorite(true, blockId, undefined)"
-        @click="addToFavorite(false, blockId, $event)"
+        :disabled="!addToFavorite(true, clickedBlockId!, undefined)"
+        @click="addToFavorite(false, clickedBlockId!, $event)"
       >
         <Bookmark class="size-4 mr-2" />
         {{ $t("kbView.command.addToFavorite") }}
       </DropdownMenuItem>
       <DropdownMenuItem
-        :disabled="!addToSidePane(true, blockId, undefined)"
-        @click="addToSidePane(false, blockId, $event)"
+        :disabled="!addToSidePane(true, clickedBlockId!, undefined)"
+        @click="addToSidePane(false, clickedBlockId!, $event)"
       >
         <Sidebar class="size-4 mr-2" />
         {{ $t("kbView.command.addToSidepane") }}
@@ -55,22 +52,22 @@
         {{ $t("kbView.command.archiveDone") }}
       </DropdownMenuItem> -->
       <DropdownMenuItem
-        :disabled="!moveBlock(true, blockId, undefined)"
-        @click="moveBlock(false, blockId, $event)"
+        :disabled="!moveBlock(true, clickedBlockId!, undefined)"
+        @click="moveBlock(false, clickedBlockId!, $event)"
       >
         <ArrowRight class="size-4 mr-2" />
         {{ $t("kbView.command.moveBlock") }}
       </DropdownMenuItem>
       <DropdownMenuItem
-        :disabled="!moveBlockLeaveRef(true, blockId, undefined)"
-        @click="moveBlockLeaveRef(false, blockId, $event)"
+        :disabled="!moveBlockLeaveRef(true, clickedBlockId!, undefined)"
+        @click="moveBlockLeaveRef(false, clickedBlockId!, $event)"
       >
         <ArrowRight class="size-4 mr-2" />
         {{ $t("kbView.command.moveBlockLeaveRef") }}
       </DropdownMenuItem>
       <DropdownMenuItem
-        :disabled="!moveBlock(true, blockId, undefined)"
-        @click="moveBlock(false, blockId, $event)"
+        :disabled="!moveBlock(true, clickedBlockId!, undefined)"
+        @click="moveBlock(false, clickedBlockId!, $event)"
       >
         <ArrowRight class="size-4 mr-2" />
         {{ $t("kbView.command.moveBlockLeaveMirror") }}
@@ -120,8 +117,8 @@
           <DropdownMenuItem
             v-for="color in predefinedColors"
             :key="color"
-            :disabled="!getBlockRefColorSetter(color)(true, blockId, undefined)"
-            @click="getBlockRefColorSetter(color)(false, blockId, $event)"
+            :disabled="!getBlockRefColorSetter(color)(true, clickedBlockId!, undefined)"
+            @click="getBlockRefColorSetter(color)(false, clickedBlockId!, $event)"
           >
             <div
               class="size-4 mr-2 rounded-sm"
@@ -133,8 +130,8 @@
       </DropdownMenuSub>
 
       <DropdownMenuItem
-        :disabled="!exportBlock(true, blockId, undefined)"
-        @click="exportBlock(false, blockId, $event)"
+        :disabled="!exportBlock(true, clickedBlockId!, undefined)"
+        @click="exportBlock(false, clickedBlockId!, $event)"
       >
         <Download class="size-4 mr-2" />
         {{ $t("kbView.command.export") }}
@@ -183,16 +180,15 @@ import type { BlockPos } from "@/context/blocks/view-layer/blocksEditor";
 import LastFocusContext from "@/context/lastFocus";
 import ExporterContext from "@/context/exporter";
 import FieldValueInspectorContext from "@/context/fieldValueInspector";
+import BlockContextMenuContext from "@/context/blockContextMenu";
+import { nextTick, watch } from "vue";
+import { calcPopoverPos } from "@/utils/popover";
 
 type CommandExec = (
   test: boolean,
   blockId: BlockId | undefined,
   event: MouseEvent | undefined,
 ) => boolean;
-
-defineProps<{
-  blockId?: BlockId;
-}>();
 
 const taskQueue = useTaskQueue();
 const { blockEditor, blocksManager } = BlocksDropdown.useContext()!;
@@ -202,6 +198,24 @@ const { sidePaneBlockIds } = SidebarContext.useContext()!;
 const { lastFocusedBlockTree } = LastFocusContext.useContext()!;
 const { openExporter } = ExporterContext.useContext()!;
 const { openFieldValuesInspector } = FieldValueInspectorContext.useContext()!;
+const { open, showPos, clickedBlockId } = BlockContextMenuContext.useContext()!;
+
+watch(showPos, async () => {
+  await nextTick();
+  if (!showPos.value) return;
+  const el = document.querySelector("[data-radix-popper-content-wrapper]");
+  if (!(el instanceof HTMLElement)) return;
+  const { x, y } = showPos.value!;
+  const elRect = el.getBoundingClientRect();
+  const popoverPos = calcPopoverPos(elRect.width, elRect.height, x, y, {});
+
+  // 默认向右下弹出
+  // 这里把弹出位置作为 CSS 变量绑定到 body 上
+  // 因为 shadcn / radix 把 popover 的样式写死了
+  // 只能这样去覆盖
+  document.body.style.setProperty("--popover-x", `${popoverPos.rightDown.x}px`);
+  document.body.style.setProperty("--popover-y", `${popoverPos.rightDown.y}px`);
+});
 
 const predefinedColors = ["red", "green", "blue", "yellow", "gray", "orange", "purple"];
 
@@ -299,3 +313,9 @@ const getBlockRefColorSetter: (color: string) => CommandExec =
     return !!blockId;
   };
 </script>
+
+<style lang="scss">
+[data-radix-popper-content-wrapper]:has(> .block-contextmenu-content) {
+  transform: translate(var(--popover-x), var(--popover-y)) !important;
+}
+</style>

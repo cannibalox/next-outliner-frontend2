@@ -4,7 +4,7 @@
   <!-- mr-1 是为了让滚动条和屏幕边缘留出一点空隙 -->
   <BlockTree
     v-if="synced && rootBlockRef"
-    class="h-[100vh] mr-1 ml-4"
+    class="h-[100vh] mr-1"
     id="main"
     :style="{
       paddingRight: sidePaneOpen && sidePaneDir === 'right' ? `${sidePaneWidth}px` : '0px',
@@ -71,6 +71,8 @@
   <!-- <ImageEditor /> -->
   <!-- keybinding 展示 -->
   <KeyBindings />
+  <!-- 块上下文菜单 -->
+  <BlockContextMenu />
 </template>
 
 <script setup lang="ts">
@@ -96,6 +98,7 @@ import AttachmentsManager from "@/components/attachments-mgr/AttachmentsManager.
 import type { Block } from "@/context/blocks/view-layer/blocksManager";
 import { syncRef } from "@vueuse/core";
 import KeyBindings from "@/components/keybindings/KeyBindings.vue";
+import BlockContextMenu from "@/components/contextmenu/BlockContextMenu.vue";
 // import ImageEditor from "@/components/image-editor/ImageEditor.vue";
 
 const { sidePaneOpen, sidePaneDir, sidePaneWidth, sidePaneHeight, enableSidePaneAnimation } =

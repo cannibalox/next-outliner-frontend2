@@ -32,7 +32,9 @@
                                                               <DailyNoteContext.Provider>
                                                                 <FusionCommandContext.Provider>
                                                                   <KeymapContext.Provider>
-                                                                    <KbViewContent />
+                                                                    <BlockContextMenuContext.Provider>
+                                                                      <KbViewContent />
+                                                                    </BlockContextMenuContext.Provider>
                                                                   </KeymapContext.Provider>
                                                                 </FusionCommandContext.Provider>
                                                               </DailyNoteContext.Provider>
@@ -104,4 +106,5 @@ import ImageEditorContext from "@/context/imageEditor";
 import HistoryContext from "@/context/history";
 import MenubarContext from "@/context/menubar";
 import kbViewRegistry from "@/context/kbViewRegistry";
+import BlockContextMenuContext from "@/context/blockContextMenu";
 </script>

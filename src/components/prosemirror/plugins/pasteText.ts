@@ -12,6 +12,9 @@ import { hrefToTitle } from "../pasteLink";
 import { getPmSchema } from "../pmSchema";
 import type { PmPluginCtx } from "./pluginContext";
 
+const TOO_LARGE_NODE_COUNT = 1000;
+const TOO_LARGE_CHAR_COUNT = 10000;
+
 export const mkPasteTextPlugin = (ctx: PmPluginCtx) => {
   const lastFocusContext = ctx.lastFocusContext;
   const blocksManager = ctx.blocksContext?.blocksManager;
@@ -38,8 +41,16 @@ export const mkPasteTextPlugin = (ctx: PmPluginCtx) => {
         // 则优先粘贴 html，以保持格式
         const html = event.clipboardData?.getData("text/html");
         if (html) {
+          // XXX parsedBlocks 用 Map 会更好
           const [parsedTree, parsedBlocks] = parseHtml(pmSchema, html);
           if (parsedTree.length === 0) return false;
+
+          if (Object.keys(parsedBlocks).length > TOO_LARGE_NODE_COUNT) {
+            if (ctx.pasteDialogContext) {
+              ctx.pasteDialogContext.open.value = true;
+            }
+            return true;
+          }
 
           // 如果只解析出一个块，并且是文本块，则将该块拼在当前块的光标后面，
           // 并且将光标移动到粘贴内容的末尾，而不是在下方创建新块
@@ -118,6 +129,13 @@ export const mkPasteTextPlugin = (ctx: PmPluginCtx) => {
           // 否则，如果有纯文本，则粘贴纯文本
           const text = event.clipboardData?.getData("text/plain");
           if (!text) return false;
+
+          if (text.length > TOO_LARGE_CHAR_COUNT) {
+            if (ctx.pasteDialogContext) {
+              ctx.pasteDialogContext.open.value = true;
+            }
+            return true;
+          }
 
           // 按行分割文本,过滤掉空行
           const lines = text.split(/\r?\n/).filter((line) => line.trim());

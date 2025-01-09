@@ -190,13 +190,9 @@ export const messages = {
         failed: "创建失败",
       },
       pasteDialog: {
-        title: "确定粘贴吗？",
-        description: "检测到粘贴内容较长，将会创建 {blockCount} 个新块，共 {charCount} 个字符。",
-        confirmBtn: "粘贴",
-        cancelBtn: "取消",
-        pasting: "正在处理...",
-        done: "粘贴完成",
-        failed: "粘贴失败",
+        title: "不要不要",
+        description: "太大啦！放进来会坏掉的！要不试试分段粘贴？",
+        cancelBtn: "我知道了",
       },
       attachmentsManager: {
         title: "附件管理器",
