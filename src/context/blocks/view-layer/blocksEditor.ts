@@ -941,10 +941,8 @@ export const createBlocksEditor = (
       const blocksToExpand =
         i < 0 ? targetPath.slice(0, j + 1) : j < 0 ? rootPath.slice(0, i + 1) : targetPath.slice(j);
       mainRootBlockId.value = newRoot.id;
-      let changed = false;
       for (const block of blocksToExpand) {
         if (block.fold) {
-          changed = true;
           await toggleFold(block.id, false);
         }
       }

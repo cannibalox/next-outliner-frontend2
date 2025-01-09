@@ -1,6 +1,6 @@
 <template>
   <div class="right-pane z-20 overflow-hidden flex flex-col">
-    <div class="flex items-center flex-shrink-0 justify-between py-[10px] px-[8px] mr-2">
+    <div class="z-20 flex items-center flex-shrink-0 justify-between py-[10px] px-[8px] mr-2">
       <div>
         <Tooltip>
           <TooltipTrigger as-child>
@@ -8,7 +8,9 @@
               <ChevronsRight class="size-5 stroke-[1.8]" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent> </TooltipContent>
+          <TooltipContent>
+            {{ $t("kbView.sidePane.collapse") }}
+          </TooltipContent>
         </Tooltip>
 
         <Tooltip v-if="sidePaneDir === 'bottom'">
@@ -17,7 +19,9 @@
               <PanelRight class="size-5 stroke-[1.8]" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent> </TooltipContent>
+          <TooltipContent>
+            {{ $t("kbView.sidePane.moveToRight") }}
+          </TooltipContent>
         </Tooltip>
 
         <Tooltip v-if="sidePaneDir === 'right'">
@@ -26,7 +30,9 @@
               <PanelBottom class="size-5 stroke-[1.8]" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent> </TooltipContent>
+          <TooltipContent>
+            {{ $t("kbView.sidePane.moveToBottom") }}
+          </TooltipContent>
         </Tooltip>
       </div>
 
@@ -37,7 +43,9 @@
               <SortDesc class="size-5 stroke-[1.8]" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent> </TooltipContent>
+          <TooltipContent>
+            {{ $t("kbView.sidePane.setSort") }}
+          </TooltipContent>
         </Tooltip>
 
         <Tooltip>
@@ -46,7 +54,9 @@
               <Filter class="size-5 stroke-[1.8]" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent> </TooltipContent>
+          <TooltipContent>
+            {{ $t("kbView.sidePane.setFilter") }}
+          </TooltipContent>
         </Tooltip>
       </div>
     </div>
@@ -64,7 +74,7 @@
     <BlockTree
       v-else
       id="side-pane"
-      class="h-full"
+      class="h-full -mt-4"
       :root-block-ids="sidePaneBlockIds"
       :root-block-level="0"
       :add-side-pane-header="true"
@@ -77,12 +87,12 @@
     <!-- drag handler -->
     <div
       v-if="sidePaneDir === 'bottom'"
-      class="absolute top-0 z-10 left-0 w-full h-1 cursor-row-resize"
+      class="absolute top-0 z-30 left-0 w-full h-1 cursor-row-resize"
       @mousedown="handleMouseDown"
     ></div>
     <div
       v-if="sidePaneDir === 'right'"
-      class="absolute top-0 z-10 left-0 w-1 h-full cursor-col-resize"
+      class="absolute top-0 z-30 left-0 w-1 h-full cursor-col-resize"
       @mousedown="handleMouseDown"
     ></div>
   </div>
@@ -92,24 +102,9 @@
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import SidebarContext from "@/context/sidebar";
-import {
-  ArrowDownFromLine,
-  ArrowRightFromLine,
-  ChevronsRight,
-  Filter,
-  PanelBottom,
-  PanelRight,
-  SortDesc,
-  X,
-} from "lucide-vue-next";
+import { ChevronsRight, Filter, PanelBottom, PanelRight, SortDesc } from "lucide-vue-next";
 import type { FunctionalComponent } from "vue";
 import BlockTree from "../BlockTree.vue";
-
-type SidePaneButton = {
-  icon: FunctionalComponent;
-  label: FunctionalComponent;
-  onClick: () => void;
-};
 
 const {
   sidePaneDir,
@@ -150,20 +145,5 @@ const handleMouseDown = (e: MouseEvent) => {
   document.addEventListener("mousemove", handleMouseMove);
   document.addEventListener("mouseup", handleMouseUpOrLeave);
   document.addEventListener("mouseleave", handleMouseUpOrLeave);
-};
-
-// 离开动画
-const handleLeave = (el: Element, done: () => void) => {
-  const animation = el.animate(
-    [
-      { opacity: 1, transform: "translateX(0)" },
-      { opacity: 0, transform: dir.value === "right" ? "translateX(-100%)" : "translateX(100%)" },
-    ],
-    {
-      duration: 300,
-      easing: "cubic-bezier(0.4, 0, 0.2, 1)",
-    },
-  );
-  animation.onfinish = done;
 };
 </script>

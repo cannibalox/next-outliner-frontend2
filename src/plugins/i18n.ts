@@ -114,6 +114,11 @@ export const messages = {
         remove: "从侧栏移除此项",
         prev: "聚焦到上一项",
         next: "聚焦到下一项",
+        collapse: "折叠侧边栏",
+        moveToRight: "移动侧边栏到右侧",
+        moveToBottom: "移动侧边栏到下方",
+        setFilter: "设置过滤条件",
+        setSort: "设置排序条件",
         empty: "🤔 当前侧边栏为空",
         emptyTip:
           '您可以通过以下方式添加内容：\n  - 在块菜单中选择"添加到侧边栏"\n  - 使用快捷键 Command/Ctrl + K',

@@ -327,7 +327,7 @@ const focusDi = async (itemId: DisplayItemId, options: DiFocusOptions = {}) => {
     if (!success) return;
   }
 
-  await timeout(0); // 等待渲染完成
+  await timeout(50); // 等待渲染完成，50 是随便选择，也许有更好的方法？
 
   // 聚焦到文本或代码块
   const view = getEditorView(itemId);
