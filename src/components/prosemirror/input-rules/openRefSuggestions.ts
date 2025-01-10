@@ -31,7 +31,7 @@ export const openRefSuggestions = (ctx: PmPluginCtx) =>
     };
 
     const { openRefSuggestions } = ctx.refSuggestionsContext ?? {};
-    openRefSuggestions?.(showPos, callback);
+    openRefSuggestions?.(showPos, callback, undefined, true);
 
     return null;
   });

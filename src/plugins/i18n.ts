@@ -99,6 +99,8 @@ export const messages = {
       },
       refSuggestions: {
         noSuggestions: "没有结果",
+        createNewUnder1: "在",
+        createNewUnder2: "下创建新块",
       },
       pomodoro: {
         startWorking: "开工吧！",
@@ -468,6 +470,8 @@ export const messages = {
       },
       refSuggestions: {
         noSuggestions: "No results",
+        createNewUnder1: "Create new block under",
+        createNewUnder2: "",
       },
       pomodoro: {
         startWorking: "Let's get started!",
@@ -841,6 +845,8 @@ export const messages = {
       },
       refSuggestions: {
         noSuggestions: "沒有結果",
+        createNewUnder1: "在",
+        createNewUnder2: "下建立新區塊",
       },
       pomodoro: {
         startWorking: "開工吧！",
@@ -1209,6 +1215,8 @@ export const messages = {
       },
       refSuggestions: {
         noSuggestions: "沒有結果",
+        createNewUnder1: "在",
+        createNewUnder2: "下建立新區塊",
       },
       pomodoro: {
         startWorking: "開工吧！",
@@ -1579,6 +1587,8 @@ export const messages = {
       },
       refSuggestions: {
         noSuggestions: "Aucun résultat",
+        createNewUnder1: "Créer un nouveau bloc sous",
+        createNewUnder2: "",
       },
       pomodoro: {
         startWorking: "Commençons !",
@@ -1956,6 +1966,8 @@ export const messages = {
       },
       refSuggestions: {
         noSuggestions: "結果がありません",
+        createNewUnder1: "新しいブロックを作成",
+        createNewUnder2: "",
       },
       pomodoro: {
         startWorking: "さあ、始めましょう！",

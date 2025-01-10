@@ -135,6 +135,7 @@ const BacklinksContext = createContext(() => {
 
   const ctx = {
     showBacklinksCounter,
+    putNewBlockAt,
     getAllAliases,
     getBacklinksConsideringAliases,
   };
