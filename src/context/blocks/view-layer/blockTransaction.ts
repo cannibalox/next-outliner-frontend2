@@ -2,7 +2,8 @@ import { shallowRef, type ShallowRef } from "vue";
 import {
   BLOCK_DATA_MAP_NAME,
   BlockOriginSchema,
-  type AddBlockParams,
+  cloneMinimalBlock,
+  type MinimalBlock,
   type Block,
   type BlockOrigin,
   type BlockPatch,
@@ -23,7 +24,10 @@ import { BLOCK_CONTENT_TYPES } from "@/common/constants";
 import { calcBlockStatus } from "@/common/helper-functions/block";
 import type { BlockTree } from "@/context/blockTree";
 
-type BlockTransactionContext = {
+// 下面的 _toBlockParams 和 _fromBlockParams 就是依托答辩。。。
+// 但是不想改了，之前出了很多奇奇怪怪的问题，就这样吧
+
+type BlockTransactionBuilderContext = {
   mainRootBlockId: ShallowRef<BlockId | null>;
   lastFocusedBlockTree: ShallowRef<BlockTree | null>;
   lastFocusedDiId: ShallowRef<string | null>;
@@ -37,7 +41,7 @@ type BlockTransactionContext = {
   getOlinks: (docContent: any) => string[];
 };
 
-function useBlockTransaction(context: BlockTransactionContext) {
+function useBlockTransaction(context: BlockTransactionBuilderContext) {
   const {
     mainRootBlockId,
     lastFocusedBlockTree,
@@ -69,12 +73,12 @@ function useBlockTransaction(context: BlockTransactionContext) {
         beforeCommit: null,
         afterCommit: null,
       },
-      addBlock: <T extends AddBlockParams>(block: T) => {
+      addBlock: <T extends MinimalBlock>(block: T) => {
         tr.patches.push({ op: "add", block });
         tr.reversePatches.push({ op: "delete", blockId: block.id });
         return tr;
       },
-      updateBlock: <T extends AddBlockParams>(block: T) => {
+      updateBlock: <T extends MinimalBlock>(block: T) => {
         const oldBlock = blocks.get(block.id)?.value;
         if (!oldBlock) {
           throw new Error(`Cannot find old block ${block.id}, maybe you should add it first?`);
@@ -82,7 +86,7 @@ function useBlockTransaction(context: BlockTransactionContext) {
         tr.patches.push({ op: "update", block });
         tr.reversePatches.push({
           op: "update",
-          block: _toBlockParams(oldBlock),
+          block: shrinkBlock(oldBlock),
         });
         return tr;
       },
@@ -92,7 +96,7 @@ function useBlockTransaction(context: BlockTransactionContext) {
           throw new Error(`Cannot find old block ${blockId}, maybe you should add it first?`);
         }
         tr.patches.push({ op: "delete", blockId });
-        tr.reversePatches.push({ op: "add", block: _toBlockParams(oldBlock) });
+        tr.reversePatches.push({ op: "add", block: shrinkBlock(oldBlock) });
         return tr;
       },
       commit: () => {
@@ -114,6 +118,17 @@ function useBlockTransaction(context: BlockTransactionContext) {
         tr.reversePatches.push(...tr2.patches);
         return tr;
       },
+      getLatestBlock: (blockId: BlockId, clone: boolean = true): MinimalBlock | null => {
+        for (let i = tr.patches.length - 1; i >= 0; i--) {
+          const patch = tr.patches[i];
+          if (patch.op === "update" && patch.block.id === blockId) {
+            return clone ? cloneMinimalBlock(patch.block) : patch.block;
+          }
+        }
+        const blockBefore = blocks.get(blockId)?.value;
+        if (!blockBefore) return null;
+        return clone ? cloneMinimalBlock(shrinkBlock(blockBefore)) : shrinkBlock(blockBefore);
+      },
     };
     return tr;
   };
@@ -134,7 +149,7 @@ function useBlockTransaction(context: BlockTransactionContext) {
 
   const commitBlockTransaction = (transaction: BlockTransaction) => {
     const { origin, patches } = transaction;
-    console.debug("Committing transaction with origin:", origin, "and patches:", patches);
+    console.debug("Committing transaction", transaction);
 
     // 所有对 yjs 层的操作通过 yjs 事务进行
     // 只有来自 ui 的更改需要推送到 yjs 层！！！
@@ -146,7 +161,7 @@ function useBlockTransaction(context: BlockTransactionContext) {
       // 1. 新增块, 2. 更新块
       if (op == "add" || op == "update") {
         const blockParams = patch.block;
-        const block = Object.assign({ origin }, _fromBlockParams(blockParams)) as Block;
+        const block = Object.assign({ origin }, enrichBlock(blockParams)) as Block;
         if (block) _upsertBlock(block.id, block, yjsTr);
       }
 
@@ -163,7 +178,8 @@ function useBlockTransaction(context: BlockTransactionContext) {
     eventBus.emit("afterBlocksTrCommit", [transaction]);
   };
 
-  const _toBlockParams = <T extends AddBlockParams>(block: T): AddBlockParams => {
+  // 将块缩小到最小，仅包含必要的信息，没有 parentRef 和 childrenRefs
+  const shrinkBlock = <T extends MinimalBlock>(block: T): MinimalBlock => {
     if (block.type == "normalBlock") {
       return {
         type: "normalBlock",
@@ -197,8 +213,9 @@ function useBlockTransaction(context: BlockTransactionContext) {
     throw new Error("Invalid block type");
   };
 
-  // origin 在块事务中根据块事务的 origin 设定
-  const _fromBlockParams = (blockParams: AddBlockParams): Omit<Block, "origin"> | null => {
+  // 将最小块扩展为完整块
+  // 但 origin 在块事务中根据块事务的 origin 设定
+  const enrichBlock = (blockParams: MinimalBlock): Omit<Block, "origin"> | null => {
     if (blockParams.type == "normalBlock") {
       const ret: Omit<NormalBlock, "origin"> = {
         type: "normalBlock",
@@ -345,11 +362,11 @@ function useBlockTransaction(context: BlockTransactionContext) {
   };
 
   // helper functions for creating and executing block transaction
-  const addBlock = (block: AddBlockParams, origin: BlockOrigin) => {
+  const addBlock = (block: MinimalBlock, origin: BlockOrigin) => {
     return createBlockTransaction(origin).addBlock(block).commit();
   };
 
-  const updateBlock = (block: AddBlockParams, origin: BlockOrigin) => {
+  const updateBlock = (block: MinimalBlock, origin: BlockOrigin) => {
     return createBlockTransaction(origin).updateBlock(block).commit();
   };
 

@@ -8,6 +8,9 @@ import {
   type Block,
   type BlocksManager,
   type BlockTransaction,
+  type MinimalBlock,
+  type MinimalMirrorBlock,
+  type MinimalVirtualBlock,
   type MirrorBlock,
   type VirtualBlock,
 } from "./blocksManager";
@@ -29,6 +32,16 @@ export type NonNormalizedBlockPosParentChild = {
 export type BlockPosSiblingOffset = {
   baseBlockId: BlockId;
   offset: number;
+};
+
+export const getActuralSrcBlock = (block: MinimalBlock, tr: BlockTransaction): MinimalBlock => {
+  if (block.type === "normalBlock") return block;
+  if (block.type === "mirrorBlock" || block.type === "virtualBlock") {
+    const srcBlock = tr.getLatestBlock(block.src);
+    if (!srcBlock) throw new Error(`Cannot get srcBlock, blockId=${block.id}`);
+    return getActuralSrcBlock(srcBlock, tr);
+  }
+  throw new Error("Invalid block type");
 };
 
 export const createBlocksEditor = (
@@ -89,17 +102,19 @@ export const createBlocksEditor = (
     let { blockId, content, tr, commit } = params;
     tr ??= blocksManager.createBlockTransaction({ type: "ui", changeSources: [blockId] });
     commit ??= true;
-
-    const block = blocksManager.getBlock(blockId);
-    if (!block) return;
     const indexContext = getIndexContext();
-    const occurs = indexContext!.getOccurs(block.acturalSrc);
+
+    const block = tr.getLatestBlock(blockId)!;
+    const actualSrcBlock = getActuralSrcBlock(block, tr);
+    const occurs = indexContext!.getOccurs(actualSrcBlock.id);
+
     const ctext = blocksManager.getCtext(content);
     const olinks =
       content[0] === BLOCK_CONTENT_TYPES.TEXT ? blocksManager.getOlinks(content[1]) : [];
     const boosting = 0; // TODO
+
     for (const occur of occurs) {
-      const occurBlock = blocksManager.getBlock(occur);
+      const occurBlock = tr.getLatestBlock(occur);
       if (!occurBlock) continue;
       occurBlock.content = content;
       occurBlock.ctext = ctext;
@@ -120,13 +135,15 @@ export const createBlocksEditor = (
     let { blockId, metadata, tr, commit } = params;
     tr ??= blocksManager.createBlockTransaction({ type: "ui", changeSources: [blockId] });
     commit ??= true;
-
-    const block = blocksManager.getBlock(blockId);
-    if (!block) return;
     const indexContext = getIndexContext();
-    const occurs = indexContext!.getOccurs(block.acturalSrc);
+
+    const block = tr.getLatestBlock(blockId)!;
+    const actualSrcBlock = getActuralSrcBlock(block, tr);
+
+    const occurs = indexContext!.getOccurs(actualSrcBlock.id);
+
     for (const occur of occurs) {
-      const occurBlock = blocksManager.getBlock(occur);
+      const occurBlock = tr.getLatestBlock(occur);
       if (!occurBlock) continue;
       occurBlock.metadata = metadata;
       tr.updateBlock(occurBlock);
@@ -147,20 +164,14 @@ export const createBlocksEditor = (
     childrenIds ??= [];
     tr ??= blocksManager.createBlockTransaction({ type: "ui" });
     commit ??= true;
-
     const indexContext = getIndexContext();
-    const normalizedPos = normalizePos(pos);
-    if (!normalizedPos) return;
-    const { parentId, childIndex } = normalizedPos;
-    const parentBlock = blocksManager.getBlock(parentId);
-    if (!parentBlock) return;
 
-    const parentSrcBlock =
-      parentBlock.type == "normalBlock"
-        ? parentBlock
-        : blocksManager.getBlock(parentBlock.acturalSrc);
-    if (!parentSrcBlock) return;
+    const { parentId, childIndex } = normalizePos(pos)!;
+    const parentBlock = tr.getLatestBlock(parentId)!;
+    const parentActuralSrcBlock = getActuralSrcBlock(parentBlock, tr);
+    if (!parentActuralSrcBlock) return;
 
+    // 要插入的新块
     const id = nanoid();
     tr.addBlock({
       id,
@@ -172,17 +183,13 @@ export const createBlocksEditor = (
       metadata: meta ?? {},
     });
 
-    if (parentId == parentSrcBlock.id) {
-      if (parentSrcBlock.fold) {
-        parentSrcBlock.fold = false;
-      }
-    }
-    parentSrcBlock.childrenIds.splice(childIndex, 0, id);
-    tr.updateBlock(parentSrcBlock);
+    parentActuralSrcBlock.childrenIds.splice(childIndex, 0, id);
+    tr.updateBlock(parentActuralSrcBlock);
 
-    const parentOccues = indexContext!.getOccurs(parentSrcBlock.acturalSrc, false);
+    // parentActuralSrcBlock 的所有镜像和虚拟块下面创建对应的虚拟块
+    const parentOccues = indexContext!.getOccurs(parentActuralSrcBlock.id, false);
     for (const occur of parentOccues) {
-      const occurBlock = blocksManager.getBlock(occur);
+      const occurBlock = tr.getLatestBlock(occur);
       if (!occurBlock || (occurBlock.type == "virtualBlock" && !occurBlock.childrenCreated))
         continue;
       const newId = nanoid();
@@ -197,14 +204,14 @@ export const createBlocksEditor = (
         childrenCreated: false,
       });
 
-      if (occur == parentId) {
-        if (occurBlock.fold) {
-          occurBlock.fold = false;
-        }
-      }
-
       occurBlock.childrenIds.splice(childIndex, 0, newId);
       tr.updateBlock(occurBlock);
+    }
+
+    // 如果 parent block 是折叠的，则展开它，让我们能看到插入的块
+    if (parentBlock.fold) {
+      parentBlock.fold = false;
+      tr.updateBlock(parentBlock);
     }
 
     if (commit) tr.commit();
@@ -228,20 +235,11 @@ export const createBlocksEditor = (
     if (blocks.length === 0) return;
     tr ??= blocksManager.createBlockTransaction({ type: "ui" });
     commit ??= true;
-
     const indexContext = getIndexContext();
-    let focusNext;
-    const normalizedPos = normalizePos(pos);
-    if (!normalizedPos) return;
-    const { parentId, childIndex } = normalizedPos;
-    const parentBlock = blocksManager.getBlock(parentId);
-    if (!parentBlock) return;
 
-    const parentSrcBlock =
-      parentBlock.type == "normalBlock"
-        ? parentBlock
-        : blocksManager.getBlock(parentBlock.acturalSrc);
-    if (!parentSrcBlock) return;
+    const { parentId, childIndex } = normalizePos(pos)!;
+    const parentBlock = tr.getLatestBlock(parentId)!;
+    const parentActuralSrcBlock = getActuralSrcBlock(parentBlock, tr);
 
     // 创建所有新块的ID
     const newBlockIds = blocks.map((b) => b.id ?? nanoid());
@@ -261,21 +259,16 @@ export const createBlocksEditor = (
     });
 
     // 更新父块的子块列表
-    parentSrcBlock.childrenIds.splice(childIndex, 0, ...newBlockIds);
-    if (parentSrcBlock.fold) {
-      parentSrcBlock.fold = false;
+    parentActuralSrcBlock.childrenIds.splice(childIndex, 0, ...newBlockIds);
+    if (parentActuralSrcBlock.fold) {
+      parentActuralSrcBlock.fold = false;
     }
-    tr.updateBlock(parentSrcBlock);
-
-    // 如果父块是源块且插入位置是当前位置，则聚焦第一个新块
-    if (parentId == parentSrcBlock.id) {
-      focusNext = newBlockIds[0];
-    }
+    tr.updateBlock(parentActuralSrcBlock);
 
     // 为父块的所有镜像和虚拟块创建对应的虚拟块
-    const parentOccurs = indexContext!.getOccurs(parentSrcBlock.acturalSrc, false);
+    const parentOccurs = indexContext!.getOccurs(parentActuralSrcBlock.id, false);
     for (const occur of parentOccurs) {
-      const occurBlock = blocksManager.getBlock(occur);
+      const occurBlock = tr.getLatestBlock(occur);
       if (!occurBlock || (occurBlock.type == "virtualBlock" && !occurBlock.childrenCreated))
         continue;
 
@@ -298,15 +291,17 @@ export const createBlocksEditor = (
 
       // 批量更新镜像/虚拟块的子块列表
       occurBlock.childrenIds.splice(childIndex, 0, ...newVirtualIds);
-      if (occur == parentId) {
-        occurBlock.fold = false;
-        focusNext = newVirtualIds[0];
-      }
       tr.updateBlock(occurBlock);
     }
 
+    // 如果 parent block 是折叠的，则展开它，让我们能看到插入的块
+    if (parentBlock.fold) {
+      parentBlock.fold = false;
+      tr.updateBlock(parentBlock);
+    }
+
     if (commit) tr.commit();
-    return { focusNext, newNormalBlockIds: newBlockIds };
+    return { newNormalBlockIds: newBlockIds };
   };
 
   const insertMirrorBlock = (params: {
@@ -318,32 +313,22 @@ export const createBlocksEditor = (
     let { pos, srcBlockId, tr, commit } = params;
     tr ??= blocksManager.createBlockTransaction({ type: "ui" });
     commit ??= true;
-
     const indexContext = getIndexContext();
-    const normalizedPos = normalizePos(pos);
-    if (!normalizedPos) return;
-    const { parentId, childIndex } = normalizedPos;
-    const parentBlock = blocksManager.getBlock(parentId);
-    if (!parentBlock) return;
 
-    const parentSrcBlock =
-      parentBlock.type == "normalBlock"
-        ? parentBlock
-        : blocksManager.getBlock(parentBlock.acturalSrc);
-    if (!parentSrcBlock) return;
+    const { parentId, childIndex } = normalizePos(pos)!;
+    const parentBlock = tr.getLatestBlock(parentId)!;
+    const parentActuralSrcBlock = getActuralSrcBlock(parentBlock, tr);
 
-    const srcBlock = blocksManager.getBlock(srcBlockId);
-    if (!srcBlock) return;
-    const srcSrcBlock =
-      srcBlock.type === "normalBlock" ? srcBlock : blocksManager.getBlock(srcBlock.acturalSrc);
-    if (!srcSrcBlock) return;
+    const srcBlock = tr.getLatestBlock(srcBlockId)!;
+    const srcActuralSrcBlock = getActuralSrcBlock(srcBlock, tr);
 
+    // 创建新的镜像块，镜像块的孩子都是虚拟块，需要一起生成
     const newMirrorBlockId = nanoid();
     const vChildBlockIds: BlockId[] = [];
-    for (const childId of srcSrcBlock.childrenIds) {
-      const childBlock = blocksManager.getBlock(childId);
+    for (const childId of srcActuralSrcBlock.childrenIds) {
+      const childBlock = tr.getLatestBlock(childId);
       if (!childBlock) continue;
-      const vChildBlock: VirtualBlock = {
+      const vChildBlock: MinimalVirtualBlock = {
         ...childBlock,
         id: nanoid(),
         parentId: newMirrorBlockId,
@@ -357,27 +342,25 @@ export const createBlocksEditor = (
       vChildBlockIds.push(vChildBlock.id);
     }
 
-    const newMirrorBlock: MirrorBlock = {
+    const newMirrorBlock: MinimalMirrorBlock = {
       ...srcBlock,
       id: newMirrorBlockId,
-      parentId: parentSrcBlock.id,
+      parentId,
       type: "mirrorBlock",
       childrenIds: vChildBlockIds,
       fold: true,
-      src: srcSrcBlock.id,
+      src: srcBlockId,
     };
     tr.addBlock(newMirrorBlock);
-    if (parentId == parentSrcBlock.id) {
-      parentSrcBlock.fold = false;
-    }
-    parentSrcBlock.childrenIds.splice(childIndex, 0, newMirrorBlock.id);
-    tr.updateBlock(parentSrcBlock);
 
-    const parentOccurs = indexContext!.getOccurs(parentSrcBlock.id, false);
+    parentActuralSrcBlock.childrenIds.splice(childIndex, 0, newMirrorBlock.id);
+    tr.updateBlock(parentActuralSrcBlock);
+
+    const parentOccurs = indexContext!.getOccurs(parentActuralSrcBlock.id, false);
     for (const occurId of parentOccurs) {
-      const occurBlock = blocksManager.getBlock(occurId);
+      const occurBlock = tr.getLatestBlock(occurId);
       if (!occurBlock) continue;
-      const newBlock: VirtualBlock = {
+      const newBlock: MinimalVirtualBlock = {
         ...newMirrorBlock,
         id: nanoid(),
         parentId: occurId,
@@ -387,12 +370,15 @@ export const createBlocksEditor = (
         src: newMirrorBlock.id,
         childrenCreated: false,
       };
-      if (occurId == parentId) {
-        occurBlock.fold = false;
-      }
       if (occurBlock.type === "virtualBlock" && !occurBlock.childrenCreated) continue;
       occurBlock.childrenIds.splice(childIndex, 0, newBlock.id);
       tr.updateBlock(occurBlock);
+    }
+
+    // 如果 parent block 是折叠的，则展开它，让我们能看到插入的块
+    if (parentBlock.fold) {
+      parentBlock.fold = false;
+      tr.updateBlock(parentBlock);
     }
 
     if (commit) tr.commit();
@@ -407,67 +393,55 @@ export const createBlocksEditor = (
   }) => {
     let { blockId, pos, tr, commit } = params;
     commit ??= true;
-
+    tr ??= blocksManager.createBlockTransaction({ type: "ui" });
     const indexContext = getIndexContext();
 
-    const normalizedPos = normalizePos(pos);
-    if (!normalizedPos) return null;
+    const { parentId: targetParentId, childIndex: targetChildIndex } = normalizePos(pos)!;
 
-    const block = blocksManager.getBlock(blockId);
-    if (!block) return null;
-    const srcBlock = blocksManager.getBlock(block.acturalSrc);
-    if (!srcBlock) return null;
+    const block = tr.getLatestBlock(blockId)!;
+    const acturalSrcBlock = getActuralSrcBlock(block, tr);
+    const acturalSrcParentBlock = tr.getLatestBlock(acturalSrcBlock.parentId)!;
 
-    const srcParentBlock = blocksManager.getBlock(srcBlock.parentId);
-    if (!srcParentBlock) return null;
+    const targetParentBlock = tr.getLatestBlock(targetParentId)!;
+    const targetParentActuralSrcBlock = getActuralSrcBlock(targetParentBlock, tr);
 
-    const targetParentBlock = blocksManager.getBlock(normalizedPos.parentId);
-    if (!targetParentBlock) return null;
-    const targetParentSrcBlock = blocksManager.getBlock(targetParentBlock.acturalSrc);
-    if (!targetParentSrcBlock) return null;
-
-    const index = srcParentBlock.childrenIds.indexOf(srcBlock.id);
+    const index = acturalSrcParentBlock.childrenIds.indexOf(acturalSrcBlock.id);
     if (index == -1) return null;
 
     let insertIndex;
-    if (srcParentBlock.id === targetParentSrcBlock.id) {
-      insertIndex =
-        index < normalizedPos.childIndex ? normalizedPos.childIndex - 1 : normalizedPos.childIndex;
-    } else {
-      insertIndex = normalizedPos.childIndex;
-    }
+    if (acturalSrcParentBlock.id === targetParentActuralSrcBlock.id)
+      insertIndex = index < targetChildIndex ? targetChildIndex - 1 : targetChildIndex;
+    else insertIndex = targetChildIndex;
 
-    if (insertIndex < 0 || insertIndex > targetParentSrcBlock.childrenIds.length) {
+    if (insertIndex < 0 || insertIndex > targetParentActuralSrcBlock.childrenIds.length) {
       return null;
     }
 
-    tr ??= blocksManager.createBlockTransaction({ type: "ui" });
-
     // 同级之间移动
-    if (srcParentBlock.id == targetParentSrcBlock.id) {
+    if (acturalSrcParentBlock.id == targetParentActuralSrcBlock.id) {
       // 位置没变，不用管
-      if (index == normalizedPos.childIndex || index + 1 == normalizedPos.childIndex) {
+      if (index == targetChildIndex || index + 1 == targetChildIndex) {
         return null;
       }
-      srcParentBlock.childrenIds.splice(index, 1);
-      srcParentBlock.childrenIds.splice(insertIndex, 0, srcBlock.id);
-      tr.updateBlock(srcParentBlock);
+      acturalSrcParentBlock.childrenIds.splice(index, 1);
+      acturalSrcParentBlock.childrenIds.splice(insertIndex, 0, acturalSrcBlock.id);
+      tr.updateBlock(acturalSrcParentBlock);
     } else {
       // 从原来的 parent srcBlock 中删除 srcBlock
-      srcParentBlock.childrenIds.splice(index, 1);
-      tr.updateBlock(srcParentBlock);
+      acturalSrcParentBlock.childrenIds.splice(index, 1);
+      tr.updateBlock(acturalSrcParentBlock);
       // 将 srcBlock 添加到新的 parent srcBlock 中
-      targetParentSrcBlock.childrenIds.splice(insertIndex, 0, srcBlock.id);
-      tr.updateBlock(targetParentSrcBlock);
+      targetParentActuralSrcBlock.childrenIds.splice(insertIndex, 0, acturalSrcBlock.id);
+      tr.updateBlock(targetParentActuralSrcBlock);
       // 更新 srcBlock 的 parent
-      srcBlock.parentId = targetParentSrcBlock.id;
-      tr.updateBlock(srcBlock);
+      acturalSrcBlock.parentId = targetParentActuralSrcBlock.id;
+      tr.updateBlock(acturalSrcBlock);
     }
 
     // 同步到所有镜像和虚拟块
-    const oldParentOccurs = indexContext!.getOccurs(srcParentBlock.id, false);
+    const oldParentOccurs = indexContext!.getOccurs(acturalSrcParentBlock.id, false);
     for (const occurId of oldParentOccurs) {
-      const occurBlock = blocksManager.getBlock(occurId);
+      const occurBlock = tr.getLatestBlock(occurId);
       if (!occurBlock || (occurBlock.type == "virtualBlock" && !occurBlock.childrenCreated))
         continue;
       const deletedId = occurBlock.childrenIds.splice(index, 1)[0];
@@ -475,19 +449,19 @@ export const createBlocksEditor = (
       tr.deleteBlock(deletedId);
     }
 
-    const newParentOccurs = indexContext!.getOccurs(targetParentSrcBlock.id, false);
+    const newParentOccurs = indexContext!.getOccurs(targetParentActuralSrcBlock.id, false);
     for (const occurId of newParentOccurs) {
-      const occurBlock = blocksManager.getBlock(occurId);
+      const occurBlock = tr.getLatestBlock(occurId);
       if (!occurBlock || (occurBlock.type == "virtualBlock" && !occurBlock.childrenCreated))
         continue;
-      const newVirtualBlock: VirtualBlock = {
-        ...structuredClone(srcBlock),
+      const newVirtualBlock: MinimalVirtualBlock = {
+        ...structuredClone(acturalSrcBlock),
         id: nanoid(),
         parentId: occurBlock.id,
         type: "virtualBlock",
         childrenIds: [],
         fold: true,
-        src: srcBlock.id,
+        src: acturalSrcBlock.id,
         childrenCreated: false,
       };
       occurBlock.childrenIds.splice(insertIndex, 0, newVirtualBlock.id);
@@ -509,17 +483,17 @@ export const createBlocksEditor = (
     let { blockIds, pos, tr, commit } = params;
     commit ??= true;
     tr ??= blocksManager.createBlockTransaction({ type: "ui" });
-
     const indexContext = getIndexContext();
-    const normalizedPos = normalizePos(pos);
-    if (!normalizedPos) return null;
+
+    const { parentId: targetParentId, childIndex: targetChildIndex } = normalizePos(pos)!;
 
     // 预检查，blockIds 中要移动的块应该是同一个父块的若干连续子块
+    // 下面计算 fromIndex 和 toIndex
+    // fromIndex - 要移动的块的第一个块在父块中的位置，inclusive
+    // toIndex - 要移动的块的最后一个块在父块中的位置，inclusive
     const blockId0 = blockIds[0];
-    const block0 = blocksManager.getBlock(blockId0);
-    if (!block0) return null;
-    const block0Parent = cloneBlock(block0.parentRef.value);
-    if (!block0Parent) return null;
+    const block0 = tr.getLatestBlock(blockId0)!;
+    const block0Parent = tr.getLatestBlock(block0.parentId)!;
     const fromIndex = block0Parent.childrenIds.indexOf(blockId0);
     if (fromIndex == -1) return null;
     for (let i = 1; i < blockIds.length; i++) {
@@ -529,41 +503,28 @@ export const createBlocksEditor = (
     }
     const toIndex = fromIndex + blockIds.length - 1; // [fromIndex, toIndex]
 
-    const currParentSrcBlock =
-      block0Parent.type === "normalBlock"
-        ? block0Parent
-        : blocksManager.getBlock(block0Parent.acturalSrc);
-    if (!currParentSrcBlock) return null;
-
-    const targetParentBlock = blocksManager.getBlock(normalizedPos.parentId);
-    if (!targetParentBlock) return null;
-    const targetParentSrcBlock =
-      targetParentBlock.type === "normalBlock"
-        ? targetParentBlock
-        : blocksManager.getBlock(targetParentBlock.acturalSrc);
-    if (!targetParentSrcBlock) return null;
+    const currParentActuralSrcBlock = getActuralSrcBlock(block0Parent, tr);
+    const targetParentBlock = tr.getLatestBlock(targetParentId)!;
+    const targetParentActuralSrcBlock = getActuralSrcBlock(targetParentBlock, tr);
 
     // 同级之间移动
     // 1 (2 3 4) 5 6 | 7 8 9
     // 将 () 中的部分移到 | 的位置时，需要会先删除 () 中的部分
     // 如果 () 在 |左侧，那么再插入时 | 的下标要减去删除部分的长度
     let srcBlockIdsToMove: BlockId[];
-    if (currParentSrcBlock.id === targetParentSrcBlock.id) {
+    if (currParentActuralSrcBlock.id === targetParentActuralSrcBlock.id) {
       // 先修改 currParentSrcBlock 的 childrenIds
-      if (normalizedPos.childIndex >= fromIndex && normalizedPos.childIndex <= toIndex + 1)
-        return null;
-      srcBlockIdsToMove = currParentSrcBlock.childrenIds.splice(fromIndex, blockIds.length);
+      if (targetChildIndex >= fromIndex && targetChildIndex <= toIndex + 1) return null;
+      srcBlockIdsToMove = currParentActuralSrcBlock.childrenIds.splice(fromIndex, blockIds.length);
       const insertIndex =
-        normalizedPos.childIndex < fromIndex
-          ? normalizedPos.childIndex
-          : normalizedPos.childIndex - blockIds.length;
-      currParentSrcBlock.childrenIds.splice(insertIndex, 0, ...srcBlockIdsToMove);
-      tr.updateBlock(currParentSrcBlock);
+        targetChildIndex < fromIndex ? targetChildIndex : targetChildIndex - blockIds.length;
+      currParentActuralSrcBlock.childrenIds.splice(insertIndex, 0, ...srcBlockIdsToMove);
+      tr.updateBlock(currParentActuralSrcBlock);
 
       // 然后同步到 currParentBlock 的镜像和虚拟块
-      const currParentOccurs = indexContext!.getOccurs(currParentSrcBlock.id, false);
+      const currParentOccurs = indexContext!.getOccurs(currParentActuralSrcBlock.id, false);
       for (const occurId of currParentOccurs) {
-        const occurBlock = blocksManager.getBlock(occurId);
+        const occurBlock = tr.getLatestBlock(occurId);
         if (!occurBlock || (occurBlock.type == "virtualBlock" && !occurBlock.childrenCreated))
           continue;
         const spliced = occurBlock.childrenIds.splice(fromIndex, blockIds.length);
@@ -572,39 +533,39 @@ export const createBlocksEditor = (
       }
     } else {
       // 从原来 parentSrcBlock 中删除 blockIds 中的块
-      srcBlockIdsToMove = currParentSrcBlock.childrenIds.splice(fromIndex, blockIds.length);
-      tr.updateBlock(currParentSrcBlock);
-      // 将删除的块添加到 targetParentSrcBlock 的目标位置
-      targetParentSrcBlock.childrenIds.splice(normalizedPos.childIndex, 0, ...srcBlockIdsToMove);
-      tr.updateBlock(targetParentSrcBlock);
-      // 所有被移动块的 parentId 都要改为 targetParentSrcBlock.id
+      srcBlockIdsToMove = currParentActuralSrcBlock.childrenIds.splice(fromIndex, blockIds.length);
+      tr.updateBlock(currParentActuralSrcBlock);
+      // 将删除的块添加到 targetParentActuralSrcBlock 的目标位置
+      targetParentActuralSrcBlock.childrenIds.splice(targetChildIndex, 0, ...srcBlockIdsToMove);
+      tr.updateBlock(targetParentActuralSrcBlock);
+      // 所有被移动块的 parentId 都要改为 targetParentActuralSrcBlock.id
       for (const blockId of srcBlockIdsToMove) {
-        const splicedBlock = blocksManager.getBlock(blockId);
+        const splicedBlock = tr.getLatestBlock(blockId);
         if (!splicedBlock) continue;
-        splicedBlock.parentId = targetParentSrcBlock.id;
+        splicedBlock.parentId = targetParentActuralSrcBlock.id;
         tr.updateBlock(splicedBlock);
       }
 
       // 然后同步更改到所有镜像和虚拟块
-      const currParentOccurs = indexContext!.getOccurs(currParentSrcBlock.id, false);
+      const currParentOccurs = indexContext!.getOccurs(currParentActuralSrcBlock.id, false);
       for (const occurId of currParentOccurs) {
-        const occurBlock = blocksManager.getBlock(occurId);
+        const occurBlock = tr.getLatestBlock(occurId);
         if (!occurBlock || (occurBlock.type == "virtualBlock" && !occurBlock.childrenCreated))
           continue;
         occurBlock.childrenIds.splice(fromIndex, blockIds.length);
         tr.updateBlock(occurBlock);
       }
 
-      const targetParentOccurs = indexContext!.getOccurs(targetParentSrcBlock.id, false);
+      const targetParentOccurs = indexContext!.getOccurs(targetParentActuralSrcBlock.id, false);
       for (const occurId of targetParentOccurs) {
-        const occurBlock = blocksManager.getBlock(occurId);
+        const occurBlock = tr.getLatestBlock(occurId);
         if (!occurBlock || (occurBlock.type == "virtualBlock" && !occurBlock.childrenCreated))
           continue;
         const newVirtualBlockIds: BlockId[] = [];
         for (const blockId of srcBlockIdsToMove) {
-          const block = blocksManager.getBlock(blockId);
+          const block = tr.getLatestBlock(blockId);
           if (!block) continue;
-          const newVirtualBlock: VirtualBlock = {
+          const newVirtualBlock: MinimalVirtualBlock = {
             ...block,
             id: nanoid(),
             parentId: occurBlock.id,
@@ -617,7 +578,7 @@ export const createBlocksEditor = (
           newVirtualBlockIds.push(newVirtualBlock.id);
           tr.addBlock(newVirtualBlock);
         }
-        occurBlock.childrenIds.splice(normalizedPos.childIndex, 0, ...newVirtualBlockIds);
+        occurBlock.childrenIds.splice(targetChildIndex, 0, ...newVirtualBlockIds);
         tr.updateBlock(occurBlock);
       }
     }
@@ -631,22 +592,23 @@ export const createBlocksEditor = (
     let { blockId, tr, commit } = params;
     commit ??= true;
     const indexContext = getIndexContext();
+    tr ??= blocksManager.createBlockTransaction({ type: "ui" });
 
-    const block = blocksManager.getBlock(blockId);
+    const block = tr.getLatestBlock(blockId);
 
     // 如果无法获得 block，说明这是一个 missing block
     // missing block 需要特殊处理
     if (!block) {
-      const tr = blocksManager.createBlockTransaction({ type: "ui" });
       const parentId = blocksManager.missingBlockParents.get(blockId);
       if (!parentId) return;
-      const parentBlock = blocksManager.getBlock(parentId);
+      const parentBlock = tr.getLatestBlock(parentId);
       if (!parentBlock) return;
       const index = parentBlock.childrenIds.indexOf(blockId);
       if (index < 0) return;
-      const parentOccurs = indexContext!.getOccurs(parentBlock.acturalSrc, true);
+      const parentActualSrc = getActuralSrcBlock(parentBlock, tr);
+      const parentOccurs = indexContext!.getOccurs(parentActualSrc.id, true);
       for (const occur of parentOccurs) {
-        const occurBlock = blocksManager.getBlock(occur);
+        const occurBlock = tr.getLatestBlock(occur);
         if (!occurBlock) continue;
         occurBlock.childrenIds.splice(index, 1);
         tr.updateBlock(occurBlock);
@@ -655,20 +617,21 @@ export const createBlocksEditor = (
       return;
     }
 
-    const blocksToDelete: Block[] = [];
+    const blocksToDelete: MinimalBlock[] = [];
 
-    const _deleteBlock = (block: Block) => {
+    const _deleteBlock = (block: MinimalBlock) => {
       // 1. 删除一个普通块，其所有后代及其镜像块和虚拟块都会删除
       // 2. 删除一个虚拟块，其来源块的所有后代及其镜像块和虚拟块都会删除
       if (block.type == "normalBlock" || block.type == "virtualBlock") {
-        const occurs = indexContext!.getOccurs(block.acturalSrc, true);
+        const srcActualSrc = getActuralSrcBlock(block, tr);
+        const occurs = indexContext!.getOccurs(srcActualSrc.id, true);
         const occurBlocks = occurs
-          .map((id) => blocksManager.getBlock(id))
+          .map((id) => tr.getLatestBlock(id))
           .filter((b) => b != null) as Block[];
         blocksToDelete.push(...occurBlocks);
         for (const occurBlock of occurBlocks) {
           for (const child of occurBlock.childrenIds) {
-            const childBlock = blocksManager.getBlock(child);
+            const childBlock = tr.getLatestBlock(child);
             if (!childBlock) continue;
             _deleteBlock(childBlock); // 递归删除
           }
@@ -677,7 +640,7 @@ export const createBlocksEditor = (
         // 3. 删除一个镜像块，其所有后代都会删除，但不会影响其来源块
         blocksToDelete.push(block);
         for (const child of block.childrenIds) {
-          const childBlock = blocksManager.getBlock(child);
+          const childBlock = tr.getLatestBlock(child);
           if (!childBlock) continue;
           _deleteBlock(childBlock); // 递归删除
         }
@@ -685,25 +648,24 @@ export const createBlocksEditor = (
     };
 
     _deleteBlock(block);
-
-    tr ??= blocksManager.createBlockTransaction({ type: "ui" });
     for (const block of blocksToDelete) tr.deleteBlock(block.id);
 
     // 此外，还需将 blockId 从其父块的孩子中删除
     if (block.type == "normalBlock" || block.type == "virtualBlock") {
-      const parentBlock = blocksManager.getBlock(block.parentId);
+      const parentBlock = tr.getLatestBlock(block.parentId);
       if (!parentBlock) return;
+      const parentActualSrc = getActuralSrcBlock(parentBlock, tr);
       const index = parentBlock.childrenIds.indexOf(block.id);
       if (index < 0) return;
-      const parentOccurs = indexContext!.getOccurs(parentBlock.acturalSrc, true);
+      const parentOccurs = indexContext!.getOccurs(parentActualSrc.id, true);
       for (const occur of parentOccurs) {
-        const occurBlock = blocksManager.getBlock(occur);
+        const occurBlock = tr.getLatestBlock(occur);
         if (!occurBlock) continue;
         occurBlock.childrenIds.splice(index, 1);
         tr.updateBlock(occurBlock);
       }
     } else {
-      const parentBlock = blocksManager.getBlock(block.parentId);
+      const parentBlock = tr.getLatestBlock(block.parentId);
       if (!parentBlock) return;
       const index = parentBlock.childrenIds.indexOf(block.id);
       if (index < 0) return;
@@ -718,58 +680,49 @@ export const createBlocksEditor = (
     let { blockId, tr, commit } = params;
     tr ??= blocksManager.createBlockTransaction({ type: "ui" });
     commit ??= true;
-
     const indexContext = getIndexContext();
-    const block = blocksManager.getBlock(blockId);
-    if (!block) return;
-    if (block.id == "root") return; // cannot promote root block
-    const srcBlock = blocksManager.getBlock(block.acturalSrc);
-    if (!srcBlock) return;
 
-    const parentBlock = block.parentRef.value;
-    if (!parentBlock) return;
-    // note: srcBlock's parent must be normal block
-    const parentSrcBlock = blocksManager.getBlock(parentBlock.acturalSrc);
-    if (!parentSrcBlock) return;
+    const block = tr.getLatestBlock(blockId)!;
+    if (block.id == "root") return { success: false }; // 不能缩进根块
+    const srcBlock = getActuralSrcBlock(block, tr);
+    const parentBlock = tr.getLatestBlock(block.parentId)!;
+    // 注意，srcBlock 的 parent 必须是 normal block
+    const parentActuralSrcBlock = getActuralSrcBlock(parentBlock, tr);
 
-    // locate block to promote in its parent block's childrenIds
+    // 找到要缩进的块在父块中的位置
     const index = parentBlock.childrenIds.indexOf(block.id);
-    if (index <= 0) return;
+    if (index <= 0) return { success: false };
 
-    const prevBlock = blocksManager.getBlock(parentBlock.childrenIds[index - 1]);
-    if (!prevBlock) return;
-    const prevSrcBlock = blocksManager.getBlock(prevBlock.acturalSrc);
-    if (!prevSrcBlock) return;
+    // 找到要缩进的块的前一个块，找不到的话就无法缩进
+    const prevBlock = tr.getLatestBlock(parentBlock.childrenIds[index - 1]);
+    if (!prevBlock) return { success: false };
+    const prevActuralSrcBlock = getActuralSrcBlock(prevBlock, tr);
 
-    // delete index-th block from parentSrcBlock and append to prevSrcBlock
-    const deleted = parentSrcBlock.childrenIds.splice(index, 1)[0];
-    const deletedBlock = blocksManager.getBlock(deleted);
-    if (!deletedBlock) return;
-    tr.updateBlock(parentSrcBlock);
-    prevSrcBlock.childrenIds.push(deleted);
-    if (prevSrcBlock.id == prevBlock.id) {
-      // need expand & focus?
-      prevSrcBlock.fold = false;
-    }
-    tr.updateBlock(prevSrcBlock);
-    deletedBlock.parentId = prevSrcBlock.id; // update deletedBlock's parent
+    // 将 index-th 块从 parentActuralSrcBlock 中删除，并添加到 prevActuralSrcBlock 中
+    const deleted = parentActuralSrcBlock.childrenIds.splice(index, 1)[0];
+    const deletedBlock = tr.getLatestBlock(deleted);
+    if (!deletedBlock) return { success: false };
+    tr.updateBlock(parentActuralSrcBlock);
+    prevActuralSrcBlock.childrenIds.push(deleted);
+    tr.updateBlock(prevActuralSrcBlock);
+    deletedBlock.parentId = prevActuralSrcBlock.id; // 更新 deletedBlock 的 parent
     tr.updateBlock(deletedBlock);
 
-    // sync to all the mirrors and virtuals
-    const parentOccurs = indexContext!.getOccurs(parentSrcBlock.id, false);
+    // 同步到 parentActuralSrcBlock 的所有镜像和虚拟块
+    const parentOccurs = indexContext!.getOccurs(parentActuralSrcBlock.id, false);
     for (const occurId of parentOccurs) {
-      const occurBlock = blocksManager.getBlock(occurId);
+      const occurBlock = tr.getLatestBlock(occurId);
       if (!occurBlock || (occurBlock.type == "virtualBlock" && !occurBlock.childrenCreated))
         continue;
       const deletedId = occurBlock.childrenIds.splice(index, 1)[0];
       tr.updateBlock(occurBlock);
       tr.deleteBlock(deletedId);
-      // gs.deleteVirtual(srcBlock.id, deletedId);
     }
 
-    const prevOccurs = indexContext!.getOccurs(prevSrcBlock.id, false);
+    // 同步到 prevActuralSrcBlock 的所有镜像和虚拟块
+    const prevOccurs = indexContext!.getOccurs(prevActuralSrcBlock.id, false);
     for (const occurId of prevOccurs) {
-      const occurBlock = blocksManager.getBlock(occurId);
+      const occurBlock = tr.getLatestBlock(occurId);
       if (!occurBlock || (occurBlock.type == "virtualBlock" && !occurBlock.childrenCreated))
         continue;
       const newVirtualBlock = {
@@ -787,36 +740,34 @@ export const createBlocksEditor = (
       }
       tr.updateBlock(occurBlock);
       tr.addBlock(newVirtualBlock);
-      // gs.addVirtual(srcBlock.id, newVirtualBlock.id);
+    }
+
+    if (prevBlock.fold) {
+      prevBlock.fold = false;
+      tr.updateBlock(prevBlock);
     }
 
     if (commit) tr.commit();
 
-    return {};
+    return { success: true };
   };
 
   const demoteBlock = (params: { blockId: BlockId; tr?: BlockTransaction; commit?: boolean }) => {
     let { blockId, tr, commit } = params;
     tr ??= blocksManager.createBlockTransaction({ type: "ui" });
     commit ??= true;
-
     const indexContext = getIndexContext();
-    const block = blocksManager.getBlock(blockId);
-    if (!block) return;
-    if (block.parentId == "null") return;
-    const srcBlock = blocksManager.getBlock(block.acturalSrc);
-    if (!srcBlock) return;
 
-    const parentBlock = blocksManager.getBlock(block.parentId);
-    if (!parentBlock) return;
-    if (parentBlock.parentId == "null") return;
-    const parentSrcBlock = blocksManager.getBlock(parentBlock.acturalSrc);
-    if (!parentSrcBlock) return;
+    const block = tr.getLatestBlock(blockId)!;
+    if (block.parentId == "null") return { success: false };
+    const acturalSrcBlock = getActuralSrcBlock(block, tr);
 
-    const parentParentBlock = blocksManager.getBlock(parentBlock.parentId);
-    if (!parentParentBlock) return;
-    const parentParentSrcBlock = blocksManager.getBlock(parentParentBlock.acturalSrc);
-    if (!parentParentSrcBlock) return;
+    const parentBlock = tr.getLatestBlock(block.parentId)!;
+    if (parentBlock.parentId == "null") return { success: false };
+    const parentActuralSrcBlock = getActuralSrcBlock(parentBlock, tr);
+
+    const parentParentBlock = tr.getLatestBlock(parentBlock.parentId)!;
+    const parentParentActuralSrcBlock = getActuralSrcBlock(parentParentBlock, tr);
 
     // Example 1.
     // - block1                              Desirable:  - block1
@@ -834,11 +785,11 @@ export const createBlocksEditor = (
     //     - block2 [virtual] <-- demote this
 
     // delete srcBlock from its parent
-    const index1 = parentSrcBlock.childrenIds.indexOf(srcBlock.id);
-    const deleted = parentSrcBlock.childrenIds.splice(index1, 1)[0];
-    const deletedBlock = blocksManager.getBlock(deleted);
-    if (!deletedBlock) return;
-    tr.updateBlock(parentSrcBlock);
+    const index1 = parentActuralSrcBlock.childrenIds.indexOf(acturalSrcBlock.id);
+    const deleted = parentActuralSrcBlock.childrenIds.splice(index1, 1)[0];
+    const deletedBlock = tr.getLatestBlock(deleted);
+    if (!deletedBlock) return { success: false };
+    tr.updateBlock(parentActuralSrcBlock);
 
     let index2;
     if (parentBlock.type == "mirrorBlock" && parentParentBlock.type == "normalBlock") {
@@ -853,19 +804,19 @@ export const createBlocksEditor = (
       tr.updateBlock(deletedBlock);
     } else {
       // append srcBlock to new parent, right after parentSrcBlock
-      index2 = parentParentSrcBlock.childrenIds.indexOf(parentSrcBlock.id);
-      parentParentSrcBlock.childrenIds.splice(index2 + 1, 0, deleted);
-      tr.updateBlock(parentParentSrcBlock);
+      index2 = parentParentActuralSrcBlock.childrenIds.indexOf(parentActuralSrcBlock.id);
+      parentParentActuralSrcBlock.childrenIds.splice(index2 + 1, 0, deleted);
+      tr.updateBlock(parentParentActuralSrcBlock);
 
       // change parent of srcBlock
-      deletedBlock.parentId = parentParentSrcBlock.id;
+      deletedBlock.parentId = parentParentActuralSrcBlock.id;
       tr.updateBlock(deletedBlock);
     }
 
     // sync to all the mirrors and virtuals
-    const parentOccurs = indexContext!.getOccurs(parentSrcBlock.id, false);
+    const parentOccurs = indexContext!.getOccurs(parentActuralSrcBlock.id, false);
     for (const occurId of parentOccurs) {
-      const occurBlock = blocksManager.getBlock(occurId);
+      const occurBlock = tr.getLatestBlock(occurId);
       if (!occurBlock || (occurBlock.type == "virtualBlock" && !occurBlock.childrenCreated))
         continue;
       const deletedId = occurBlock.childrenIds.splice(index1, 1)[0];
@@ -874,18 +825,18 @@ export const createBlocksEditor = (
       // state.deleteVirtual(srcBlock.id, deletedId);
     }
 
-    const parentParentOccurs = indexContext!.getOccurs(parentParentSrcBlock.id, false);
+    const parentParentOccurs = indexContext!.getOccurs(parentParentActuralSrcBlock.id, false);
     for (const occurId of parentParentOccurs) {
-      const occurBlock = blocksManager.getBlock(occurId);
+      const occurBlock = tr.getLatestBlock(occurId);
       if (!occurBlock || (occurBlock.type == "virtualBlock" && !occurBlock.childrenCreated))
         continue;
       const newVirtualBlock = {
-        ...srcBlock,
+        ...acturalSrcBlock,
         id: nanoid(),
         parentId: occurBlock.id,
         type: "virtualBlock",
         fold: true,
-        src: srcBlock.id,
+        src: acturalSrcBlock.id,
         childrenCreated: false,
       } as const;
       occurBlock.childrenIds.splice(index2 + 1, 0, newVirtualBlock.id);
@@ -895,7 +846,7 @@ export const createBlocksEditor = (
 
     if (commit) tr.commit();
 
-    return {};
+    return { success: true };
   };
 
   const locateBlock = async (blockId: BlockId, blockTree?: BlockTree) => {

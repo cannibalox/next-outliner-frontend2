@@ -97,7 +97,9 @@ export type TransactionEnvInfo = {
   [key: string]: any;
 };
 
-export type AddBlockParams = {
+// 最小块，仅包含必要的信息，没有 parentRef 和 childrenRefs
+// 这种加速某些操作用的辅助字段
+export type MinimalBlock = {
   id: BlockId;
   fold: boolean;
   parentId: BlockId;
@@ -109,9 +111,13 @@ export type AddBlockParams = {
   | { type: "virtualBlock"; src: BlockId; childrenCreated: boolean }
 );
 
+export type MinimalNormalBlock = MinimalBlock & { type: "normalBlock" };
+export type MinimalMirrorBlock = MinimalBlock & { type: "mirrorBlock" };
+export type MinimalVirtualBlock = MinimalBlock & { type: "virtualBlock" };
+
 export type BlockPatch =
-  | { op: "add"; block: AddBlockParams }
-  | { op: "update"; block: AddBlockParams }
+  | { op: "add"; block: MinimalBlock }
+  | { op: "update"; block: MinimalBlock }
   | { op: "delete"; blockId: BlockId; docId?: number };
 
 export type BlockTransactionMeta = {
@@ -136,13 +142,14 @@ export type BlockTransaction = {
     beforeCommit: TransactionEnvInfo | null;
     afterCommit: TransactionEnvInfo | null;
   };
-  addBlock: <T extends AddBlockParams>(block: T) => BlockTransaction;
-  updateBlock: <T extends AddBlockParams>(block: T) => BlockTransaction;
+  addBlock: <T extends MinimalBlock>(block: T) => BlockTransaction;
+  updateBlock: <T extends MinimalBlock>(block: T) => BlockTransaction;
   deleteBlock: (blockId: BlockId) => BlockTransaction;
   commit: () => void;
   setMeta: (key: string, value: any) => BlockTransaction;
   addTransaction: (tr: BlockTransaction) => BlockTransaction;
   addReverseTransaction: (tr: BlockTransaction) => BlockTransaction;
+  getLatestBlock: (blockId: BlockId, clone?: boolean) => MinimalBlock | null;
 };
 
 export type ForDescendantsOptions = {
@@ -199,7 +206,28 @@ type PendingTask<RET> = {
 
 export const BLOCK_DATA_MAP_NAME = "blockData";
 
-export const cloneBlock = (block: Block | null): Block | null => {
+export const cloneMinimalBlock = (block: MinimalBlock | null | undefined): MinimalBlock | null => {
+  if (!block) return null;
+  return {
+    type: block.type,
+    id: block.id,
+    fold: block.fold,
+    parentId: block.parentId,
+    childrenIds: [...block.childrenIds],
+    ...(block.type == "normalBlock"
+      ? {
+          content: JSON.parse(JSON.stringify(block.content)),
+          metadata: JSON.parse(JSON.stringify(block.metadata)),
+        }
+      : {}),
+    ...(block.type == "mirrorBlock" ? { src: block.src } : {}),
+    ...(block.type == "virtualBlock"
+      ? { src: block.src, childrenCreated: block.childrenCreated }
+      : {}),
+  } as MinimalBlock;
+};
+
+export const cloneBlock = (block: Block | null | undefined): Block | null => {
   if (!block) return null;
   return {
     type: block.type,
@@ -712,7 +740,7 @@ export const createBlocksManager = (syncLayer: SyncLayer) => {
               content: blockData[0],
               metadata: blockData[1],
               docId,
-            } as AddBlockParams);
+            } as MinimalBlock);
           })();
 
           promises.push(promise);
@@ -761,7 +789,7 @@ export const createBlocksManager = (syncLayer: SyncLayer) => {
                 ...(type === "virtualBlock"
                   ? { childrenCreated: srcChildrenIds.length == childrenIds.length }
                   : {}),
-              } as AddBlockParams);
+              } as MinimalBlock);
             } else {
               console.error("[blocksManager] Src type must be normalBlock, but got", srcType);
               return;

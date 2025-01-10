@@ -10,15 +10,9 @@
       <div class="indent-line" v-for="i in level" :key="i" :data-level="i"></div>
     </div>
     <div class="relative block-content-container">
-      <div class="block-buttons">
-        <BlockContextMenu :block-id="blockId">
-          <div class="more-button">
-            <MoreHorizontal />
-          </div>
-        </BlockContextMenu>
-      </div>
+      <div class="block-buttons"></div>
 
-      <div class="bullet shrink-0">
+      <div class="bullet shrink-0" @contextmenu="handleContextmenu">
         <Circle class="circle" />
       </div>
 
@@ -40,9 +34,10 @@ import BlockSelectDragContext from "@/context/blockSelect";
 import type { BlockTree } from "@/context/blockTree";
 import { Circle, MoreHorizontal } from "lucide-vue-next";
 import { computed } from "vue";
-
 import type { DisplayItem, DisplayItemId } from "@/utils/display-item";
-import BlockContextMenu from "../contextmenu/BlockContextMenu.vue";
+import BlockContextMenuContext from "@/context/blockContextMenu";
+
+const { openAt } = BlockContextMenuContext.useContext()!;
 
 const props = withDefaults(
   defineProps<{
@@ -65,6 +60,12 @@ const { selectedBlockIds, draggingDropPos } = BlockSelectDragContext.useContext(
 
 // computed
 const selected = computed(() => selectedBlockIds.value.allNonFolded.includes(props.blockId));
+
+const handleContextmenu = (e: MouseEvent) => {
+  if (e.button !== 2) return; // 仅处理右键
+  e.preventDefault();
+  openAt({ x: e.clientX, y: e.clientY }, props.blockId);
+};
 </script>
 
 <style lang="scss"></style>

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { BLOCK_CONTENT_TYPES } from "@/common/constants";
-import type { AddBlockParams, BlocksManager } from "@/context/blocks/view-layer/blocksManager";
+import type { MinimalBlock, BlocksManager } from "@/context/blocks/view-layer/blocksManager";
 
 // v1 schema
 const BlockContentSchema_v1 = z.discriminatedUnion("type", [
@@ -76,7 +76,7 @@ export const parseV1Backup = (text: string) => {
     return null;
   }
 
-  const fromV1Block = (v1Block: z.infer<typeof BlockSchema_v1>): AddBlockParams | null => {
+  const fromV1Block = (v1Block: z.infer<typeof BlockSchema_v1>): MinimalBlock | null => {
     const params = {
       id: v1Block.id,
       type: v1Block.type,
@@ -108,7 +108,7 @@ export const parseV1Backup = (text: string) => {
       ...(v1Block.type === "virtualBlock"
         ? { src: v1Block.src, childrenCreated: v1Block.childrenIds != "null" }
         : {}),
-    } as AddBlockParams;
+    } as MinimalBlock;
     return params;
   };
 
@@ -116,7 +116,7 @@ export const parseV1Backup = (text: string) => {
   return blocks;
 };
 
-export const importBlocks = (blocks: AddBlockParams[], blocksManager: BlocksManager) => {
+export const importBlocks = (blocks: MinimalBlock[], blocksManager: BlocksManager) => {
   const linkBlocks = [];
   const blockIds = new Set(blocks.map((block) => block.id));
   const blocksToInsert = [];

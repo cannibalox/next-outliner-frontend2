@@ -28,6 +28,9 @@ import { DI_FILTERS } from "./blockTree";
 import { EditorView as CmEditorView } from "@codemirror/view";
 import FusionCommandContext from "./fusionCommand";
 import SidebarContext from "./sidebar";
+import BlockSelectDragContext from "./blockSelect";
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
+import type { BlocksManager } from "./blocks/view-layer/blocksManager";
 
 export type KeyBinding<P extends Array<any> = any[]> = {
   run: (...params: P) => boolean;
@@ -36,6 +39,9 @@ export type KeyBinding<P extends Array<any> = any[]> = {
 };
 
 const mac = typeof navigator != "undefined" ? /Mac|iP(hone|[oa]d)/.test(navigator.platform) : false;
+
+// 删除超过 10 个块时，弹出确认框要求用户二次确认
+const DELETE_WARN_THRESHOLD = 10;
 
 function normalizeKeyName(name: string) {
   // eslint-disable-next-line prefer-const
@@ -145,6 +151,19 @@ export function generateKeydownHandlerSimple(bindings: { [key: string]: SimpleKe
   );
 }
 
+// const canPromote = (blockId: BlockId, blocksManager: BlocksManager) => {
+//   const block = blocksManager.getBlock(blockId);
+//   if (!block) return false;
+//   const parentBlock = block.parentRef.value;
+//   if (!parentBlock) return false;
+//   const index = parentBlock.childrenIds.indexOf(blockId);
+//   return index > 0;
+// }
+
+// const canDemote = (blockId: BlockId, blocksManager: BlocksManager) => {
+//   return true; // TODO
+// }
+
 const KeymapContext = createContext(() => {
   const taskQueue = useTaskQueue();
   const { lastFocusedBlockTree, lastFocusedDiId } = LastFocusContext.useContext()!;
@@ -153,6 +172,7 @@ const KeymapContext = createContext(() => {
   const openKeybindings = ref(false);
   const { openFusionCommand } = FusionCommandContext.useContext()!;
   const { addToSidePane } = SidebarContext.useContext()!;
+  const { selectedBlockIds } = BlockSelectDragContext.useContext()!;
 
   const prosemirrorKeymap = ref<{ [p: string]: KeyBinding }>({
     "Mod-z": {
@@ -286,6 +306,17 @@ const KeymapContext = createContext(() => {
           const di = tree.getDi(diId);
           if (!(view instanceof PmEditorView) || !di || !DI_FILTERS.isBlockDi(di)) return;
 
+          // 选中了多个块，则删除选中的所有块
+          // TODO：如果上一个 di 也被删了怎么办？这是可能的，比如上一个块是被删除的块的镜像块
+          if (selectedBlockIds.value.topLevelOnly.length > 1) {
+            const tr = blocksManager.createBlockTransaction({ type: "ui" });
+            for (const blockId of selectedBlockIds.value.topLevelOnly) {
+              blockEditor.deleteBlock({ blockId, tr, commit: false });
+            }
+            tr.commit();
+            return;
+          }
+
           const diAbove = tree.getDiAbove(diId, DI_FILTERS.isBlockDi);
           const diBelow = tree.getDiBelow(diId, DI_FILTERS.isBlockDi);
           const focusNext = diAbove?.[0].itemId || diBelow?.[0].itemId;
@@ -365,6 +396,20 @@ const KeymapContext = createContext(() => {
         if (!(view instanceof PmEditorView) || !di || !DI_FILTERS.isBlockDi(di)) return false;
 
         const schema = view.state.schema;
+
+        // 选中了多个块，则删除选中的所有块
+        // 然后聚焦到上一个 di
+        // TODO：如果上一个 di 也被删了怎么办？这是可能的，比如上一个块是被删除的块的镜像块
+        if (selectedBlockIds.value.topLevelOnly.length > 1) {
+          taskQueue.addTask(async () => {
+            const tr = blocksManager.createBlockTransaction({ type: "ui" });
+            for (const blockId of selectedBlockIds.value.topLevelOnly) {
+              blockEditor.deleteBlock({ blockId, tr, commit: false });
+            }
+            tr.commit();
+          });
+          return true;
+        }
 
         const diAbove = tree.getDiAbove(diId, DI_FILTERS.isBlockDi);
         const diBelow = tree.getDiBelow(diId, DI_FILTERS.isBlockDi);
@@ -475,6 +520,22 @@ const KeymapContext = createContext(() => {
     },
     "Alt-ArrowUp": {
       run: () => {
+        // 1. 如果选中了多个块，则上移所有选中的所有块
+        if (selectedBlockIds.value.topLevelOnly.length > 1) {
+          taskQueue.addTask(async () => {
+            const pos = {
+              baseBlockId: selectedBlockIds.value.topLevelOnly[0],
+              offset: -1,
+            };
+            blockEditor.moveBlocks({
+              blockIds: selectedBlockIds.value.topLevelOnly,
+              pos,
+            });
+          });
+          return true;
+        }
+
+        // 2. 上移聚焦的块
         taskQueue.addTask(async () => {
           const diId = lastFocusedDiId.value;
           const tree = lastFocusedBlockTree.value;
@@ -483,11 +544,10 @@ const KeymapContext = createContext(() => {
           const di = tree.getDi(diId);
           if (!di || !DI_FILTERS.isBlockDi(di)) return;
 
-          const pos = blockEditor.normalizePos({
+          const pos = {
             baseBlockId: di.block.id,
             offset: -1,
-          });
-          if (!pos) return;
+          };
           blockEditor.moveBlock({ blockId: di.block.id, pos });
 
           await tree.nextUpdate();
@@ -500,6 +560,23 @@ const KeymapContext = createContext(() => {
     },
     "Alt-ArrowDown": {
       run: () => {
+        // 1. 如果选中了多个块，则下移所有选中的所有块
+        if (selectedBlockIds.value.topLevelOnly.length > 1) {
+          taskQueue.addTask(async () => {
+            const selected = selectedBlockIds.value.topLevelOnly;
+            const pos = {
+              baseBlockId: selected[selected.length - 1],
+              offset: 2,
+            };
+            blockEditor.moveBlocks({
+              blockIds: selected,
+              pos,
+            });
+          });
+          return true;
+        }
+
+        // 2. 下移聚焦的块
         taskQueue.addTask(async () => {
           const diId = lastFocusedDiId.value;
           const tree = lastFocusedBlockTree.value;
@@ -525,6 +602,20 @@ const KeymapContext = createContext(() => {
     },
     Tab: {
       run: () => {
+        // 1. 如果选中了多个块，则缩进所有选中的所有块
+        if (selectedBlockIds.value.topLevelOnly.length > 1) {
+          taskQueue.addTask(async () => {
+            const tr = blocksManager.createBlockTransaction({ type: "ui" });
+            for (const blockId of selectedBlockIds.value.topLevelOnly) {
+              const res = blockEditor.promoteBlock({ blockId, tr, commit: false });
+              if (!res.success) return;
+            }
+            tr.commit();
+          });
+          return true;
+        }
+
+        // 2. 缩进聚焦的块
         taskQueue.addTask(async () => {
           const diId = lastFocusedDiId.value;
           const tree = lastFocusedBlockTree.value;
@@ -533,7 +624,9 @@ const KeymapContext = createContext(() => {
           const di = tree.getDi(diId);
           if (!di || !DI_FILTERS.isBlockDi(di)) return;
 
-          blockEditor.promoteBlock({ blockId: di.block.id });
+          const res = blockEditor.promoteBlock({ blockId: di.block.id });
+          if (!res.success) return;
+
           await tree.nextUpdate();
           tree.focusDi(diId);
         });
@@ -544,6 +637,20 @@ const KeymapContext = createContext(() => {
     },
     "Shift-Tab": {
       run: () => {
+        // 1. 如果选中了多个块，则反缩进所有选中的所有块
+        if (selectedBlockIds.value.topLevelOnly.length > 1) {
+          taskQueue.addTask(async () => {
+            const tr = blocksManager.createBlockTransaction({ type: "ui" });
+            for (const blockId of selectedBlockIds.value.topLevelOnly) {
+              const res = blockEditor.demoteBlock({ blockId, tr, commit: false });
+              if (!res.success) return;
+            }
+            tr.commit();
+          });
+          return true;
+        }
+
+        // 2. 反缩进聚焦的块
         taskQueue.addTask(async () => {
           const diId = lastFocusedDiId.value;
           const tree = lastFocusedBlockTree.value;
@@ -552,7 +659,9 @@ const KeymapContext = createContext(() => {
           const di = tree.getDi(diId);
           if (!di || !DI_FILTERS.isBlockDi(di)) return;
 
-          blockEditor.demoteBlock({ blockId: di.block.id });
+          const res = blockEditor.demoteBlock({ blockId: di.block.id });
+          if (!res.success) return;
+
           await tree.nextUpdate();
           tree.focusDi(diId);
         });
@@ -631,7 +740,7 @@ const KeymapContext = createContext(() => {
       preventDefault: true,
       stopPropagation: true,
     },
-    "Mod-m": {
+    "Alt-m": {
       run: (state, dispatch, view) => {
         if (dispatch == null) return false;
         const schema = view.state.schema;
@@ -647,7 +756,7 @@ const KeymapContext = createContext(() => {
       preventDefault: true,
       stopPropagation: true,
     },
-    "Mod-Shift-m": {
+    "Alt-Shift-m": {
       run: (state, dispatch, view) => {
         const diId = lastFocusedDiId.value;
         const tree = lastFocusedBlockTree.value;
