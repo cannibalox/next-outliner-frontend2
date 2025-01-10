@@ -26,7 +26,7 @@ const { open } = PasteDialogContext.useContext()!;
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>
+        <AlertDialogCancel @click="open = false">
           {{ $t("kbView.pasteDialog.cancelBtn") }}
         </AlertDialogCancel>
       </AlertDialogFooter>
