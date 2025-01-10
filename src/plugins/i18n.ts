@@ -134,6 +134,7 @@ export const messages = {
           '您可以通过以下方式添加内容：\n  - 在块菜单中选择"添加到侧边栏"\n  - 使用快捷键 Command/Ctrl + K\n  - 右上角点击 "+" 按钮搜索添加块',
       },
       headerBar: {
+        moreOptions: "更多选项",
         dailynoteNavigator: "每日笔记",
         pomodoro: "番茄钟",
         closeMenu: "关闭菜单",
@@ -502,6 +503,7 @@ export const messages = {
           'You can add content by:\n  - Selecting "Add to sidebar" in block menu\n  - Using shortcut Command/Ctrl + K\n  - Clicking "+" button in top right to search and add blocks',
       },
       headerBar: {
+        moreOptions: "More Options",
         dailynoteNavigator: "Daily Notes",
         pomodoro: "Pomodoro",
         closeMenu: "Close Menu",
@@ -874,6 +876,7 @@ export const messages = {
           '您可以透過以下方式新增內容：\n  - 在區塊選單中選擇"新增到側邊欄"\n  - 使用快速鍵 Command/Ctrl + K\n  - 右上角點擊 "+" 按鈕搜尋新增區塊',
       },
       headerBar: {
+        moreOptions: "更多選項",
         dailynoteNavigator: "每日筆記",
         pomodoro: "番茄鐘",
         closeMenu: "關閉選單",
@@ -1241,6 +1244,7 @@ export const messages = {
           '您可以透過以下方式新增內容：\n  - 在區塊選單中選擇"新增到側邊欄"\n  - 使用快速鍵 Command/Ctrl + K\n  - 右上角點擊 "+" 按鈕搜尋新增區塊',
       },
       headerBar: {
+        moreOptions: "更多選項",
         dailynoteNavigator: "每日筆記",
         pomodoro: "番茄鐘",
         closeMenu: "關閉選單",
@@ -1610,6 +1614,7 @@ export const messages = {
           'Vous pouvez ajouter du contenu en :\n  - Sélectionnant "Ajouter à la barre latérale" dans le menu du bloc\n  - Utilisant le raccourci Command/Ctrl + K\n  - Cliquant sur le bouton "+" en haut à droite pour rechercher et ajouter des blocs',
       },
       headerBar: {
+        moreOptions: "Plus d'options",
         dailynoteNavigator: "Notes quotidiennes",
         pomodoro: "Pomodoro",
         closeMenu: "Fermer le menu",
@@ -1986,6 +1991,7 @@ export const messages = {
           'コンテンツを追加するには：\n  - ブロックメニューから"サイドバーに追加"を選択\n  - ショートカットCommand/Ctrl + Kを使用\n  - 右上の"+"ボタンをクリックしてブロックを検索して追加',
       },
       headerBar: {
+        moreOptions: "より多くのオプション",
         dailynoteNavigator: "デイリーノート",
         pomodoro: "ポモドーロ",
         closeMenu: "メニューを閉じる",

@@ -52,7 +52,9 @@
                 <MoreVertical class="size-5 stroke-[1.8]" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent> 更多选项 </TooltipContent>
+            <TooltipContent>
+              {{ t("kbView.headerBar.moreOptions") }}
+            </TooltipContent>
           </Tooltip>
         </DropdownMenuTrigger>
         <DropdownMenuContent class="mr-2">
