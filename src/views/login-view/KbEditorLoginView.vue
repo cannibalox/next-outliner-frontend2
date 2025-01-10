@@ -1,7 +1,26 @@
 <template>
   <Card class="w-[400px] z-10">
     <CardHeader>
-      <CardTitle> {{ $t("login.kbEditorLogin.title") }} </CardTitle>
+      <CardTitle class="flex items-center justify-between">
+        {{ $t("login.kbEditorLogin.title") }}
+        <DropdownMenu>
+          <DropdownMenuTrigger as-child>
+            <Button variant="outline" size="icon">
+              <Globe class="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuCheckboxItem
+              v-for="locale in $i18n.availableLocales"
+              :key="locale"
+              :checked="$i18n.locale === locale"
+              @click="$i18n.locale = locale"
+            >
+              {{ $t(`languages.${locale}`) }}
+            </DropdownMenuCheckboxItem>
+          </DropdownMenuContent>
+        </DropdownMenu></CardTitle
+      >
       <CardDescription></CardDescription>
     </CardHeader>
 
@@ -136,6 +155,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
@@ -144,7 +170,7 @@ import { KbInfoContext } from "@/context/kbinfo";
 import ServerInfoContext from "@/context/serverInfo";
 import router from "@/router";
 import { useDebounceFn } from "@vueuse/core";
-import { Check, CircleCheck, Loader2, LoaderCircle, RefreshCcw, X } from "lucide-vue-next";
+import { Check, CircleCheck, Globe, Loader2, LoaderCircle, RefreshCcw, X } from "lucide-vue-next";
 import { ref, watch } from "vue";
 import { z } from "zod";
 

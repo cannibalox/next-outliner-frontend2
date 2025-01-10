@@ -11,8 +11,8 @@ import "prosemirror-view/style/prosemirror.css";
 const startApp = async () => {
   const i18n = createI18n({
     legacy: false,
-    locale: "zh",
-    fallbackLocale: "zh",
+    locale: "en_US",
+    fallbackLocale: "en_US",
     messages,
   });
 

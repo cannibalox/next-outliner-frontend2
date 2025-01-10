@@ -1,7 +1,26 @@
 <template>
   <Card class="w-[400px]">
     <CardHeader>
-      <CardTitle> {{ $t("login.adminLogin.title") }} </CardTitle>
+      <CardTitle class="flex items-center justify-between">
+        {{ $t("login.adminLogin.title") }}
+
+        <DropdownMenu>
+          <DropdownMenuTrigger as-child>
+            <Button variant="outline" size="icon">
+              <Globe class="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem
+              v-for="locale in $i18n.availableLocales"
+              :key="locale"
+              @click="$i18n.locale = locale"
+            >
+              {{ $t(`languages.${locale}`) }}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </CardTitle>
       <CardDescription></CardDescription>
     </CardHeader>
 
@@ -63,13 +82,19 @@ import { Label } from "@/components/ui/label";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { z } from "zod";
-import { X, Loader2, Check } from "lucide-vue-next";
+import { X, Loader2, Check, Globe } from "lucide-vue-next";
 import { adminLogin } from "@/common/api-call/auth";
 import { RESP_CODES } from "@/common/constants";
 import { timeout } from "@/utils/time";
 import router from "@/router";
 import ServerInfoContext from "@/context/serverInfo";
 import { normalizeServerUrl } from "@/common/helper-functions/url";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const { serverUrl, buildAdminTokenKey: buildTokenKey } = ServerInfoContext.useContext()!;
 const serverUrlInputText = ref("");

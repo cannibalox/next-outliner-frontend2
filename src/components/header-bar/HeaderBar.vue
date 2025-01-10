@@ -59,6 +59,25 @@
           <DropdownMenuItem v-for="(item, index) in moreOptions" :key="index" @click="item.onClick">
             <HeaderBarItem :item="item" iconClass="!size-4" />
           </DropdownMenuItem>
+
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <Globe class="size-4 mr-3" />
+              {{ $t("languages.label") }}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuSubContent>
+                <DropdownMenuCheckboxItem
+                  v-for="locale in $i18n.availableLocales"
+                  :key="locale"
+                  :checked="$i18n.locale === locale"
+                  @click="$i18n.locale = locale"
+                >
+                  {{ $t(`languages.${locale}`) }}
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuPortal>
+          </DropdownMenuSub>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
@@ -75,8 +94,13 @@ import Importer from "@/components/Importer.vue";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -100,6 +124,7 @@ import {
   Focus,
   FolderClosed,
   FolderInput,
+  Globe,
   HelpCircle,
   History,
   Keyboard,
