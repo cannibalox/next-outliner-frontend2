@@ -96,8 +96,8 @@ const { lastFocusedBlockTree, lastFocusedDiId } = LastFocusContext.useContext()!
 const taskQueue = useTaskQueue();
 
 const putNewBlockAtBlock = computed(() => {
-  if (!putNewBlockAt.value) return null;
-  return blocksManager.getBlock(putNewBlockAt.value);
+  const id = putNewBlockAt.value === "" ? "root" : putNewBlockAt.value;
+  return blocksManager.getBlock(id);
 });
 
 const queryTerms = computed(() => {
@@ -168,11 +168,12 @@ const handleCreateNew = () => {
     if (!(view instanceof EditorView)) return;
     const schema = view.state.schema;
     // 在指定位置创建新块
+    const parentId = putNewBlockAt.value === "" ? "root" : putNewBlockAt.value;
     const { newNormalBlockId } =
       blockEditor.insertNormalBlock({
         content: plainTextToTextContent(query.value, schema),
         pos: {
-          parentId: putNewBlockAt.value,
+          parentId,
           childIndex: "last-space",
         },
       }) ?? {};
