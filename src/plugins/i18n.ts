@@ -75,6 +75,11 @@ export const messages = {
       keybindingInput: {
         empty: "点击设置快捷键",
       },
+      codeblock: {
+        unknownLanguage: "未知语言",
+        copyCode: "复制代码",
+        copySuccess: "代码块中的代码已复制到剪贴板",
+      },
       imageEditor: {
         title: "图片编辑器",
         description: "支持图片裁剪、旋转，自动优化扫描文件等功能",
@@ -444,6 +449,11 @@ export const messages = {
       },
       keybindingInput: {
         empty: "Click to set shortcut",
+      },
+      codeblock: {
+        unknownLanguage: "Unknown Language",
+        copyCode: "Copy Code",
+        copySuccess: "Code in code block has been copied to clipboard",
       },
       imageEditor: {
         title: "Image Editor",
@@ -821,6 +831,11 @@ export const messages = {
       keybindingInput: {
         empty: "點擊設置快捷鍵",
       },
+      codeblock: {
+        unknownLanguage: "未知語言",
+        copyCode: "複製程式碼",
+        copySuccess: "程式碼已複製到剪貼簿",
+      },
       imageEditor: {
         title: "圖片編輯器",
         description: "支援圖片裁剪、旋轉，自動最佳化掃描檔案等功能",
@@ -1191,6 +1206,11 @@ export const messages = {
       keybindingInput: {
         empty: "點擊設置快捷鍵",
       },
+      codeblock: {
+        unknownLanguage: "未知語言",
+        copyCode: "複製程式碼",
+        copySuccess: "程式碼已複製到剪貼簿",
+      },
       imageEditor: {
         title: "圖片編輯器",
         description: "支援圖片裁剪、旋轉，自動最佳化掃描檔案等功能",
@@ -1560,6 +1580,11 @@ export const messages = {
       },
       keybindingInput: {
         empty: "Cliquez pour définir le raccourci",
+      },
+      codeblock: {
+        unknownLanguage: "Langue inconnue",
+        copyCode: "Copier le code",
+        copySuccess: "Le code dans le bloc de code a été copié dans le presse-papiers",
       },
       imageEditor: {
         title: "Éditeur d'images",
@@ -1940,6 +1965,11 @@ export const messages = {
       },
       keybindingInput: {
         empty: "クリックしてショートカットを設定",
+      },
+      codeblock: {
+        unknownLanguage: "不明な言語",
+        copyCode: "コードをコピー",
+        copySuccess: "コードブロックのコードがクリップボードにコピーされました",
       },
       imageEditor: {
         title: "画像エディター",

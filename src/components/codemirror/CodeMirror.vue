@@ -1,5 +1,5 @@
 <template>
-  <div class="code-mirror-wrapper" ref="$wrapper"></div>
+  <div class="code-mirror-wrapper !w-full" ref="$wrapper"></div>
 </template>
 
 <script setup lang="ts">
