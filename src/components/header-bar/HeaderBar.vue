@@ -121,6 +121,7 @@ import {
   ArrowRight,
   Bell,
   CalendarDays,
+  DatabaseBackup,
   Dot,
   Download,
   Focus,
@@ -149,6 +150,9 @@ import ServerInfoContext from "@/context/serverInfo";
 import HistoryContext from "@/context/history";
 import LeftButtons from "./LeftButtons.vue";
 import KeymapContext from "@/context/keymap";
+import { KbInfoContext } from "@/context/kbinfo";
+import { backupKb } from "@/common/api-call/kb";
+import { useToast } from "../ui/toast";
 
 const { sidePaneOpen, sidePaneDir, sidePaneWidth, enableSidePaneAnimation } =
   SidebarContext.useContext()!;
@@ -162,10 +166,12 @@ const { openFusionCommand } = FusionCommandContext.useContext()!;
 const { synced } = BlocksContext.useContext()!;
 const { mainRootBlockId } = MainTreeContext.useContext()!;
 const { logout } = ServerInfoContext.useContext()!;
+const { currKbInfo } = KbInfoContext.useContext()!;
 const openImporter = ref(false);
 const { t } = useI18n();
 const { goPrev, goNext, canGoPrev, canGoNext } = HistoryContext.useContext()!;
 const { openKeybindings } = KeymapContext.useContext()!;
+const { toast } = useToast();
 
 const handleClickPathSegment = (blockId: BlockId) => {
   mainRootBlockId.value = blockId;
@@ -303,6 +309,20 @@ const moreOptions: HeaderBarItemType[] = [
     icon: HelpCircle,
     label: () => t("kbView.headerBar.help"),
     onClick: () => {},
+  },
+  {
+    icon: DatabaseBackup,
+    label: () => t("kbView.backup.createBackup"),
+    onClick: async () => {
+      const location = currKbInfo.value?.location;
+      if (!location) return;
+      const res = await backupKb({ location });
+      toast({
+        title: res.success
+          ? t("kbView.backup.createBackupSuccess")
+          : t("kbView.backup.createBackupFailed"),
+      });
+    },
   },
   {
     icon: LogOut,

@@ -68,6 +68,11 @@ export const messages = {
     },
     kbView: {
       loadingKb: "加载知识库中...",
+      backup: {
+        createBackup: "创建备份",
+        createBackupSuccess: "备份成功",
+        createBackupFailed: "备份失败",
+      },
       backlinksPanel: {
         nBacklinks: "{count} 个反向链接",
         nPotentialLinks: "{count} 个潜在链接",
@@ -443,6 +448,11 @@ export const messages = {
     },
     kbView: {
       loadingKb: "Loading knowledge base...",
+      backup: {
+        createBackup: "Create Backup",
+        createBackupSuccess: "Backup created successfully",
+        createBackupFailed: "Backup creation failed",
+      },
       backlinksPanel: {
         nBacklinks: "{count} backlinks",
         nPotentialLinks: "{count} potential links",
@@ -824,6 +834,11 @@ export const messages = {
     },
     kbView: {
       loadingKb: "載入知識庫中...",
+      backup: {
+        createBackup: "創建備份",
+        createBackupSuccess: "備份創建成功",
+        createBackupFailed: "備份創建失敗",
+      },
       backlinksPanel: {
         nBacklinks: "{count} 個反向連結",
         nPotentialLinks: "{count} 個潛在連結",
@@ -1199,6 +1214,11 @@ export const messages = {
     },
     kbView: {
       loadingKb: "載入知識庫中...",
+      backup: {
+        createBackup: "創建備份",
+        createBackupSuccess: "備份創建成功",
+        createBackupFailed: "備份創建失敗",
+      },
       backlinksPanel: {
         nBacklinks: "{count} 個反向連結",
         nPotentialLinks: "{count} 個潛在連結",
@@ -1574,6 +1594,11 @@ export const messages = {
     },
     kbView: {
       loadingKb: "Chargement de la base de connaissances...",
+      backup: {
+        createBackup: "Créer une sauvegarde",
+        createBackupSuccess: "Sauvegarde créée avec succès",
+        createBackupFailed: "Échec de la création de la sauvegarde",
+      },
       backlinksPanel: {
         nBacklinks: "{count} rétroliens",
         nPotentialLinks: "{count} liens potentiels",
@@ -1959,6 +1984,11 @@ export const messages = {
     },
     kbView: {
       loadingKb: "ナレッジベースを読み込み中...",
+      backup: {
+        createBackup: "バックアップを作成",
+        createBackupSuccess: "バックアップ作成成功",
+        createBackupFailed: "バックアップ作成失敗",
+      },
       backlinksPanel: {
         nBacklinks: "バックリンク {count} 件",
         nPotentialLinks: "潜在的なリンク {count} 件",
