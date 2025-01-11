@@ -52,14 +52,14 @@ export const SidebarContext = createContext(() => {
         if (!tree) return;
         const di2 = tree.findDi((di) => di.type === "side-pane-header" && di.blockId === blockId);
         if (!di2) return;
-        tree.focusDi(di2.itemId, { highlight: true, scrollIntoView: true });
+        tree.focusDi(di2[0].itemId, { highlight: true, scrollIntoView: true });
       });
     } else {
       const tree = getBlockTree("side-pane");
       if (!tree) return;
       const di = tree.findDi((di) => di.type === "side-pane-header" && di.blockId === blockId);
       if (!di) return;
-      tree.focusDi(di.itemId, { highlight: true, scrollIntoView: true });
+      tree.focusDi(di[0].itemId, { highlight: true, scrollIntoView: true });
     }
   };
 
@@ -72,7 +72,7 @@ export const SidebarContext = createContext(() => {
     const nextId = sidePaneBlockIds.value[nextIndex];
     const nextItem = tree.findDi((di) => di.type === "basic-block" && di.block.id === nextId);
     if (!nextItem) return;
-    tree.focusDi(nextItem.itemId, { highlight: true, scrollIntoView: true });
+    tree.focusDi(nextItem[0].itemId, { highlight: true, scrollIntoView: true });
   };
 
   const focusPrev = (blockId: BlockId) => {
@@ -84,7 +84,7 @@ export const SidebarContext = createContext(() => {
     const prevId = sidePaneBlockIds.value[prevIndex];
     const prevItem = tree.findDi((di) => di.type === "basic-block" && di.block.id === prevId);
     if (!prevItem) return;
-    tree.focusDi(prevItem.itemId, { highlight: true, scrollIntoView: true });
+    tree.focusDi(prevItem[0].itemId, { highlight: true, scrollIntoView: true });
   };
 
   return {

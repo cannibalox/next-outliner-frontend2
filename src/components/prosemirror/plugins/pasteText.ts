@@ -116,8 +116,8 @@ export const mkPasteTextPlugin = (ctx: PmPluginCtx) => {
                   (item) => item.type === "basic-block" && item.block.id === lastBlockId,
                 );
                 if (di) {
-                  tree.focusDi(di.itemId);
-                  tree.moveCursorToTheEnd(di.itemId);
+                  tree.focusDi(di[0].itemId);
+                  tree.moveCursorToTheEnd(di[0].itemId);
                 }
               }
             }
@@ -189,8 +189,8 @@ export const mkPasteTextPlugin = (ctx: PmPluginCtx) => {
                     (item) => item.type === "basic-block" && item.block.id === lastBlockId,
                   );
                   if (di) {
-                    tree.focusDi(di.itemId);
-                    tree.moveCursorToTheEnd(di.itemId);
+                    tree.focusDi(di[0].itemId);
+                    tree.moveCursorToTheEnd(di[0].itemId);
                   }
                 }
               }

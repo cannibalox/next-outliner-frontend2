@@ -53,7 +53,10 @@ export type BlockTree = {
   getRootBlockIds: () => BlockId[];
   getDisplayItems: () => DisplayItem[];
   getDi: (itemId: DisplayItemId) => DisplayItem | null;
-  findDi: (filter: (item: DisplayItem) => boolean) => DisplayItem | null;
+  findDi: (
+    filter: (item: DisplayItem, index: number) => boolean,
+    dir?: "forward" | "backward",
+  ) => readonly [DisplayItem, number] | null;
 
   expandedBP: Ref<Record<BlockId, boolean>>;
 

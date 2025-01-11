@@ -219,15 +219,19 @@ const KeymapContext = createContext(() => {
                   offset: 1,
                 });
             if (!pos) return;
-            (document.activeElement as HTMLElement).blur(); // 操作前先失去焦点，防止闪烁
-            blockEditor.insertNormalBlock({
-              pos,
-              content: plainTextToTextContent("", schema),
-            });
-            if (tree) {
+            // (document.activeElement as HTMLElement).blur(); // 操作前先失去焦点，防止闪烁
+            const { newNormalBlockId } =
+              blockEditor.insertNormalBlock({
+                pos,
+                content: plainTextToTextContent("", schema),
+              }) ?? {};
+            if (tree && newNormalBlockId) {
               await tree.nextUpdate();
-              const nextDi = tree.getDiBelow(diId, DI_FILTERS.isBlockDi);
-              nextDi && tree.focusDi(nextDi[0].itemId);
+              const nextDi = tree.getDiBelow(
+                diId,
+                (di) => DI_FILTERS.isBlockDi(di) && di.block.id === newNormalBlockId,
+              );
+              nextDi && (await tree.focusDi(nextDi[0].itemId));
             }
           } else if (sel.head == 0) {
             // 2. 在块开头按 Enter，则在上方创建空块
@@ -238,11 +242,18 @@ const KeymapContext = createContext(() => {
             });
             if (!pos) return;
             (document.activeElement as HTMLElement).blur(); // 操作前先失去焦点，防止闪烁
-            blockEditor.insertNormalBlock({ pos, content: plainTextToTextContent("", schema) });
-            if (tree) {
+            const { newNormalBlockId } =
+              blockEditor.insertNormalBlock({
+                pos,
+                content: plainTextToTextContent("", schema),
+              }) ?? {};
+            if (tree && newNormalBlockId) {
               await tree.nextUpdate();
-              const nextDi = tree.getDiAbove(diId, DI_FILTERS.isBlockDi);
-              nextDi && tree.focusDi(nextDi[0].itemId);
+              const nextDi = tree.getDiAbove(
+                diId,
+                (di) => DI_FILTERS.isBlockDi(di) && di.block.id === newNormalBlockId,
+              );
+              nextDi && (await tree.focusDi(nextDi[0].itemId));
             }
           } else {
             // 3. 中间按 Enter，上面创建一个新块，将光标左边的内容挪到新块中
@@ -275,7 +286,7 @@ const KeymapContext = createContext(() => {
 
             if (tree) {
               await tree.nextUpdate();
-              tree.focusDi(di.itemId);
+              await tree.focusDi(di.itemId);
               tree.moveCursorToBegin(di.itemId); // 将光标移至开头
             }
           }
@@ -551,7 +562,7 @@ const KeymapContext = createContext(() => {
           blockEditor.moveBlock({ blockId: di.block.id, pos });
 
           await tree.nextUpdate();
-          tree.focusDi(diId);
+          await tree.focusDi(diId);
         });
         return true;
       },
@@ -593,7 +604,7 @@ const KeymapContext = createContext(() => {
           blockEditor.moveBlock({ blockId: di.block.id, pos });
 
           await tree.nextUpdate();
-          tree.focusDi(diId);
+          await tree.focusDi(diId);
         });
         return true;
       },
@@ -628,7 +639,7 @@ const KeymapContext = createContext(() => {
           if (!res.success) return;
 
           await tree.nextUpdate();
-          tree.focusDi(diId);
+          await tree.focusDi(diId);
         });
         return true;
       },
@@ -663,7 +674,7 @@ const KeymapContext = createContext(() => {
           if (!res.success) return;
 
           await tree.nextUpdate();
-          tree.focusDi(diId);
+          await tree.focusDi(diId);
         });
         return true;
       },
@@ -685,19 +696,21 @@ const KeymapContext = createContext(() => {
           const coord = view.coordsAtPos(oldPos);
           const diAbove = tree.getDiAbove(diId, DI_FILTERS.isBlockDi);
           if (!diAbove) return false;
-          tree.focusDi(diAbove[0].itemId);
-          // 调整光标位置
-          const newEditorView = tree.getEditorView(diAbove[0].itemId);
-          if (!(newEditorView instanceof PmEditorView)) return false;
-          const newPos =
-            newEditorView.posAtCoords({
-              left: coord.left,
-              top: coord.top - 10,
-            })?.pos ?? oldPos;
-          const maxPos = newEditorView.state.doc.content.size;
-          const sel = TextSelection.create(newEditorView.state.doc, Math.min(newPos, maxPos));
-          const tr = newEditorView.state.tr.setSelection(sel);
-          newEditorView.dispatch(tr);
+          tree.focusDi(diAbove[0].itemId).then(() => {
+            // 调整光标位置
+            const newEditorView = tree.getEditorView(diAbove[0].itemId);
+            if (!(newEditorView instanceof PmEditorView)) return false;
+            const newPos =
+              newEditorView.posAtCoords({
+                left: coord.left,
+                top: coord.top - 10,
+              })?.pos ?? oldPos;
+            const maxPos = newEditorView.state.doc.content.size;
+            const sel = TextSelection.create(newEditorView.state.doc, Math.min(newPos, maxPos));
+            const tr = newEditorView.state.tr.setSelection(sel);
+            newEditorView.dispatch(tr);
+          });
+
           return true;
         }
         return false;
@@ -720,19 +733,21 @@ const KeymapContext = createContext(() => {
           const coord = view.coordsAtPos(oldPos);
           const diBelow = tree.getDiBelow(diId, DI_FILTERS.isBlockDi);
           if (!diBelow) return false;
-          tree.focusDi(diBelow[0].itemId);
-          // 调整光标位置
-          const newEditorView = tree.getEditorView(diBelow[0].itemId);
-          if (!(newEditorView instanceof PmEditorView)) return false;
-          const newPos =
-            newEditorView.posAtCoords({
-              left: coord.left,
-              top: coord.top + 30,
-            })?.pos ?? oldPos;
-          const maxPos = newEditorView.state.doc.content.size;
-          const sel = TextSelection.create(newEditorView.state.doc, Math.min(newPos, maxPos));
-          const tr = newEditorView.state.tr.setSelection(sel);
-          newEditorView.dispatch(tr);
+          tree.focusDi(diBelow[0].itemId).then(() => {
+            // 调整光标位置
+            const newEditorView = tree.getEditorView(diBelow[0].itemId);
+            if (!(newEditorView instanceof PmEditorView)) return false;
+            const newPos =
+              newEditorView.posAtCoords({
+                left: coord.left,
+                top: coord.top + 30,
+              })?.pos ?? oldPos;
+            const maxPos = newEditorView.state.doc.content.size;
+            const sel = TextSelection.create(newEditorView.state.doc, Math.min(newPos, maxPos));
+            const tr = newEditorView.state.tr.setSelection(sel);
+            newEditorView.dispatch(tr);
+          });
+
           return true;
         }
         return false;
@@ -775,7 +790,7 @@ const KeymapContext = createContext(() => {
             });
             // 聚焦块
             await tree.nextUpdate();
-            tree.focusDi(diId, { scrollIntoView: true });
+            await tree.focusDi(diId, { scrollIntoView: true });
           });
         } else {
           // 下方插入公式块
@@ -790,7 +805,7 @@ const KeymapContext = createContext(() => {
             const diBelow = tree.getDiBelow(diId, DI_FILTERS.isBlockDi);
             if (diBelow) {
               await tree.nextUpdate();
-              tree.focusDi(diBelow[0].itemId, { scrollIntoView: true });
+              await tree.focusDi(diBelow[0].itemId, { scrollIntoView: true });
             }
           });
         }
@@ -813,8 +828,9 @@ const KeymapContext = createContext(() => {
         if (tree && atBeg) {
           const predDi = tree.getPredecessorDi(diId);
           if (!predDi) return false;
-          tree.focusDi(predDi[0].itemId);
-          tree.moveCursorToTheEnd(predDi[0].itemId);
+          tree.focusDi(predDi[0].itemId).then(() => {
+            tree.moveCursorToTheEnd(predDi[0].itemId);
+          });
           return true;
         }
         return false;
@@ -836,8 +852,9 @@ const KeymapContext = createContext(() => {
         if (tree && atEnd) {
           const nextDi = tree.getSuccessorDi(diId);
           if (!nextDi) return false;
-          tree.focusDi(nextDi[0].itemId);
-          tree.moveCursorToTheEnd(nextDi[0].itemId);
+          tree.focusDi(nextDi[0].itemId).then(() => {
+            tree.moveCursorToTheEnd(nextDi[0].itemId);
+          });
           return true;
         }
         return false;
@@ -902,8 +919,9 @@ const KeymapContext = createContext(() => {
           if (range0.from == range0.to && range0.from == 0) {
             const predDi = tree.getPredecessorDi(diId);
             if (!predDi) return false;
-            tree.focusDi(predDi[0].itemId);
-            tree.moveCursorToTheEnd(predDi[0].itemId);
+            tree.focusDi(predDi[0].itemId).then(() => {
+              tree.moveCursorToTheEnd(predDi[0].itemId);
+            });
             return true;
           }
         }
@@ -930,8 +948,9 @@ const KeymapContext = createContext(() => {
           if (range0.from == range0.to && range0.from == docLength) {
             const succDi = tree.getSuccessorDi(diId);
             if (!succDi) return false;
-            tree.focusDi(succDi[0].itemId);
-            tree.moveCursorToTheEnd(succDi[0].itemId);
+            tree.focusDi(succDi[0].itemId).then(() => {
+              tree.moveCursorToTheEnd(succDi[0].itemId);
+            });
             return true;
           }
         }
@@ -959,8 +978,9 @@ const KeymapContext = createContext(() => {
             if (selLine == 1) {
               const diAbove = tree.getDiAbove(diId);
               if (!diAbove) return false;
-              tree.focusDi(diAbove[0].itemId);
-              tree.moveCursorToTheEnd(diAbove[0].itemId);
+              tree.focusDi(diAbove[0].itemId).then(() => {
+                tree.moveCursorToTheEnd(diAbove[0].itemId);
+              });
               return true;
             }
           }
@@ -990,8 +1010,9 @@ const KeymapContext = createContext(() => {
             if (selLine == lineNumber) {
               const diBelow = tree.getDiBelow(diId);
               if (!diBelow) return false;
-              tree.focusDi(diBelow[0].itemId);
-              tree.moveCursorToBegin(diBelow[0].itemId);
+              tree.focusDi(diBelow[0].itemId).then(() => {
+                tree.moveCursorToBegin(diBelow[0].itemId);
+              });
               return true;
             }
           }
@@ -1019,7 +1040,7 @@ const KeymapContext = createContext(() => {
             blockEditor.deleteBlock({ blockId: di.block.id });
             if (diAbove) {
               await tree.nextUpdate();
-              tree.focusDi(diAbove[0].itemId);
+              await tree.focusDi(diAbove[0].itemId);
               tree.moveCursorToTheEnd(diAbove[0].itemId);
             }
           });
@@ -1047,7 +1068,7 @@ const KeymapContext = createContext(() => {
             blockEditor.deleteBlock({ blockId: di.block.id });
             if (diBelow) {
               await tree.nextUpdate();
-              tree.focusDi(diBelow[0].itemId);
+              await tree.focusDi(diBelow[0].itemId);
               tree.moveCursorToBegin(diBelow[0].itemId);
             }
           });

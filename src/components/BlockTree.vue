@@ -375,11 +375,22 @@ const focusBlock = async (blockId: BlockId, options: BlockFocusOptions = {}) => 
   // TODO：只检查 basic-block 是否合适？
   const di = findDi((item) => item.type === "basic-block" && item.block.id === blockId);
   if (!di) return;
-  await focusDi(di.itemId, { scrollIntoView, highlight });
+  await focusDi(di[0].itemId, { scrollIntoView, highlight });
 };
 
-const findDi = (filter: (item: DisplayItem) => boolean) => {
-  return displayItems.value?.find((item) => filter(item)) ?? null;
+const findDi = (
+  filter: (item: DisplayItem, index: number) => boolean,
+  dir: "forward" | "backward" = "forward",
+) => {
+  for (
+    let i = dir === "forward" ? 0 : displayItems.value!.length - 1;
+    i >= 0 && i < displayItems.value!.length;
+    i += dir === "forward" ? 1 : -1
+  ) {
+    const item = displayItems.value![i];
+    if (filter(item, i)) return [item, i] as const;
+  }
+  return null;
 };
 
 const moveCursorToTheEnd = (itemId: DisplayItemId) => {
