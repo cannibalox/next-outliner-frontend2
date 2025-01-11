@@ -1115,6 +1115,127 @@ const KeymapContext = createContext(() => {
       preventDefault: true,
       stopPropagation: true,
     },
+    Delete: {
+      run: () => {
+        // 选中了多个块，则删除选中的所有块
+        // 然后聚焦到上一个 di
+        // TODO：如果上一个 di 也被删了怎么办？这是可能的，比如上一个块是被删除的块的镜像块
+        if (selectedBlockIds.value.topLevelOnly.length > 1) {
+          taskQueue.addTask(async () => {
+            const tr = blocksManager.createBlockTransaction({ type: "ui" });
+            for (const blockId of selectedBlockIds.value.topLevelOnly) {
+              blockEditor.deleteBlock({ blockId, tr, commit: false });
+            }
+            tr.commit();
+          });
+          return true;
+        }
+        return false;
+      },
+      stopPropagation: true,
+      preventDefault: true,
+    },
+    Backspace: {
+      run: () => {
+        // 选中了多个块，则删除选中的所有块
+        // 然后聚焦到上一个 di
+        // TODO：如果上一个 di 也被删了怎么办？这是可能的，比如上一个块是被删除的块的镜像块
+        if (selectedBlockIds.value.topLevelOnly.length > 1) {
+          taskQueue.addTask(async () => {
+            const tr = blocksManager.createBlockTransaction({ type: "ui" });
+            for (const blockId of selectedBlockIds.value.topLevelOnly) {
+              blockEditor.deleteBlock({ blockId, tr, commit: false });
+            }
+            tr.commit();
+          });
+          return true;
+        }
+        return false;
+      },
+      stopPropagation: true,
+      preventDefault: true,
+    },
+    Tab: {
+      run: () => {
+        // 1. 如果选中了多个块，则反缩进所有选中的所有块
+        if (selectedBlockIds.value.topLevelOnly.length > 1) {
+          taskQueue.addTask(async () => {
+            const tr = blocksManager.createBlockTransaction({ type: "ui" });
+            for (const blockId of selectedBlockIds.value.topLevelOnly) {
+              const res = blockEditor.promoteBlock({ blockId, tr, commit: false });
+              if (!res.success) return;
+            }
+            tr.commit();
+          });
+          return true;
+        }
+        return false;
+      },
+      stopPropagation: true,
+      preventDefault: true,
+    },
+    "Shift-Tab": {
+      run: () => {
+        // 1. 如果选中了多个块，则反缩进所有选中的所有块
+        if (selectedBlockIds.value.topLevelOnly.length > 1) {
+          taskQueue.addTask(async () => {
+            const tr = blocksManager.createBlockTransaction({ type: "ui" });
+            for (const blockId of selectedBlockIds.value.topLevelOnly) {
+              const res = blockEditor.demoteBlock({ blockId, tr, commit: false });
+              if (!res.success) return;
+            }
+            tr.commit();
+          });
+          return true;
+        }
+        return false;
+      },
+      stopPropagation: true,
+      preventDefault: true,
+    },
+    "Alt-ArrowUp": {
+      run: () => {
+        // 1. 如果选中了多个块，则上移所有选中的所有块
+        if (selectedBlockIds.value.topLevelOnly.length > 1) {
+          taskQueue.addTask(async () => {
+            const pos = {
+              baseBlockId: selectedBlockIds.value.topLevelOnly[0],
+              offset: -1,
+            };
+            blockEditor.moveBlocks({
+              blockIds: selectedBlockIds.value.topLevelOnly,
+              pos,
+            });
+          });
+          return true;
+        }
+        return false;
+      },
+      stopPropagation: true,
+      preventDefault: true,
+    },
+    "Alt-ArrowDown": {
+      run: () => {
+        // 1. 如果选中了多个块，则下移所有选中的所有块
+        if (selectedBlockIds.value.topLevelOnly.length > 1) {
+          taskQueue.addTask(async () => {
+            const selected = selectedBlockIds.value.topLevelOnly;
+            const pos = {
+              baseBlockId: selected[selected.length - 1],
+              offset: 2,
+            };
+            blockEditor.moveBlocks({
+              blockIds: selected,
+              pos,
+            });
+          });
+          return true;
+        }
+        return false;
+      },
+      stopPropagation: true,
+      preventDefault: true,
+    },
   });
 
   const getProsemirrorKeybinding = (key: string) => {
