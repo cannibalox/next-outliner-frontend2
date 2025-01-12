@@ -234,7 +234,7 @@ const CommandsContext = createContext(() => {
         const tr = blocksManager.createBlockTransaction({ type: "ui" });
         for (const blockId of selectedBlockIds.value!.topLevelOnly) {
           const res = blockEditor.promoteBlock({ blockId, tr, commit: false });
-          if (!res.success) continue;
+          if (!res.success) return; // 任何一个块无法 promote，直接取消整个事务
         }
         tr.commit();
       });
@@ -273,7 +273,7 @@ const CommandsContext = createContext(() => {
         for (let i = selectedBlockIds.value!.topLevelOnly.length - 1; i >= 0; i--) {
           const id = selectedBlockIds.value!.topLevelOnly[i];
           const res = blockEditor.demoteBlock({ blockId: id, tr, commit: false });
-          if (!res.success) continue;
+          if (!res.success) return; // 任何一个块无法 demote，直接取消整个事务
         }
         tr.commit();
       });
