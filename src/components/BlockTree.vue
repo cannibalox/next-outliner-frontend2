@@ -490,6 +490,7 @@ const handlePointerUpOrLeave = (e: PointerEvent) => {
       const di = getDi(itemId);
       if (!di || !DI_FILTERS.isBlockDi(di)) return;
       const selected = dndCtx.selectedBlockIds.value;
+      if (!selected) return;
       const blockLevel = blocksManager.getBlockLevel(di.block.id);
       if (absLevel > blockLevel) {
         // 将 selected 插入到 block 的子级
@@ -536,7 +537,7 @@ const clearDraggingDropPos = () => {
 };
 
 const handlePointerMove = useThrottleFn((e: PointerEvent) => {
-  // 如果按下时间小于 200ms，则认为是点击，防止影响双击选词的功能
+  // 如果按下时间小于 200ms，则认为是点击
   const duration = Date.now().valueOf() - (pointerDownTime ?? 0);
   if (duration < 200) return;
 
@@ -548,9 +549,11 @@ const handlePointerMove = useThrottleFn((e: PointerEvent) => {
   if (movingBlocks) {
     // 如果是在拖动块，并且目前没有选中任何块
     // 则将光标按下时的块加入选中
+    if (!dndCtx.selectedBlockIds.value) return clearDraggingDropPos();
     if (dndCtx.selectedBlockIds.value.topLevelOnly.length === 0) {
       if (!pointerDownDi || !DI_FILTERS.isBlockDi(pointerDownDi)) return; // IMPOSSIBLE
       const newSelected = {
+        baseBlockId: dndCtx.selectedBlockIds.value.baseBlockId,
         topLevelOnly: [pointerDownDi.block.id],
         allNonFolded: [] as BlockId[],
       };
@@ -646,13 +649,13 @@ const handlePointerMove = useThrottleFn((e: PointerEvent) => {
       return;
     // 如果点击的是同一个块，则取消选中，并聚焦到这个块，以框选其中的文字
     if (pointerDownDi.itemId === currItemId) {
-      dndCtx.selectedBlockIds.value = { topLevelOnly: [], allNonFolded: [] };
+      dndCtx.selectedBlockIds.value = null;
       focusDi(currItemId, { scrollIntoView: false });
       return;
     }
     // 框选区域：blockIdStart 到 blockIdCurrent
     (document.activeElement as HTMLElement)?.blur(); // 先让当前聚焦的块失焦
-    dndCtx.selectedBlockIds.value = { topLevelOnly: [], allNonFolded: [] };
+    dndCtx.selectedBlockIds.value = null;
     // 计算选中的块
     const startBlockPath = blocksManager.getBlockPath(pointerDownDi.block.id).map((b) => b.id);
     const currBlockPath = blocksManager.getBlockPath(currDi.block.id).map((b) => b.id);
@@ -670,6 +673,7 @@ const handlePointerMove = useThrottleFn((e: PointerEvent) => {
       if (commonParentI === 0 || commonParentJ === 0) {
         const commonParentId = startBlockPath[commonParentI];
         const newSelected = {
+          baseBlockId: pointerDownDi.block.id,
           topLevelOnly: [commonParentId],
           allNonFolded: [] as BlockId[],
         };
@@ -694,6 +698,7 @@ const handlePointerMove = useThrottleFn((e: PointerEvent) => {
         const from = Math.min(childFromIndex, childToIndex);
         const to = Math.max(childFromIndex, childToIndex);
         const newSelected = {
+          baseBlockId: pointerDownDi.block.id,
           topLevelOnly: commonParentBlock.childrenIds.slice(from, to + 1),
           allNonFolded: [] as BlockId[],
         };

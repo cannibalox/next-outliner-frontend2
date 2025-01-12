@@ -31,11 +31,13 @@
                                                             <FieldValueInspectorContext.Provider>
                                                               <DailyNoteContext.Provider>
                                                                 <FusionCommandContext.Provider>
-                                                                  <KeymapContext.Provider>
-                                                                    <BlockContextMenuContext.Provider>
-                                                                      <KbViewContent />
-                                                                    </BlockContextMenuContext.Provider>
-                                                                  </KeymapContext.Provider>
+                                                                  <CommandsContext.Provider>
+                                                                    <KeymapContext.Provider>
+                                                                      <BlockContextMenuContext.Provider>
+                                                                        <KbViewContent />
+                                                                      </BlockContextMenuContext.Provider>
+                                                                    </KeymapContext.Provider>
+                                                                  </CommandsContext.Provider>
                                                                 </FusionCommandContext.Provider>
                                                               </DailyNoteContext.Provider>
                                                             </FieldValueInspectorContext.Provider>
@@ -107,4 +109,5 @@ import HistoryContext from "@/context/history";
 import MenubarContext from "@/context/menubar";
 import kbViewRegistry from "@/context/kbViewRegistry";
 import BlockContextMenuContext from "@/context/blockContextMenu";
+import CommandsContext from "@/context/commands/commands";
 </script>

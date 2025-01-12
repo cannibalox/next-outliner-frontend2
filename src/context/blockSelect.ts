@@ -11,9 +11,10 @@ export type DraggingDropPos = {
 
 const BlockSelectDragContext = createContext(() => {
   const selectedBlockIds = ref<{
+    baseBlockId: BlockId;
     topLevelOnly: BlockId[];
     allNonFolded: BlockId[];
-  }>({ topLevelOnly: [], allNonFolded: [] });
+  } | null>(null);
   const draggingDropPos = ref<DraggingDropPos | null>(null);
   const dragging = ref(false);
 

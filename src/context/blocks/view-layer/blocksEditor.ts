@@ -759,11 +759,11 @@ export const createBlocksEditor = (
     const indexContext = getIndexContext();
 
     const block = tr.getLatestBlock(blockId)!;
-    if (block.parentId == "null") return { success: false };
+    if (block.parentId == "root") return { success: false };
     const acturalSrcBlock = getActuralSrcBlock(block, tr);
 
     const parentBlock = tr.getLatestBlock(block.parentId)!;
-    if (parentBlock.parentId == "null") return { success: false };
+    if (parentBlock.parentId == "root") return { success: false };
     const parentActuralSrcBlock = getActuralSrcBlock(parentBlock, tr);
 
     const parentParentBlock = tr.getLatestBlock(parentBlock.parentId)!;

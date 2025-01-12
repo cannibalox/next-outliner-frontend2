@@ -43,7 +43,8 @@ export const DI_FILTERS = {
     di.type === "backlink-block" ||
     di.type === "backlink-descendant" ||
     di.type === "potential-links-block" ||
-    di.type === "potential-links-descendant",
+    di.type === "potential-links-descendant" ||
+    di.type === "root-block",
 };
 
 export type BlockTree = {

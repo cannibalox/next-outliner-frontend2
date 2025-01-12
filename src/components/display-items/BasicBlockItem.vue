@@ -68,6 +68,8 @@ import IndexContext from "@/context";
 import BacklinksCounter from "../backlinks-counter/BacklinksCounter.vue";
 import type { DisplayItem, DisplayItemId } from "@/utils/display-item";
 import BlockContextMenuContext from "@/context/blockContextMenu";
+import KeymapContext from "@/context/keymap";
+import SidebarContext from "@/context/sidebar";
 
 const props = withDefaults(
   defineProps<{
@@ -107,6 +109,8 @@ const { mainRootBlockId } = MainTreeContext.useContext()!;
 const { selectedBlockIds, draggingDropPos, dragging } = BlockSelectDragContext.useContext()!;
 const { getMirrors } = IndexContext.useContext()!;
 const { openAt } = BlockContextMenuContext.useContext()!;
+const { ctrlPressed, shiftPressed } = KeymapContext.useContext()!;
+const { addToSidePane } = SidebarContext.useContext()!;
 
 // computed
 const mirrorIds = computed(() => getMirrors(props.block.id));
@@ -115,7 +119,7 @@ const hasOrIsMirrors = computed(
 );
 const fold = computed(() => props.fold ?? props.block.fold);
 const hasChildren = computed(() => props.block.childrenIds.length > 0);
-const selected = computed(() => selectedBlockIds.value.allNonFolded.includes(props.block.id));
+const selected = computed(() => selectedBlockIds.value?.allNonFolded.includes(props.block.id));
 
 // handlers
 const handleFocusIn = () => {
@@ -124,7 +128,7 @@ const handleFocusIn = () => {
   // 一个块获得焦点时，清除块选择
   // 但是当拖拽时，不清除块选择
   if (!dragging.value) {
-    selectedBlockIds.value = { topLevelOnly: [], allNonFolded: [] };
+    selectedBlockIds.value = null;
   }
 };
 
@@ -140,7 +144,13 @@ const handleClickFoldButton = () => {
 
 const handleClickBullet = (e: MouseEvent) => {
   if (e.button !== 0) return; // 仅处理左键
-  mainRootBlockId.value = props.block.id;
+  if (shiftPressed.value) {
+    addToSidePane(props.block.id);
+  } else if (ctrlPressed.value) {
+    // TODO
+  } else {
+    mainRootBlockId.value = props.block.id;
+  }
 };
 
 const handleContextmenu = (e: MouseEvent) => {

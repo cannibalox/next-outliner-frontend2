@@ -23,9 +23,10 @@ jobs:
       - name: Install Deps & Build 🛠️
         run: |
           pnpm i
-          pnpm run build
+          pnpm run build:prod
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist
+          branch: gh-pages
