@@ -19,7 +19,7 @@ import {
   deleteCharBackward,
   deleteCharForward,
   indentLess,
-  indentMore,
+  insertTab,
   insertNewlineAndIndent,
 } from "@codemirror/commands";
 import { watch, ref, onMounted, onUnmounted } from "vue";
@@ -729,23 +729,17 @@ const KeymapContext = createContext(() => {
     },
     Tab: {
       key: "Tab",
-      run: (view) => {
-        return indentMore(view);
-      },
+      run: insertTab,
       stopPropagation: true,
     },
     "Shift-Tab": {
       key: "Shift-Tab",
-      run: (view) => {
-        return indentLess(view);
-      },
+      run: indentLess,
       stopPropagation: true,
     },
     Enter: {
       key: "Enter",
-      run: (view) => {
-        return insertNewlineAndIndent(view);
-      },
+      run: insertNewlineAndIndent,
       stopPropagation: true,
     },
   });
