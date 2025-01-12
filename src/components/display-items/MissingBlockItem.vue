@@ -59,7 +59,7 @@ const props = withDefaults(
 const { selectedBlockIds, draggingDropPos } = BlockSelectDragContext.useContext()!;
 
 // computed
-const selected = computed(() => selectedBlockIds.value.allNonFolded.includes(props.blockId));
+const selected = computed(() => selectedBlockIds.value?.allNonFolded.includes(props.blockId));
 
 const handleContextmenu = (e: MouseEvent) => {
   if (e.button !== 2) return; // 仅处理右键
