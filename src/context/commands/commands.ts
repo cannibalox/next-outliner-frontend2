@@ -15,6 +15,7 @@ import { Node } from "prosemirror-model";
 import { AllSelection, TextSelection } from "prosemirror-state";
 import { useTaskQueue } from "@/plugins/taskQueue";
 import type { BlockId } from "@/common/type-and-schemas/block/block-id";
+import { EditorView as CmEditorView } from "@codemirror/view";
 
 const CommandsContext = createContext(() => {
   const { selectedBlockIds } = BlockSelectDragContext.useContext()!;
@@ -927,6 +928,50 @@ const CommandsContext = createContext(() => {
     return true;
   };
 
+  const blurAndSelectCurrentBlock = () => {
+    const diId = lastFocusedDiId.value;
+    const tree = lastFocusedBlockTree.value;
+    if (!diId || !tree) return false;
+    const di = tree.getDi(diId);
+    const view = tree.getEditorView(diId);
+    if (!di || !DI_FILTERS.isBlockDi(di)) return false;
+
+    let emptySelection = false;
+    if (view instanceof PmEditorView) {
+      const sel = view.state.selection;
+      if (sel.empty) {
+        emptySelection = true;
+        view.dom.blur();
+      }
+    }
+    if (view instanceof CmEditorView) {
+      const sel = view.state.selection;
+      if (sel.ranges.length === 1 && sel.ranges[0].empty) {
+        emptySelection = true;
+        view.contentDOM.blur();
+      }
+    }
+
+    if (emptySelection) {
+      const newSelected = {
+        baseBlockId: di.block.id,
+        topLevelOnly: [di.block.id],
+        allNonFolded: [] as BlockId[],
+      };
+      blocksManager.forDescendants({
+        rootBlockId: di.block.id,
+        nonFoldOnly: true,
+        includeSelf: true,
+        onEachBlock: (block) => {
+          newSelected.allNonFolded.push(block.id);
+        },
+      });
+      selectedBlockIds.value = newSelected;
+      return true;
+    }
+    return false;
+  };
+
   return {
     swapUpSelected,
     swapDownSelected,
@@ -955,6 +1000,7 @@ const CommandsContext = createContext(() => {
     toggleFoldOfFocusedBlock,
     addBlockAboveToSelection,
     addBlockBelowToSelection,
+    blurAndSelectCurrentBlock,
   };
 });
 
