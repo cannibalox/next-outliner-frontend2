@@ -727,6 +727,37 @@ const KeymapContext = createContext(() => {
       },
       stopPropagation: true,
     },
+    // 失焦，但选中当前块
+    Escape: {
+      key: "Escape",
+      run: (view) => {
+        const sel = view.state.selection;
+        if (sel.ranges.length === 1 && sel.ranges[0].empty) {
+          view.contentDOM.blur();
+          const diId = lastFocusedDiId.value;
+          const tree = lastFocusedBlockTree.value;
+          if (!diId || !tree) return false;
+          const di = tree.getDi(diId);
+          if (!di || !DI_FILTERS.isBlockDi(di)) return false;
+          const newSelected = {
+            baseBlockId: di.block.id,
+            topLevelOnly: [di.block.id],
+            allNonFolded: [] as BlockId[],
+          };
+          blocksManager.forDescendants({
+            rootBlockId: di.block.id,
+            nonFoldOnly: true,
+            includeSelf: true,
+            onEachBlock: (block) => {
+              newSelected.allNonFolded.push(block.id);
+            },
+          });
+          selectedBlockIds.value = newSelected;
+          return true;
+        }
+        return false;
+      },
+    },
     Tab: {
       key: "Tab",
       run: insertTab,

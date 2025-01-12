@@ -189,7 +189,10 @@ const IndexContext = createContext(() => {
       index: "text",
       store: ["text"],
     },
-    encode: (str: string) => hybridTokenize(str),
+    encode: (str: string) => {
+      const tokens = hybridTokenize(str);
+      return tokens;
+    },
   });
   const dirtySet = new Set<BlockId>();
 
@@ -224,7 +227,7 @@ const IndexContext = createContext(() => {
     dirtySet.clear();
   };
 
-  const search = (query: string, limit: number = 50): BlockId[] => {
+  const search = (query: string, limit: number = 200): BlockId[] => {
     _updateIndex();
 
     const results = fulltextIndex.search(query, { limit, enrich: true })?.[0]?.result;

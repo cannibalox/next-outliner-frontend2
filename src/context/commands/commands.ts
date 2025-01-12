@@ -25,7 +25,7 @@ const CommandsContext = createContext(() => {
 
   const swapUpSelected = () => {
     if (!selectedBlockIds.value) return false;
-    if (selectedBlockIds.value.topLevelOnly.length > 1) {
+    if (selectedBlockIds.value.topLevelOnly.length > 0) {
       const taskQueue = useTaskQueue();
       taskQueue.addTask(async () => {
         const pos = {
@@ -86,7 +86,7 @@ const CommandsContext = createContext(() => {
 
   const swapDownSelected = () => {
     if (!selectedBlockIds.value) return false;
-    if (selectedBlockIds.value.topLevelOnly.length > 1) {
+    if (selectedBlockIds.value.topLevelOnly.length > 0) {
       const taskQueue = useTaskQueue();
       taskQueue.addTask(async () => {
         const selected = selectedBlockIds.value!.topLevelOnly;
@@ -228,7 +228,7 @@ const CommandsContext = createContext(() => {
 
   const promoteSelected = () => {
     if (!selectedBlockIds.value) return false;
-    if (selectedBlockIds.value.topLevelOnly.length > 1) {
+    if (selectedBlockIds.value.topLevelOnly.length > 0) {
       const taskQueue = useTaskQueue();
       taskQueue.addTask(async () => {
         const tr = blocksManager.createBlockTransaction({ type: "ui" });
@@ -266,7 +266,7 @@ const CommandsContext = createContext(() => {
 
   const demoteSelected = () => {
     if (!selectedBlockIds.value) return false;
-    if (selectedBlockIds.value.topLevelOnly.length > 1) {
+    if (selectedBlockIds.value.topLevelOnly.length > 0) {
       const taskQueue = useTaskQueue();
       taskQueue.addTask(async () => {
         const tr = blocksManager.createBlockTransaction({ type: "ui" });
@@ -284,7 +284,7 @@ const CommandsContext = createContext(() => {
 
   const deleteSelected = () => {
     if (!selectedBlockIds.value) return false;
-    if (selectedBlockIds.value.topLevelOnly.length > 1) {
+    if (selectedBlockIds.value.topLevelOnly.length > 0) {
       const taskQueue = useTaskQueue();
       taskQueue.addTask(async () => {
         const tr = blocksManager.createBlockTransaction({ type: "ui" });
