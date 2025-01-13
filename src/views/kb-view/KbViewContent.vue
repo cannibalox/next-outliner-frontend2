@@ -76,31 +76,28 @@
 </template>
 
 <script setup lang="ts">
-import TimeMachine from "@/components/time-machine/TimeMachine.vue";
 import BlockMover from "@/block-mover/BlockMover.vue";
+import AttachmentsManager from "@/components/attachments-mgr/AttachmentsManager2.vue";
 import BlockTree from "@/components/BlockTree.vue";
+import BlockContextMenu from "@/components/contextmenu/BlockContextMenu.vue";
 import Exporter from "@/components/exporter/Exporter.vue";
 import FieldValueInspector from "@/components/field-values-inspector/FieldValueInspector.vue";
 import FloatingEditor from "@/components/floating-editor/FloatingEditor.vue";
+import KeyBindings from "@/components/keybindings/KeyBindings.vue";
 import PasteDialog from "@/components/paste-dialog/PasteDialog.vue";
 import RefSuggestions from "@/components/ref-suggestions/RefSuggestions.vue";
 import SettingsPanel from "@/components/settings/SettingsPanel.vue";
+import TimeMachine from "@/components/time-machine/TimeMachine.vue";
 import CreateNewTreeDialogContext from "@/context/createNewTreeDialog";
 import MainTreeContext from "@/context/mainTree";
 import { Loader2 } from "lucide-vue-next";
-import { shallowRef, watch } from "vue";
+import { watch } from "vue";
 import FloatingMathInput from "../../components/FloatingMathInput.vue";
 import FusionCommand from "../../components/fusion-command/FusionCommand.vue";
 import HeaderBar from "../../components/header-bar/HeaderBar.vue";
 import SidePane from "../../components/side-pane/SidePane.vue";
 import BlocksContext from "../../context/blocks/blocks";
 import SidebarContext from "../../context/sidebar";
-import AttachmentsManager from "@/components/attachments-mgr/AttachmentsManager.vue";
-import type { Block } from "@/context/blocks/view-layer/blocksManager";
-import { syncRef } from "@vueuse/core";
-import KeyBindings from "@/components/keybindings/KeyBindings.vue";
-import BlockContextMenu from "@/components/contextmenu/BlockContextMenu.vue";
-// import ImageEditor from "@/components/image-editor/ImageEditor.vue";
 
 const { sidePaneOpen, sidePaneDir, sidePaneWidth, sidePaneHeight, enableSidePaneAnimation } =
   SidebarContext.useContext()!;
