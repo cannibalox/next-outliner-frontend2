@@ -13,7 +13,14 @@
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem
-          v-if="!isDirectory && isTextFile(name)"
+          v-if="
+            !isDirectory &&
+            (isTextFile(name) ||
+              isStaticImage(name) ||
+              isAnimateImage(name) ||
+              isAudioFile(name) ||
+              isVideo(name))
+          "
           @click="handlePreview(path, name)"
         >
           <Eye class="size-4 mr-2" />
@@ -93,14 +100,11 @@ defineProps<{
   ctime?: Date | string;
 }>();
 
-const { handleDownload, isTextFile } = AttachmentsManagerContext.useContext()!;
-const { previewTextFile } = AttachmentViewerContext.useContext()!;
+const { handleDownload, isTextFile, isStaticImage, isAnimateImage, isAudioFile, isVideo } =
+  AttachmentsManagerContext.useContext()!;
+const { handlePreview } = AttachmentViewerContext.useContext()!;
 
 const openRenameDialog = ref(false);
 const openDeleteDialog = ref(false);
 const openInfoDialog = ref(false);
-
-const handlePreview = async (path: string, name: string) => {
-  await previewTextFile(name, path);
-};
 </script>

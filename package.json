@@ -33,6 +33,7 @@
     "codemirror": "^6.0.1",
     "dayjs": "^1.11.13",
     "flexsearch": "^0.7.43",
+    "gifuct-js": "^2.1.2",
     "html-prettify": "^1.0.7",
     "katex": "^0.16.19",
     "lib0": "^0.2.99",

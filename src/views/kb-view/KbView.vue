@@ -20,14 +20,14 @@
                                       <AttachmentsManagerContext.Provider>
                                         <ImagesContext.Provider>
                                           <SidebarContext.Provider>
-                                            <RefSuggestionsContext.Provider>
-                                              <BlockMoverContext.Provider>
-                                                <HistoryContext.Provider>
-                                                  <BlockSelectDragContext.Provider>
-                                                    <SettingsPanelContext.Provider>
-                                                      <FavoriteContext.Provider>
-                                                        <FieldsManagerContext.Provider>
-                                                          <BacklinksContext.Provider>
+                                            <BlockMoverContext.Provider>
+                                              <HistoryContext.Provider>
+                                                <BlockSelectDragContext.Provider>
+                                                  <SettingsPanelContext.Provider>
+                                                    <FavoriteContext.Provider>
+                                                      <FieldsManagerContext.Provider>
+                                                        <BacklinksContext.Provider>
+                                                          <RefSuggestionsContext.Provider>
                                                             <FloatingEditorContext.Provider>
                                                               <FieldValueInspectorContext.Provider>
                                                                 <DailyNoteContext.Provider>
@@ -45,14 +45,14 @@
                                                                 </DailyNoteContext.Provider>
                                                               </FieldValueInspectorContext.Provider>
                                                             </FloatingEditorContext.Provider>
-                                                          </BacklinksContext.Provider>
-                                                        </FieldsManagerContext.Provider>
-                                                      </FavoriteContext.Provider>
-                                                    </SettingsPanelContext.Provider>
-                                                  </BlockSelectDragContext.Provider>
-                                                </HistoryContext.Provider>
-                                              </BlockMoverContext.Provider>
-                                            </RefSuggestionsContext.Provider>
+                                                          </RefSuggestionsContext.Provider>
+                                                        </BacklinksContext.Provider>
+                                                      </FieldsManagerContext.Provider>
+                                                    </FavoriteContext.Provider>
+                                                  </SettingsPanelContext.Provider>
+                                                </BlockSelectDragContext.Provider>
+                                              </HistoryContext.Provider>
+                                            </BlockMoverContext.Provider>
                                           </SidebarContext.Provider>
                                         </ImagesContext.Provider>
                                       </AttachmentsManagerContext.Provider>

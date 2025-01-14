@@ -15,15 +15,15 @@ import { toast } from "@/components/ui/toast/use-toast";
 import { useI18n } from "vue-i18n";
 import dayjs from "dayjs";
 import ServerInfoContext from "./serverInfo";
-import { isText } from "@/utils/fileType";
+import { isText, isStaticImage, isAnimateImage, isAudio, isVideo } from "@/utils/fileType";
 import { getSeperator } from "@/common/helper-functions/path";
 
 const AttachmentsManagerContext = createContext(() => {
   const { dbBasePath, attachmentsBasePath, attachmentsFolderName } = PathsContext.useContext()!;
-  const { t } = useI18n();
-  const open = ref(false);
   const { serverUrl } = ServerInfoContext.useContext()!;
-  // /dbBasePath/attachments 下的所有文件
+  const { t } = useI18n();
+
+  const open = ref(false);
   const files = ref<Dirents>({});
   const fetchFilesStatus = ref<"idle" | "fetching" | "success" | "failed">("idle");
   const uploadStatus = ref<"idle" | "uploading" | "success" | "failed">("idle");
@@ -58,6 +58,17 @@ const AttachmentsManagerContext = createContext(() => {
   });
   // 展开的目录
   const expandedDirs = ref<Set<string>>(new Set());
+  // 搜索查询
+  const searchQuery = ref("");
+  // 防抖的搜索查询
+  const debouncedSearchQuery = ref("");
+  // 当前过滤结果
+  const filterResult = ref<FilterResult>({
+    files: [],
+    filteredCount: 0,
+    dirFilteredCounts: new Map(),
+  });
+
   // 当前路径下的所有文件
   const currentFiles = computed(() => {
     let ctx = files.value;
@@ -99,12 +110,6 @@ const AttachmentsManagerContext = createContext(() => {
       : expandedDirs.value.add(dirName);
   };
 
-  // 搜索查询
-  const searchQuery = ref("");
-
-  // 防抖的搜索查询
-  const debouncedSearchQuery = ref("");
-
   // 更新防抖搜索查询
   const updateDebouncedSearchQuery = useDebounceFn((value: string) => {
     debouncedSearchQuery.value = value;
@@ -113,13 +118,6 @@ const AttachmentsManagerContext = createContext(() => {
   // 监听搜索查询变化
   watch(searchQuery, (value) => {
     updateDebouncedSearchQuery(value);
-  });
-
-  // 当前过滤结果
-  const filterResult = ref<FilterResult>({
-    files: [],
-    filteredCount: 0,
-    dirFilteredCounts: new Map(),
   });
 
   watch(
@@ -410,8 +408,6 @@ const AttachmentsManagerContext = createContext(() => {
     }
   };
 
-  const isTextFile = isText;
-
   return {
     open,
     files,
@@ -437,7 +433,11 @@ const AttachmentsManagerContext = createContext(() => {
     handleRename,
     handleDelete,
     handleDownload,
-    isTextFile,
+    isTextFile: isText,
+    isStaticImage,
+    isAnimateImage,
+    isAudioFile: isAudio,
+    isVideo,
   };
 });
 

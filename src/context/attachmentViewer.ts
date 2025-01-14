@@ -2,7 +2,14 @@ import { createContext } from "@/utils/createContext";
 import { fsGetAttachmentSignedUrl } from "@/common/api-call/fs";
 import { ref } from "vue";
 import ServerInfoContext from "./serverInfo";
-import { getExtname } from "@/utils/fileType";
+import {
+  getExtname,
+  isAnimateImage,
+  isAudio,
+  isStaticImage,
+  isText,
+  isVideo,
+} from "@/utils/fileType";
 
 export type ViewingTextAttachment = {
   type: "text";
@@ -14,7 +21,40 @@ export type ViewingTextAttachment = {
   save: () => void;
 };
 
-export type ViewingAttachment = ViewingTextAttachment;
+export type ViewingImageAttachment = {
+  type: "image";
+  name: string;
+  path: string;
+  url: string;
+};
+
+export type ViewingAnimateImageAttachment = {
+  type: "animateImage";
+  name: string;
+  path: string;
+  url: string;
+};
+
+export type ViewingAudioAttachment = {
+  type: "audio";
+  name: string;
+  path: string;
+  url: string;
+};
+
+export type ViewingVideoAttachment = {
+  type: "video";
+  name: string;
+  path: string;
+  url: string;
+};
+
+export type ViewingAttachment =
+  | ViewingTextAttachment
+  | ViewingImageAttachment
+  | ViewingAnimateImageAttachment
+  | ViewingAudioAttachment
+  | ViewingVideoAttachment;
 
 type ViewerStatus = "idle" | "loading" | "viewing" | "error";
 
@@ -71,10 +111,159 @@ const AttachmentViewerContext = createContext(() => {
     }
   };
 
+  const previewStaticImageFile = async (name: string, path: string) => {
+    try {
+      status.value = "loading";
+      errorMessage.value = "";
+
+      // 获取签名 URL
+      const resp = await fsGetAttachmentSignedUrl({
+        path,
+        attachment: false,
+        inferMimeType: true,
+      });
+
+      if (!resp.success) {
+        throw new Error("Failed to get signed URL");
+      }
+
+      const url = `${serverUrl.value}${resp.data.signedUrl}`;
+
+      viewingAttachment.value = {
+        type: "image",
+        name,
+        path,
+        url,
+      };
+
+      status.value = "viewing";
+    } catch (error) {
+      console.error("Error previewing image attachment", error);
+      status.value = "error";
+      errorMessage.value = error instanceof Error ? error.message : "Unknown error";
+      viewingAttachment.value = null;
+    }
+  };
+
+  const previewAnimateImageFile = async (name: string, path: string) => {
+    try {
+      status.value = "loading";
+      errorMessage.value = "";
+
+      // 获取签名 URL
+      const resp = await fsGetAttachmentSignedUrl({
+        path,
+        attachment: false,
+        inferMimeType: true,
+      });
+
+      if (!resp.success) {
+        throw new Error("Failed to get signed URL");
+      }
+
+      const url = `${serverUrl.value}${resp.data.signedUrl}`;
+
+      viewingAttachment.value = {
+        type: "animateImage",
+        name,
+        path,
+        url,
+      };
+
+      status.value = "viewing";
+    } catch (error) {
+      console.error("Error previewing image attachment", error);
+      status.value = "error";
+      errorMessage.value = error instanceof Error ? error.message : "Unknown error";
+      viewingAttachment.value = null;
+    }
+  };
+
+  const previewAudioFile = async (name: string, path: string) => {
+    try {
+      status.value = "loading";
+      errorMessage.value = "";
+
+      // 获取签名 URL
+      const resp = await fsGetAttachmentSignedUrl({
+        path,
+        attachment: false,
+        inferMimeType: true,
+      });
+
+      if (!resp.success) {
+        throw new Error("Failed to get signed URL");
+      }
+
+      const url = `${serverUrl.value}${resp.data.signedUrl}`;
+
+      viewingAttachment.value = {
+        type: "audio",
+        name,
+        path,
+        url,
+      };
+
+      status.value = "viewing";
+    } catch (error) {
+      console.error("Error previewing audio attachment", error);
+      status.value = "error";
+      errorMessage.value = error instanceof Error ? error.message : "Unknown error";
+      viewingAttachment.value = null;
+    }
+  };
+
+  const previewVideoFile = async (name: string, path: string) => {
+    try {
+      status.value = "loading";
+      errorMessage.value = "";
+
+      const resp = await fsGetAttachmentSignedUrl({
+        path,
+        attachment: false,
+        inferMimeType: true,
+      });
+
+      if (!resp.success) {
+        throw new Error("Failed to get signed URL");
+      }
+
+      const url = `${serverUrl.value}${resp.data.signedUrl}`;
+
+      viewingAttachment.value = {
+        type: "video",
+        name,
+        path,
+        url,
+      };
+
+      status.value = "viewing";
+    } catch (error) {
+      console.error("Error previewing video attachment", error);
+      status.value = "error";
+      errorMessage.value = error instanceof Error ? error.message : "Unknown error";
+      viewingAttachment.value = null;
+    }
+  };
+
   const closeViewer = () => {
     viewingAttachment.value = null;
     status.value = "idle";
     errorMessage.value = "";
+  };
+
+  const handlePreview = async (path: string, name: string) => {
+    if (isText(name)) {
+      await previewTextFile(name, path);
+    } else if (isStaticImage(name)) {
+      await previewStaticImageFile(name, path);
+    } else if (isAnimateImage(name)) {
+      await previewAnimateImageFile(name, path);
+    } else if (isAudio(name)) {
+      await previewAudioFile(name, path);
+    } else if (isVideo(name)) {
+      await previewVideoFile(name, path);
+    }
   };
 
   return {
@@ -82,6 +271,11 @@ const AttachmentViewerContext = createContext(() => {
     status,
     errorMessage,
     previewTextFile,
+    previewStaticImageFile,
+    previewAnimateImageFile,
+    previewAudioFile,
+    previewVideoFile,
+    handlePreview,
     closeViewer,
   };
 });
