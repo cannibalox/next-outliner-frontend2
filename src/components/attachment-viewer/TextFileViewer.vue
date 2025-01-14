@@ -1,6 +1,7 @@
 <template>
   <CodeMirror
     v-if="viewingAttachment"
+    class="text-file-viewer-cm"
     :lang="viewingAttachment.lang"
     v-model:src="viewingAttachment.tempContent"
     :readonly="!allowEdit"
@@ -17,3 +18,13 @@ const props = defineProps<{
 
 const viewingAttachment = defineModel<ViewingTextAttachment>("viewingAttachment");
 </script>
+
+<style lang="scss">
+.text-file-viewer-cm {
+  height: 100%;
+
+  .cm-editor {
+    height: 100%;
+  }
+}
+</style>

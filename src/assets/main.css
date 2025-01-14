@@ -176,3 +176,7 @@ a {
   border-radius: 6px;
   background-color: hsl(var(--muted));
 }
+
+::-webkit-scrollbar-corner {
+  background-color: hsl(var(--background));
+}

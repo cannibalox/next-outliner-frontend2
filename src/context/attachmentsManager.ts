@@ -16,6 +16,7 @@ import { useI18n } from "vue-i18n";
 import dayjs from "dayjs";
 import ServerInfoContext from "./serverInfo";
 import { isText } from "@/utils/fileType";
+import { getSeperator } from "@/common/helper-functions/path";
 
 const AttachmentsManagerContext = createContext(() => {
   const { dbBasePath, attachmentsBasePath, attachmentsFolderName } = PathsContext.useContext()!;
@@ -215,17 +216,17 @@ const AttachmentsManagerContext = createContext(() => {
   };
 
   // 刷新文件列表
-  const refreshFiles = async (basePath?: string, maxDepth?: number) => {
+  const refreshFiles = async () => {
     fetchFilesStatus.value = "fetching";
 
     try {
       // 并行执行刷新和最小等待时间
       const [res] = await Promise.all([
         fsLs({
-          basePath: basePath ?? "",
+          basePath: currentPathSegments.value.join(getSeperator()),
           includeHidden: true,
           recursive: true,
-          maxDepth: maxDepth ?? 1000, // Infinity
+          maxDepth: 1000, // Infinity
         }),
         timeout(1000), // 确保加载动画至少显示 1s
       ]);
