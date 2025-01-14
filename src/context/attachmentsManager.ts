@@ -3,7 +3,7 @@ import {
   filterFiles,
   type FilterResult,
 } from "./attachmentsManager/fileFilter";
-import { fsLs, fsUpload } from "@/common/api-call/fs";
+import { fsLs, fsUpload, fsRename, fsDelete, fsGetAttachmentSignedUrl } from "@/common/api-call/fs";
 import { type Dirents } from "@/common/type-and-schemas/dirents";
 import { createContext } from "@/utils/createContext";
 import { computed, ref, reactive, watch } from "vue";
@@ -14,11 +14,13 @@ import { timeout } from "@/utils/time";
 import { toast } from "@/components/ui/toast/use-toast";
 import { useI18n } from "vue-i18n";
 import dayjs from "dayjs";
+import ServerInfoContext from "./serverInfo";
 
 const AttachmentsManagerContext = createContext(() => {
   const { dbBasePath, attachmentsBasePath, attachmentsFolderName } = PathsContext.useContext()!;
   const { t } = useI18n();
   const open = ref(false);
+  const { serverUrl } = ServerInfoContext.useContext()!;
   // /dbBasePath/attachments 下的所有文件
   const files = ref<Dirents>({});
   const fetchFilesStatus = ref<"idle" | "fetching" | "success" | "failed">("idle");
@@ -311,6 +313,101 @@ const AttachmentsManagerContext = createContext(() => {
     }
   };
 
+  // 处理重命名
+  const handleRename = async (path: string, newName: string) => {
+    try {
+      const [res] = await Promise.all([fsRename({ path, newName }), timeout(1000)]);
+
+      if (res.success) {
+        toast({
+          title: t("kbView.attachmentsManager.renameSuccess.title"),
+          description: t("kbView.attachmentsManager.renameSuccess.description"),
+        });
+        await refreshFilesWithoutAnimation();
+        return true;
+      } else {
+        toast({
+          title: t("kbView.attachmentsManager.renameError.title"),
+          description: t("kbView.attachmentsManager.renameError.unknown"),
+          variant: "destructive",
+        });
+        throw new Error(t("kbView.attachmentsManager.renameError.unknown"));
+      }
+    } catch (error) {
+      toast({
+        title: t("kbView.attachmentsManager.renameError.title"),
+        description:
+          error instanceof Error
+            ? error.message
+            : t("kbView.attachmentsManager.renameError.unknown"),
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  // 处理删除
+  const handleDelete = async (path: string, isDirectory: boolean) => {
+    try {
+      const [res] = await Promise.all([fsDelete({ path }), timeout(1000)]);
+
+      if (res.success) {
+        toast({
+          title: t("kbView.attachmentsManager.deleteSuccess.title"),
+          description: t("kbView.attachmentsManager.deleteSuccess.description"),
+        });
+        await refreshFilesWithoutAnimation();
+        return true;
+      } else {
+        toast({
+          title: t("kbView.attachmentsManager.deleteError.title"),
+          description: t("kbView.attachmentsManager.deleteError.unknown"),
+          variant: "destructive",
+        });
+        throw new Error(t("kbView.attachmentsManager.deleteError.unknown"));
+      }
+    } catch (error) {
+      toast({
+        title: t("kbView.attachmentsManager.deleteError.title"),
+        description:
+          error instanceof Error
+            ? error.message
+            : t("kbView.attachmentsManager.deleteError.unknown"),
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const handleDownload = async (path: string) => {
+    try {
+      const res = await fsGetAttachmentSignedUrl({ path });
+      if (!res.success) {
+        toast({
+          title: t("kbView.attachmentsManager.downloadError.title"),
+          description: t("kbView.attachmentsManager.downloadError.unknown"),
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const signedUrl = res.data.signedUrl;
+      const a = document.createElement("a");
+      a.href = `${serverUrl.value}${signedUrl}`;
+      a.download = path.split("/").pop() ?? path;
+      a.click();
+    } catch (error) {
+      toast({
+        title: t("kbView.attachmentsManager.downloadError.title"),
+        description:
+          error instanceof Error
+            ? error.message
+            : t("kbView.attachmentsManager.downloadError.unknown"),
+        variant: "destructive",
+      });
+    }
+  };
+
   return {
     open,
     files,
@@ -333,6 +430,9 @@ const AttachmentsManagerContext = createContext(() => {
     filterResult,
     searchQuery,
     handleUpload,
+    handleRename,
+    handleDelete,
+    handleDownload,
   };
 });
 

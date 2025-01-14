@@ -12,28 +12,41 @@
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem v-if="!isDirectory">
+        <DropdownMenuItem v-if="!isDirectory" @click="handleDownload(path)">
           <Download class="size-4 mr-2" />
           {{ $t("kbView.attachmentsManager.actions.download") }}
         </DropdownMenuItem>
-        <DropdownMenuItem>
+        <DropdownMenuItem @click="openRenameDialog = true">
           <Pencil class="size-4 mr-2" />
           {{ $t("kbView.attachmentsManager.actions.rename") }}
         </DropdownMenuItem>
-        <DropdownMenuItem>
-          <Copy class="size-4 mr-2" />
-          {{ $t("kbView.attachmentsManager.actions.copy") }}
-        </DropdownMenuItem>
-        <DropdownMenuItem>
+        <DropdownMenuItem @click="openInfoDialog = true">
           <Info class="size-4 mr-2" />
           {{ $t("kbView.attachmentsManager.actions.info") }}
         </DropdownMenuItem>
-        <DropdownMenuItem class="!text-red-500">
+        <DropdownMenuItem class="!text-red-500" @click="openDeleteDialog = true">
           <Trash class="size-4 mr-2" />
           {{ $t("kbView.attachmentsManager.actions.delete") }}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+
+    <RenameDialog v-model:open="openRenameDialog" :path="path" :name="name" />
+    <DeleteDialog
+      v-model:open="openDeleteDialog"
+      :path="path"
+      :name="name"
+      :is-directory="isDirectory"
+    />
+    <InfoDialog
+      v-model:open="openInfoDialog"
+      :path="path"
+      :name="name"
+      :is-directory="isDirectory"
+      :size="size"
+      :mtime="mtime"
+      :ctime="ctime"
+    />
   </div>
 </template>
 
@@ -47,9 +60,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { File, Folder, MoreHorizontal, Pencil, Copy, Info, Trash, Download } from "lucide-vue-next";
+import RenameDialog from "./RenameDialog.vue";
+import DeleteDialog from "./DeleteDialog.vue";
+import InfoDialog from "./InfoDialog.vue";
+import { ref } from "vue";
+import AttachmentsManagerContext from "@/context/attachmentsManager";
 
 defineProps<{
   name: string;
+  path: string;
   isDirectory: boolean;
+  size?: number;
+  mtime?: Date;
+  ctime?: Date;
 }>();
+
+const { handleDownload } = AttachmentsManagerContext.useContext()!;
+
+const openRenameDialog = ref(false);
+const openDeleteDialog = ref(false);
+const openInfoDialog = ref(false);
 </script>

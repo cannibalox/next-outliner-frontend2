@@ -9,11 +9,26 @@
           />
         </Button>
       </CollapsibleTrigger>
-      <FileItem :name="name" :is-directory="true" />
+      <FileItem
+        :name="name"
+        :path="path"
+        :is-directory="true"
+        :mtime="mtime"
+        :ctime="ctime"
+        :size="size"
+      />
     </div>
     <CollapsibleContent class="ml-6">
       <template v-for="subDirent in subDirents" :key="subDirent.name">
-        <FileItem :name="subDirent.name" :is-directory="subDirent.isDirectory" />
+        <FileItem
+          :name="subDirent.name"
+          :path="`${path}${getSeperator()}${subDirent.name}`"
+          :is-directory="subDirent.isDirectory"
+          :file-info="subDirent"
+          :mtime="subDirent.mtime"
+          :ctime="subDirent.ctime"
+          :size="subDirent.size"
+        />
       </template>
       <div v-if="filteredCount" class="text-xs ml-10 text-muted-foreground py-1">
         {{ $t("kbView.attachmentsManager.hiddenFiles", { count: filteredCount }) }}
@@ -28,10 +43,15 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ChevronRight } from "lucide-vue-next";
 import FileItem from "./FileItem.vue";
 import type { Dirents } from "@/common/type-and-schemas/dirents";
+import { getSeperator } from "@/common/helper-functions/path";
 
 defineProps<{
   name: string;
+  path: string;
   isExpanded: boolean;
+  mtime: Date;
+  ctime: Date;
+  size: number;
   subDirents: Dirents[string][];
   filteredCount?: number;
   onToggle: () => void;

@@ -138,12 +138,16 @@
             <DirectoryItem
               v-if="dirent.isDirectory"
               :name="dirent.name"
+              :path="dirent.name"
+              :mtime="dirent.mtime"
+              :ctime="dirent.ctime"
+              :size="dirent.size"
               :is-expanded="expandedDirs.has(dirent.name)"
               :sub-dirents="Object.values(dirent.subDirents)"
               :filtered-count="filterResult.dirFilteredCounts.get(dirent.name)"
               :on-toggle="() => toggleDirectory(dirent.name)"
             />
-            <FileItem v-else :name="dirent.name" :is-directory="false" />
+            <FileItem v-else :name="dirent.name" :path="dirent.name" :is-directory="false" />
           </template>
         </div>
 
