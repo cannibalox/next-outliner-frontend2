@@ -5,7 +5,7 @@
     <!-- mr-1 是为了让滚动条和屏幕边缘留出一点空隙 -->
     <BlockTree
       v-if="synced && rootBlockRef"
-      class="h-[100vh] mr-1"
+      class="h-[100vh] mr-1 ml-2"
       id="main"
       :style="{
         paddingRight: sidePaneOpen && sidePaneDir === 'right' ? `${sidePaneWidth}px` : '0px',
