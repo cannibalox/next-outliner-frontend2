@@ -49,8 +49,8 @@ defineProps<{
   name: string;
   path: string;
   isExpanded: boolean;
-  mtime: Date;
-  ctime: Date;
+  mtime: Date | string;
+  ctime: Date | string;
   size: number;
   subDirents: Dirents[string][];
   filteredCount?: number;

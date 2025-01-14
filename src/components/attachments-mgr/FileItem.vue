@@ -12,6 +12,13 @@
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        <DropdownMenuItem
+          v-if="!isDirectory && isTextFile(name)"
+          @click="handlePreview(path, name)"
+        >
+          <Eye class="size-4 mr-2" />
+          {{ $t("kbView.attachmentsManager.actions.preview") }}
+        </DropdownMenuItem>
         <DropdownMenuItem v-if="!isDirectory" @click="handleDownload(path)">
           <Download class="size-4 mr-2" />
           {{ $t("kbView.attachmentsManager.actions.download") }}
@@ -59,25 +66,41 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { File, Folder, MoreHorizontal, Pencil, Copy, Info, Trash, Download } from "lucide-vue-next";
+import {
+  File,
+  Folder,
+  MoreHorizontal,
+  Pencil,
+  Copy,
+  Info,
+  Trash,
+  Download,
+  Eye,
+} from "lucide-vue-next";
 import RenameDialog from "./RenameDialog.vue";
 import DeleteDialog from "./DeleteDialog.vue";
 import InfoDialog from "./InfoDialog.vue";
 import { ref } from "vue";
 import AttachmentsManagerContext from "@/context/attachmentsManager";
+import AttachmentViewerContext from "@/context/attachmentViewer";
 
 defineProps<{
   name: string;
   path: string;
   isDirectory: boolean;
   size?: number;
-  mtime?: Date;
-  ctime?: Date;
+  mtime?: Date | string;
+  ctime?: Date | string;
 }>();
 
-const { handleDownload } = AttachmentsManagerContext.useContext()!;
+const { handleDownload, isTextFile } = AttachmentsManagerContext.useContext()!;
+const { previewTextFile } = AttachmentViewerContext.useContext()!;
 
 const openRenameDialog = ref(false);
 const openDeleteDialog = ref(false);
 const openInfoDialog = ref(false);
+
+const handlePreview = async (path: string, name: string) => {
+  await previewTextFile(name, path);
+};
 </script>

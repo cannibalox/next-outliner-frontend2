@@ -15,6 +15,7 @@ import { toast } from "@/components/ui/toast/use-toast";
 import { useI18n } from "vue-i18n";
 import dayjs from "dayjs";
 import ServerInfoContext from "./serverInfo";
+import { isText } from "@/utils/fileType";
 
 const AttachmentsManagerContext = createContext(() => {
   const { dbBasePath, attachmentsBasePath, attachmentsFolderName } = PathsContext.useContext()!;
@@ -408,6 +409,8 @@ const AttachmentsManagerContext = createContext(() => {
     }
   };
 
+  const isTextFile = isText;
+
   return {
     open,
     files,
@@ -433,6 +436,7 @@ const AttachmentsManagerContext = createContext(() => {
     handleRename,
     handleDelete,
     handleDownload,
+    isTextFile,
   };
 });
 

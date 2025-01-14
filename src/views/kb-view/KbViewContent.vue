@@ -1,78 +1,82 @@
 <template>
-  <!-- 头部栏 -->
-  <HeaderBar />
-  <!-- mr-1 是为了让滚动条和屏幕边缘留出一点空隙 -->
-  <BlockTree
-    v-if="synced && rootBlockRef"
-    class="h-[100vh] mr-1"
-    id="main"
-    :style="{
-      paddingRight: sidePaneOpen && sidePaneDir === 'right' ? `${sidePaneWidth}px` : '0px',
-      paddingBottom: sidePaneOpen && sidePaneDir === 'bottom' ? `${sidePaneHeight}px` : '0px',
-      transition: enableSidePaneAnimation ? 'padding 500ms var(--tf)' : 'none',
-    }"
-    :root-block-ids="[mainRootBlockId]"
-    :root-block-level="0"
-    :padding-top="60"
-    :enlarge-root-block="true"
-  ></BlockTree>
-  <div
-    v-else
-    class="h-[100vh] mr-1 flex justify-center items-center text-muted-foreground"
-    :style="{
-      paddingRight: sidePaneOpen && sidePaneDir === 'right' ? `${sidePaneWidth}px` : '0px',
-      paddingBottom: sidePaneOpen && sidePaneDir === 'bottom' ? `${sidePaneHeight}px` : '0px',
-      transition: enableSidePaneAnimation ? 'padding 500ms var(--tf)' : 'none',
-    }"
-  >
-    <Loader2 class="animate-spin mr-2" />
-    {{ $t("kbView.loadingKb") }}
-  </div>
-  <!-- 右侧侧边栏 -->
-  <Transition @leave="handleCloseR" @enter="handleOpenR">
-    <SidePane
-      v-if="sidePaneOpen && sidePaneDir === 'right'"
-      class="absolute right-0 top-0 h-full border-l"
-      :style="{ width: `${sidePaneWidth}px` }"
-    />
-  </Transition>
-  <!-- 底部侧边栏 -->
+  <div>
+    <!-- 头部栏 -->
+    <HeaderBar />
+    <!-- mr-1 是为了让滚动条和屏幕边缘留出一点空隙 -->
+    <BlockTree
+      v-if="synced && rootBlockRef"
+      class="h-[100vh] mr-1"
+      id="main"
+      :style="{
+        paddingRight: sidePaneOpen && sidePaneDir === 'right' ? `${sidePaneWidth}px` : '0px',
+        paddingBottom: sidePaneOpen && sidePaneDir === 'bottom' ? `${sidePaneHeight}px` : '0px',
+        transition: enableSidePaneAnimation ? 'padding 500ms var(--tf)' : 'none',
+      }"
+      :root-block-ids="[mainRootBlockId]"
+      :root-block-level="0"
+      :padding-top="60"
+      :enlarge-root-block="true"
+    ></BlockTree>
+    <div
+      v-else
+      class="h-[100vh] mr-1 flex justify-center items-center text-muted-foreground"
+      :style="{
+        paddingRight: sidePaneOpen && sidePaneDir === 'right' ? `${sidePaneWidth}px` : '0px',
+        paddingBottom: sidePaneOpen && sidePaneDir === 'bottom' ? `${sidePaneHeight}px` : '0px',
+        transition: enableSidePaneAnimation ? 'padding 500ms var(--tf)' : 'none',
+      }"
+    >
+      <Loader2 class="animate-spin mr-2" />
+      {{ $t("kbView.loadingKb") }}
+    </div>
+    <!-- 右侧侧边栏 -->
+    <Transition @leave="handleCloseR" @enter="handleOpenR">
+      <SidePane
+        v-if="sidePaneOpen && sidePaneDir === 'right'"
+        class="absolute right-0 top-0 h-full border-l"
+        :style="{ width: `${sidePaneWidth}px` }"
+      />
+    </Transition>
+    <!-- 底部侧边栏 -->
 
-  <Transition @leave="handleCloseB" @enter="handleOpenB">
-    <SidePane
-      v-if="sidePaneOpen && sidePaneDir === 'bottom'"
-      class="absolute bottom-0 left-0 w-[100vw] border-t"
-      :style="{ height: `${sidePaneHeight}px` }"
-    />
-  </Transition>
-  <!-- 菜单栏 -->
-  <!-- <MenuPane /> -->
-  <!-- 浮动数学输入框 -->
-  <FloatingMathInput />
-  <!-- 融合命令 -->
-  <FusionCommand />
-  <!-- 时光机 -->
-  <TimeMachine />
-  <RefSuggestions />
-  <!-- 附件管理器 -->
-  <AttachmentsManager />
-  <!-- 设置面板 -->
-  <SettingsPanel />
-  <!-- 块移动 popover -->
-  <BlockMover />
-  <!-- 粘贴对话框 -->
-  <PasteDialog />
-  <!-- 浮动编辑器 -->
-  <FloatingEditor />
-  <!-- 导出器 -->
-  <Exporter />
-  <!-- 属性检视器 -->
-  <FieldValueInspector />
-  <!-- <ImageEditor /> -->
-  <!-- keybinding 展示 -->
-  <KeyBindings />
-  <!-- 块上下文菜单 -->
-  <BlockContextMenu />
+    <Transition @leave="handleCloseB" @enter="handleOpenB">
+      <SidePane
+        v-if="sidePaneOpen && sidePaneDir === 'bottom'"
+        class="absolute bottom-0 left-0 w-[100vw] border-t"
+        :style="{ height: `${sidePaneHeight}px` }"
+      />
+    </Transition>
+    <!-- 菜单栏 -->
+    <!-- <MenuPane /> -->
+    <!-- 浮动数学输入框 -->
+    <FloatingMathInput />
+    <!-- 融合命令 -->
+    <FusionCommand />
+    <!-- 时光机 -->
+    <TimeMachine />
+    <RefSuggestions />
+    <!-- 附件管理器 -->
+    <AttachmentsManager />
+    <!-- 设置面板 -->
+    <SettingsPanel />
+    <!-- 块移动 popover -->
+    <BlockMover />
+    <!-- 粘贴对话框 -->
+    <PasteDialog />
+    <!-- 浮动编辑器 -->
+    <FloatingEditor />
+    <!-- 导出器 -->
+    <Exporter />
+    <!-- 属性检视器 -->
+    <FieldValueInspector />
+    <!-- <ImageEditor /> -->
+    <!-- keybinding 展示 -->
+    <KeyBindings />
+    <!-- 块上下文菜单 -->
+    <BlockContextMenu />
+    <!-- 附件查看器 -->
+    <AttachmentViewer />
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -98,14 +102,15 @@ import HeaderBar from "../../components/header-bar/HeaderBar.vue";
 import SidePane from "../../components/side-pane/SidePane.vue";
 import BlocksContext from "../../context/blocks/blocks";
 import SidebarContext from "../../context/sidebar";
+import BasicSettingsContext from "@/context/basicSettings";
+import AttachmentViewer from "@/components/attachment-viewer/AttachmentViewer.vue";
 
 const { sidePaneOpen, sidePaneDir, sidePaneWidth, sidePaneHeight, enableSidePaneAnimation } =
   SidebarContext.useContext()!;
 const { synced, blocksManager } = BlocksContext.useContext()!;
 const { mainRootBlockId } = MainTreeContext.useContext()!;
 const rootBlockRef = blocksManager.getBlockRef("root");
-const { openCreateNewTreeDialog, closeCreateNewTreeDialog } =
-  CreateNewTreeDialogContext.useContext()!;
+const { textFontFamily, uiFontFamily, monospaceFontFamily } = BasicSettingsContext.useContext()!;
 
 watch(synced, (newValue, oldValue) => {
   if (!oldValue && newValue) {

@@ -86,8 +86,8 @@ const props = defineProps<{
   name: string;
   isDirectory: boolean;
   size?: number;
-  mtime?: Date;
-  ctime?: Date;
+  mtime?: Date | string;
+  ctime?: Date | string;
 }>();
 
 const open = defineModel<boolean>("open");
@@ -101,7 +101,7 @@ const formatFileSize = (bytes: number) => {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 };
 
-const formatTime = (time?: Date) => {
+const formatTime = (time?: Date | string) => {
   return time ? dayjs(time).format("YYYY-MM-DD HH:mm:ss") : "-";
 };
 

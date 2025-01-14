@@ -277,6 +277,7 @@ export const messages = {
           delete: "删除",
           download: "下载",
           refresh: "刷新",
+          preview: "预览",
         },
         hiddenFiles: "{count} 个文件被过滤隐藏",
         rename: {
@@ -363,6 +364,14 @@ export const messages = {
       fontSelector: {
         notAvailable: "(未安装)",
         notSpecified: "(未指定)",
+        addCustomFont: "添加自定义字体",
+        addCustomFontTitle: "添加自定义字体",
+        addCustomFontDesc: "输入你想要使用的字体名称",
+        fontNamePlaceholder: "输入字体名称",
+        cancel: "取消",
+        confirm: "确认",
+        fontInstalled: "字体已安装",
+        fontNotInstalled: "字体似乎尚未安装",
       },
       fieldValuesInspector: {
         title: "属性检视器",
@@ -424,6 +433,11 @@ export const messages = {
         size: "{size} MB",
         refresh: "刷新备份列表",
         noBackup: "没有备份",
+      },
+      attachmentViewer: {
+        allowEdit: "允许编辑",
+        save: "保存",
+        loading: "正在加载...",
       },
     },
     adminDashboard: {
@@ -756,6 +770,7 @@ export const messages = {
           delete: "Delete",
           download: "Download",
           refresh: "Refresh",
+          preview: "Preview",
         },
         hiddenFiles: "{count} files are hidden due to filtering",
         rename: {
@@ -842,6 +857,14 @@ export const messages = {
       fontSelector: {
         notAvailable: "(Not Installed)",
         notSpecified: "(Not Specified)",
+        addCustomFont: "Add Custom Font",
+        addCustomFontTitle: "Add Custom Font",
+        addCustomFontDesc: "Enter the font name you want to use",
+        fontNamePlaceholder: "Enter font name",
+        cancel: "Cancel",
+        confirm: "Confirm",
+        fontInstalled: "Font is installed",
+        fontNotInstalled: "Font seems not installed",
       },
       fieldValuesInspector: {
         title: "Field Values Inspector",
@@ -903,6 +926,11 @@ export const messages = {
         size: "{size} MB",
         refresh: "Refresh backup list",
         noBackup: "No backups",
+      },
+      attachmentViewer: {
+        allowEdit: "Allow Edit",
+        save: "Save",
+        loading: "Loading...",
       },
     },
     adminDashboard: {
@@ -1235,6 +1263,7 @@ export const messages = {
           delete: "删除",
           download: "下载",
           refresh: "刷新",
+          preview: "预览",
         },
         hiddenFiles: "{count} 个文件被过滤隐藏",
         rename: {
@@ -1321,6 +1350,14 @@ export const messages = {
       fontSelector: {
         notAvailable: "(未安裝)",
         notSpecified: "(未指定)",
+        addCustomFont: "新增自定義字體",
+        addCustomFontTitle: "新增自定義字體",
+        addCustomFontDesc: "輸入你想要使用的字體名稱",
+        fontNamePlaceholder: "輸入字體名稱",
+        cancel: "取消",
+        confirm: "確認",
+        fontInstalled: "字體已安裝",
+        fontNotInstalled: "字體似乎尚未安裝",
       },
       fieldValuesInspector: {
         title: "屬性檢視器",
@@ -1382,6 +1419,11 @@ export const messages = {
         size: "{size} MB",
         refresh: "刷新備份列表",
         noBackup: "沒有備份",
+      },
+      attachmentViewer: {
+        allowEdit: "允許編輯",
+        save: "保存",
+        loading: "正在加載...",
       },
     },
     adminDashboard: {
@@ -1711,6 +1753,7 @@ export const messages = {
           delete: "删除",
           download: "下载",
           refresh: "刷新",
+          preview: "预览",
         },
         hiddenFiles: "{count} 个文件被过滤隐藏",
         rename: {
@@ -1797,6 +1840,14 @@ export const messages = {
       fontSelector: {
         notAvailable: "(未安裝)",
         notSpecified: "(未指定)",
+        addCustomFont: "新增自定義字體",
+        addCustomFontTitle: "新增自定義字體",
+        addCustomFontDesc: "輸入你想要使用的字體名稱",
+        fontNamePlaceholder: "輸入字體名稱",
+        cancel: "取消",
+        confirm: "確認",
+        fontInstalled: "字體已安裝",
+        fontNotInstalled: "字體似乎尚未安裝",
       },
       fieldValuesInspector: {
         title: "屬性檢視器",
@@ -1858,6 +1909,11 @@ export const messages = {
         size: "{size} MB",
         refresh: "刷新備份列表",
         noBackup: "沒有備份",
+      },
+      attachmentViewer: {
+        allowEdit: "允許編輯",
+        save: "保存",
+        loading: "正在加載...",
       },
     },
     adminDashboard: {
@@ -2000,13 +2056,13 @@ export const messages = {
         description: "Support image cropping, rotation, and automatic scan file optimization",
         cancel: "Annuler",
         save: "Appliquer les modifications",
-        saveAs: "Enregistrer sous",
+        saveAs: "Save As",
         deleteOriginal: "Delete original image?",
       },
       fusionCommand: {
-        noResults: "Aucun résultat trouvé",
-        noCommandResults: "Aucune commande trouvée",
-        allowedBlockTypes: "Types de blocs autorisés",
+        noResults: "No results found",
+        noCommandResults: "No commands found",
+        allowedBlockTypes: "Allowed block types",
         searchPlaceholder: "Search knowledge base",
         searchHelp:
           "↑↓ and Home, End to select results, ↵ to jump to selection, ⌘+↵ to insert block reference, esc to close search panel",
@@ -2019,20 +2075,20 @@ export const messages = {
         inputPlaceholder: "Déplacer vers...",
       },
       refSuggestions: {
-        noSuggestions: "Aucun résultat",
+        noSuggestions: "No results",
         createNewUnder1: "Créer un nouveau bloc sous",
         createNewUnder2: "",
       },
       pomodoro: {
         startWorking: "Commençons !",
         startResting: "Faites une pause",
-        stop: "Arrêter",
-        working: "Travail en cours...",
-        resting: "Pause en cours...",
+        stop: "Stop",
+        working: "Working...",
+        resting: "Resting...",
       },
       settingsPanel: {
         title: "Paramètres",
-        invalidJson: "JSON invalide",
+        invalidJson: "Invalid JSON",
         reset: "Réinitialiser aux valeurs par défaut",
         noResult: "Aucun bloc correspondant trouvé",
         invalidBlockId: "ID de bloc invalide",
@@ -2061,7 +2117,7 @@ export const messages = {
         dailynoteNavigator: "Notes quotidiennes",
         pomodoro: "Pomodoro",
         closeMenu: "Fermer le menu",
-        openMenu: "Ouvrir le menu",
+        openMenu: "Open Menu",
         back: "Retour",
         forward: "Avancer",
         search: "Rechercher",
@@ -2069,11 +2125,11 @@ export const messages = {
         switchLightTheme: "Passer au thème clair",
         switchDarkTheme: "Passer au thème sombre",
         openSidepane: "Ouvrir la barre latérale",
-        closeSidepane: "Fermer la barre latérale",
+        closeSidepane: "Close Sidebar",
         export: "Exporter",
         import: "Importer",
         enterFocusMode: "Entrer en mode focus",
-        exitFocusMode: "Quitter le mode focus",
+        exitFocusMode: "Exit Focus Mode",
         attachmentsManager: "Gestionnaire de pièces jointes",
         settings: "Paramètres",
         timeMachine: "Machine à remonter le temps",
@@ -2190,6 +2246,7 @@ export const messages = {
           delete: "Delete",
           download: "Download",
           refresh: "Refresh",
+          preview: "Preview",
         },
         hiddenFiles: "{count} files are hidden due to filtering",
         rename: {
@@ -2277,6 +2334,14 @@ export const messages = {
       fontSelector: {
         notAvailable: "(Non installé)",
         notSpecified: "(Non spécifié)",
+        addCustomFont: "Ajouter une police personnalisée",
+        addCustomFontTitle: "Ajouter une police personnalisée",
+        addCustomFontDesc: "Entrez le nom de la police que vous souhaitez utiliser",
+        fontNamePlaceholder: "Entrez le nom de la police",
+        cancel: "Annuler",
+        confirm: "Confirmer",
+        fontInstalled: "La police est installée",
+        fontNotInstalled: "La police ne semble pas installée",
       },
       fieldValuesInspector: {
         title: "Inspecteur de valeurs",
@@ -2340,6 +2405,11 @@ export const messages = {
         refresh: "Actualiser la liste des sauvegardes",
         noBackup: "Aucune sauvegarde",
       },
+      attachmentViewer: {
+        allowEdit: "Allow Edit",
+        save: "Save",
+        loading: "Chargement...",
+      },
     },
     adminDashboard: {
       title: "Tableau de bord administrateur",
@@ -2354,7 +2424,7 @@ export const messages = {
           "Vous pouvez créer de nouvelles bases de connaissances, supprimer des bases de connaissances ou modifier les informations des bases existantes ici",
         noKbs: "🤔 Aucune base de connaissances",
         noKbsDescription:
-          'Cliquez sur le bouton "Créer une nouvelle base de connaissances" en haut à droite pour créer votre première base de connaissances',
+          'Click the "Create New Knowledge Base" button in the top right to create your first knowledge base',
         kbActions: {
           edit: "Modifier",
           delete: "Supprimer",
@@ -2675,6 +2745,7 @@ export const messages = {
           delete: "Delete",
           download: "Download",
           refresh: "Refresh",
+          preview: "Preview",
         },
         hiddenFiles: "{count} files are hidden due to filtering",
         rename: {
@@ -2760,8 +2831,16 @@ export const messages = {
         exportFormat: "エクスポート形式",
       },
       fontSelector: {
-        notAvailable: "（未インストール）",
-        notSpecified: "（未指定）",
+        notAvailable: "(未インストール)",
+        notSpecified: "(未指定)",
+        addCustomFont: "カスタムフォントを追加",
+        addCustomFontTitle: "カスタムフォントを追加",
+        addCustomFontDesc: "使用したいフォント名を入力してください",
+        fontNamePlaceholder: "フォント名を入力",
+        cancel: "キャンセル",
+        confirm: "確認",
+        fontInstalled: "フォントがインストールされています",
+        fontNotInstalled: "フォントがインストールされていないようです",
       },
       fieldValuesInspector: {
         title: "フィールド値インスペクター",
@@ -2823,6 +2902,11 @@ export const messages = {
         size: "{size} MB",
         refresh: "バックアップ一覧を更新",
         noBackup: "バックアップがありません",
+      },
+      attachmentViewer: {
+        allowEdit: "Allow Edit",
+        save: "Save",
+        loading: "読み込み中...",
       },
     },
     adminDashboard: {

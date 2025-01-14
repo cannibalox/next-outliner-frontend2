@@ -254,6 +254,7 @@ const {
   fetchFilesStatus,
   uploadStatus,
   handleUpload,
+  isTextFile,
 } = AttachmentsManagerContext.useContext()!;
 
 const uploadInput = ref<HTMLInputElement>();
