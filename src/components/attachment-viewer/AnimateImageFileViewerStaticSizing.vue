@@ -1,7 +1,7 @@
 <template>
-  <div class="flex flex-col gap-2">
-    <div class="relative">
-      <div class="relative max-w-[80vw] max-h-[50vh] overflow-hidden">
+  <div class="flex flex-col h-full overflow-hidden gap-2">
+    <div class="relative flex-grow overflow-hidden">
+      <div class="relative">
         <div
           ref="containerRef"
           class="cursor-move"

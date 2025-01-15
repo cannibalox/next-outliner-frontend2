@@ -9,7 +9,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ViewingImageAttachment } from "@/context/attachmentViewer";
+import type { ViewingImageState } from "@/context/attachmentViewer";
 
-const viewingAttachment = defineModel<ViewingImageAttachment>("viewingAttachment");
+const viewingAttachment = defineModel<ViewingImageState>("viewingAttachment");
 </script>

@@ -332,6 +332,14 @@ export const messages = {
           createdTime: "创建时间",
           closeBtn: "关闭",
         },
+        selectFileToPreview: "选择文件以预览",
+        fileNotPreviewable: "暂不支持预览此类型的文件",
+        tooltip: {
+          showPreview: "显示预览面板",
+          hidePreview: "隐藏预览面板",
+          filter: "筛选文件",
+          sort: "排序文件",
+        },
       },
       imageContent: {
         fetchingImage: "图片加载中...",
@@ -826,6 +834,14 @@ export const messages = {
           modifiedTime: "Modified Time",
           createdTime: "Created Time",
           closeBtn: "Close",
+        },
+        selectFileToPreview: "Select File to Preview",
+        fileNotPreviewable: "Preview is not supported for this file type",
+        tooltip: {
+          showPreview: "Show preview panel",
+          hidePreview: "Hide preview panel",
+          filter: "Filter files",
+          sort: "Sort files",
         },
       },
       imageContent: {
@@ -1322,6 +1338,14 @@ export const messages = {
           createdTime: "创建时间",
           closeBtn: "关闭",
         },
+        selectFileToPreview: "选择文件以预览",
+        fileNotPreviewable: "暂不支持预览此类型的文件",
+        tooltip: {
+          showPreview: "显示预览面板",
+          hidePreview: "隐藏预览面板",
+          filter: "筛选文件",
+          sort: "排序文件",
+        },
       },
       imageContent: {
         fetchingImage: "圖片載入中...",
@@ -1813,6 +1837,14 @@ export const messages = {
           modifiedTime: "修改时间",
           createdTime: "创建时间",
           closeBtn: "关闭",
+        },
+        selectFileToPreview: "选择文件以预览",
+        fileNotPreviewable: "暂不支持预览此类型的文件",
+        tooltip: {
+          showPreview: "显示预览面板",
+          hidePreview: "隐藏预览面板",
+          filter: "筛选文件",
+          sort: "排序文件",
         },
       },
       imageContent: {
@@ -2308,6 +2340,14 @@ export const messages = {
           modifiedTime: "Modified Time",
           createdTime: "Created Time",
           closeBtn: "Close",
+        },
+        selectFileToPreview: "Select File to Preview",
+        fileNotPreviewable: "Preview is not supported for this file type",
+        tooltip: {
+          showPreview: "Show preview panel",
+          hidePreview: "Hide preview panel",
+          filter: "Filter files",
+          sort: "Sort files",
         },
       },
       imageContent: {
@@ -2809,6 +2849,14 @@ export const messages = {
           modifiedTime: "Modified Time",
           createdTime: "Created Time",
           closeBtn: "Close",
+        },
+        selectFileToPreview: "选择文件以预览",
+        fileNotPreviewable: "Preview is not supported for this file type",
+        tooltip: {
+          showPreview: "Show preview panel",
+          hidePreview: "Hide preview panel",
+          filter: "Filter files",
+          sort: "Sort files",
         },
       },
       imageContent: {

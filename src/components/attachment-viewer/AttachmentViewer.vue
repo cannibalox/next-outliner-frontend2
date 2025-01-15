@@ -27,32 +27,32 @@
         <!-- 文本文件预览 -->
         <TextFileViewer
           v-else-if="status === 'viewing' && viewingAttachment?.type === 'text'"
-          v-model:viewingAttachment="viewingAttachment as ViewingTextAttachment"
+          v-model:viewingAttachment="viewingAttachment as ViewingTextState"
           :allowEdit="allowEdit"
         />
 
         <!-- 图片文件预览 -->
         <StaticImageFileViewer
           v-else-if="status === 'viewing' && viewingAttachment?.type === 'image'"
-          v-model:viewingAttachment="viewingAttachment as ViewingImageAttachment"
+          v-model:viewingAttachment="viewingAttachment as ViewingImageState"
         />
 
         <!-- 动图文件预览 -->
         <AnimateImageFileViewer
           v-else-if="status === 'viewing' && viewingAttachment?.type === 'animateImage'"
-          v-model:viewingAttachment="viewingAttachment as ViewingAnimateImageAttachment"
+          v-model:viewingAttachment="viewingAttachment as ViewingAnimateImageState"
         />
 
         <!-- 音频文件预览 -->
         <AudioFileViewer
           v-else-if="status === 'viewing' && viewingAttachment?.type === 'audio'"
-          v-model:viewingAttachment="viewingAttachment as ViewingAudioAttachment"
+          v-model:viewingAttachment="viewingAttachment as ViewingAudioState"
         />
 
         <!-- 视频文件预览 -->
         <VideoFileViewer
           v-else-if="status === 'viewing' && viewingAttachment?.type === 'video'"
-          v-model:viewingAttachment="viewingAttachment as ViewingVideoAttachment"
+          v-model:viewingAttachment="viewingAttachment as ViewingVideoState"
         />
       </div>
 
@@ -78,11 +78,11 @@
 
 <script setup lang="ts">
 import AttachmentViewerContext, {
-  type ViewingAnimateImageAttachment,
-  type ViewingAudioAttachment,
-  type ViewingImageAttachment,
-  type ViewingTextAttachment,
-  type ViewingVideoAttachment,
+  type ViewingAnimateImageState,
+  type ViewingAudioState,
+  type ViewingImageState,
+  type ViewingTextState,
+  type ViewingVideoState,
 } from "@/context/attachmentViewer";
 import { computed, ref } from "vue";
 import TextFileViewer from "./TextFileViewer.vue";

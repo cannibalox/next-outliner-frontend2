@@ -100,8 +100,14 @@ defineProps<{
   ctime?: Date | string;
 }>();
 
-const { handleDownload, isTextFile, isStaticImage, isAnimateImage, isAudioFile, isVideo } =
-  AttachmentsManagerContext.useContext()!;
+const {
+  handleDownload,
+  isText: isTextFile,
+  isStaticImage,
+  isAnimateImage,
+  isAudio: isAudioFile,
+  isVideo,
+} = AttachmentsManagerContext.useContext()!;
 const { handlePreview } = AttachmentViewerContext.useContext()!;
 
 const openRenameDialog = ref(false);

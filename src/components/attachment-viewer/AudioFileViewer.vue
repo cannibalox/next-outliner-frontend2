@@ -8,8 +8,8 @@
 </template>
 
 <script setup lang="ts">
-import type { ViewingAudioAttachment } from "@/context/attachmentViewer";
+import type { ViewingAudioState } from "@/context/attachmentViewer";
 import { getExtname } from "@/utils/fileType";
 
-const viewingAttachment = defineModel<ViewingAudioAttachment>("viewingAttachment");
+const viewingAttachment = defineModel<ViewingAudioState>("viewingAttachment");
 </script>

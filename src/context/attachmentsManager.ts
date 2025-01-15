@@ -17,10 +17,22 @@ import dayjs from "dayjs";
 import ServerInfoContext from "./serverInfo";
 import { isText, isStaticImage, isAnimateImage, isAudio, isVideo } from "@/utils/fileType";
 import { getSeperator } from "@/common/helper-functions/path";
+import { type ViewingState, type AttachmentInfo, createViewingState } from "./attachmentViewer";
+import AttachmentViewerContext from "./attachmentViewer";
 
 const AttachmentsManagerContext = createContext(() => {
   const { dbBasePath, attachmentsBasePath, attachmentsFolderName } = PathsContext.useContext()!;
   const { serverUrl } = ServerInfoContext.useContext()!;
+  const {
+    handlePreview,
+    viewingAttachment,
+    previewTextFile,
+    previewStaticImageFile,
+    previewAnimateImageFile,
+    previewAudioFile,
+    previewVideoFile,
+    getPreviewInfo,
+  } = AttachmentViewerContext.useContext()!;
   const { t } = useI18n();
 
   const open = ref(false);
@@ -68,6 +80,10 @@ const AttachmentsManagerContext = createContext(() => {
     filteredCount: 0,
     dirFilteredCounts: new Map(),
   });
+  const showPreview = ref(false);
+  const previewingFile = ref<ViewingState | null>(null);
+  const previewStatus = ref<"idle" | "loading" | "error" | "viewing">("idle");
+  const previewError = ref("");
 
   // 当前路径下的所有文件
   const currentFiles = computed(() => {
@@ -408,6 +424,25 @@ const AttachmentsManagerContext = createContext(() => {
     }
   };
 
+  // 预览文件
+  const previewFile = async (path: string) => {
+    if (!path) return;
+
+    previewStatus.value = "loading";
+    previewError.value = "";
+
+    try {
+      const info = await getPreviewInfo(path, serverUrl.value);
+      previewingFile.value = createViewingState(info);
+      previewStatus.value = "viewing";
+    } catch (error) {
+      console.error("Error previewing file", error);
+      previewStatus.value = "error";
+      previewError.value = error instanceof Error ? error.message : "Unknown error";
+      previewingFile.value = null;
+    }
+  };
+
   return {
     open,
     files,
@@ -433,11 +468,18 @@ const AttachmentsManagerContext = createContext(() => {
     handleRename,
     handleDelete,
     handleDownload,
-    isTextFile: isText,
+    isText,
     isStaticImage,
     isAnimateImage,
-    isAudioFile: isAudio,
+    isAudio,
     isVideo,
+    showPreview,
+    previewingFile,
+    previewStatus,
+    previewError,
+    previewFile,
+    handlePreview,
+    viewingAttachment,
   };
 });
 

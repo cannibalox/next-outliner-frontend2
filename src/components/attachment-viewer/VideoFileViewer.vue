@@ -14,11 +14,11 @@
 </template>
 
 <script setup lang="ts">
-import type { ViewingVideoAttachment } from "@/context/attachmentViewer";
+import type { ViewingVideoState } from "@/context/attachmentViewer";
 import { getExtname } from "@/utils/fileType";
 
 defineProps<{
-  viewingAttachment: ViewingVideoAttachment;
+  viewingAttachment: ViewingVideoState;
 }>();
 </script>
 
