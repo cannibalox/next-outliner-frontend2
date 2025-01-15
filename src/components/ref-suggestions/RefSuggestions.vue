@@ -57,7 +57,9 @@
             @click="handleSelectItem(item)"
           >
             <FileIcon class="size-4 mr-2 flex-shrink-0" />
-            <span class="truncate">{{ item.file.name }}</span>
+            <span class="truncate">
+              <HighlightedText :text="item.file.name" :highlight-terms="queryTerms" />
+            </span>
           </div>
         </template>
 
@@ -89,11 +91,13 @@ import { getPmSchema } from "../prosemirror/pmSchema";
 import LastFocusContext from "@/context/lastFocus";
 import { EditorView } from "prosemirror-view";
 import type { Block } from "@/context/blocks/view-layer/blocksManager";
+import HighlightedText from "@/components/highlighted-text/HighlightedText.vue";
 
 const {
   showPos,
   open,
   query,
+  queryTerms,
   focusItemIndex,
   suggestions,
   suppressMouseOver,
@@ -109,11 +113,6 @@ const taskQueue = useTaskQueue();
 const putNewBlockAtBlock = computed(() => {
   const id = putNewBlockAt.value === "" ? "root" : putNewBlockAt.value;
   return blocksManager.getBlock(id);
-});
-
-const queryTerms = computed(() => {
-  if (query.value.length == 0) return [];
-  return hybridTokenize(query.value, false, 1, false) ?? [];
 });
 
 watch(showPos, async () => {
@@ -263,5 +262,9 @@ const handleKeydown = generateKeydownHandlerSimple({
 // 这里使用了 :has 选择器，保证不干扰其他 popover 的样式
 [data-radix-popper-content-wrapper]:has(> .ref-suggestions-content) {
   transform: translate(var(--popover-x), var(--popover-y)) !important;
+}
+
+.ref-suggestions-content .highlight-keep {
+  background-color: var(--highlight-text-bg);
 }
 </style>
