@@ -13,12 +13,17 @@ import BacklinksContext from "./backlinks";
 import LastFocusContext from "./lastFocus";
 import { EditorView as PmEditorView } from "prosemirror-view";
 import { plainTextToTextContent } from "@/utils/pm";
+import { isImage, isAudio, isVideo } from "@/utils/fileType";
 
 export type SuggestionItem =
   | { type: "block"; block: Block }
   | { type: "createNew" }
   | { type: "file"; file: Dirents[string]; path: string }
   | { type: "nothing" };
+
+const isPreviewableFile = (filename: string) => {
+  return isImage(filename) || isAudio(filename) || isVideo(filename);
+};
 
 const RefSuggestionsContext = createContext(() => {
   const { blocksManager, blockEditor } = BlocksContext.useContext()!;
@@ -38,28 +43,44 @@ const RefSuggestionsContext = createContext(() => {
   let onSelectFile: ((file: Dirents[string], path: string) => void) | null = null;
   let onSelectCreateNew: ((query: string) => void) | null = null;
   let onSelectNothing: (() => void) | null = null;
+  let onSelectFileEmbed: ((file: Dirents[string], path: string) => void) | null = null;
   const focusItemIndex = ref<number>(0);
   const suggestions = ref<SuggestionItem[]>([]);
   const suppressMouseOver = ref(false);
   // 选项
   const allowFileRef = ref(false); // 是否允许文件引用
   const allowCreateNew = ref(false); // 是否允许创建新块
+  const allowFileEmbed = ref(false); // 是否允许文件嵌入
 
   const updateSuggestions = useDebounceFn(() => {
     const newSuggestions: SuggestionItem[] = [];
 
     if (query.value && query.value.trim().length > 0) {
-      if (query.value.startsWith("/") && allowFileRef.value) {
-        const searchQuery = query.value.slice(1);
+      const isFileEmbed = /^[!！]/.test(query.value);
+      const isFileRef = query.value.startsWith("/");
+
+      if ((isFileRef && allowFileRef.value) || (isFileEmbed && allowFileEmbed.value)) {
+        const searchQuery = isFileEmbed ? query.value.slice(1) : query.value.slice(1);
+
         const searchFiles = (files: Dirents, parentPath = ""): void => {
           Object.entries(files).forEach(([name, file]) => {
             const fullPath = parentPath ? `${parentPath}/${name}` : name;
             if (fullPath.toLowerCase().includes(searchQuery.toLowerCase())) {
-              newSuggestions.push({
-                type: "file",
-                file,
-                path: fullPath,
-              });
+              if (isFileEmbed) {
+                if (!file.isDirectory && isPreviewableFile(name)) {
+                  newSuggestions.push({
+                    type: "file",
+                    file,
+                    path: fullPath,
+                  });
+                }
+              } else {
+                newSuggestions.push({
+                  type: "file",
+                  file,
+                  path: fullPath,
+                });
+              }
             }
             if (file.isDirectory && file.subDirents) {
               searchFiles(file.subDirents, fullPath);
@@ -76,11 +97,11 @@ const RefSuggestionsContext = createContext(() => {
           .forEach((block) => {
             newSuggestions.push({ type: "block", block: block! });
           });
-      }
-    }
 
-    if (allowCreateNew.value && query.value.trim().length > 0 && !query.value.startsWith("/")) {
-      newSuggestions.push({ type: "createNew" });
+        if (allowCreateNew.value && query.value.trim().length > 0) {
+          newSuggestions.push({ type: "createNew" });
+        }
+      }
     }
 
     suggestions.value = newSuggestions;
@@ -130,19 +151,23 @@ const RefSuggestionsContext = createContext(() => {
     initQuery?: string;
     allowCreateNew?: boolean;
     allowFileRef?: boolean;
+    allowFileEmbed?: boolean;
     onSelectCreateNew?: (query: string) => void;
     onSelectFile?: (file: Dirents[string], path: string) => void;
+    onSelectFileEmbed?: (file: Dirents[string], path: string) => void;
     onSelectBlock?: (blockId: BlockId) => void;
     onSelectNothing?: () => void;
   }) => {
     onSelectCreateNew = params.onSelectCreateNew ?? handleCreateNew;
     onSelectFile = params.onSelectFile ?? (() => {});
+    onSelectFileEmbed = params.onSelectFileEmbed ?? (() => {});
     onSelectBlock = params.onSelectBlock ?? (() => {});
     onSelectNothing = params.onSelectNothing ?? (() => {});
     query.value = params.initQuery ?? "";
     suggestions.value = [];
     allowCreateNew.value = params.allowCreateNew ?? false;
     allowFileRef.value = params.allowFileRef ?? false;
+    allowFileEmbed.value = params.allowFileEmbed ?? false;
     updateSuggestions();
     showPos.value = params.showPos;
   };
@@ -151,7 +176,13 @@ const RefSuggestionsContext = createContext(() => {
     if (item.type === "block") {
       onSelectBlock?.(item.block.id);
     } else if (item.type === "file") {
-      onSelectFile?.(item.file, item.path);
+      // 根据查询条件判断是文件引用还是文件嵌入
+      const isFileEmbed = /^[!！]/.test(query.value);
+      if (isFileEmbed) {
+        onSelectFileEmbed?.(item.file, item.path);
+      } else {
+        onSelectFile?.(item.file, item.path);
+      }
     } else if (item.type === "createNew") {
       onSelectCreateNew?.(query.value);
     } else if (item.type === "nothing") {

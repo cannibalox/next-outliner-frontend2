@@ -438,6 +438,8 @@ export const messages = {
         allowEdit: "允许编辑",
         save: "保存",
         loading: "正在加载...",
+        audioNotSupported: "音频格式不受支持",
+        videoNotSupported: "视频格式不受支持",
       },
     },
     adminDashboard: {
@@ -931,6 +933,8 @@ export const messages = {
         allowEdit: "Allow Edit",
         save: "Save",
         loading: "Loading...",
+        audioNotSupported: "Audio format not supported",
+        videoNotSupported: "Video format not supported",
       },
     },
     adminDashboard: {
@@ -1424,6 +1428,8 @@ export const messages = {
         allowEdit: "允許編輯",
         save: "保存",
         loading: "正在加載...",
+        audioNotSupported: "音頻格式不受支持",
+        videoNotSupported: "視頻格式不受支持",
       },
     },
     adminDashboard: {
@@ -1914,6 +1920,8 @@ export const messages = {
         allowEdit: "允許編輯",
         save: "保存",
         loading: "正在加載...",
+        audioNotSupported: "音頻格式不受支持",
+        videoNotSupported: "視頻格式不受支持",
       },
     },
     adminDashboard: {
@@ -2409,6 +2417,8 @@ export const messages = {
         allowEdit: "Allow Edit",
         save: "Save",
         loading: "Chargement...",
+        audioNotSupported: "Format audio non supporté",
+        videoNotSupported: "Format vidéo non supporté",
       },
     },
     adminDashboard: {
@@ -2907,6 +2917,8 @@ export const messages = {
         allowEdit: "Allow Edit",
         save: "Save",
         loading: "読み込み中...",
+        audioNotSupported: "音声フォーマットはサポートされていません",
+        videoNotSupported: "動画フォーマットはサポートされていません",
       },
     },
     adminDashboard: {
