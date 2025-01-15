@@ -7,12 +7,25 @@
       @keydown="handleKeydown"
     >
       <div class="relative px-1">
-        <Search class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+        <div
+          class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground flex items-center"
+        >
+          <template v-if="isFileRef">
+            <File class="size-4" />
+          </template>
+          <template v-else-if="isFileEmbed">
+            <span class="text-sm">![]</span>
+          </template>
+          <template v-else>
+            <Search class="size-4" />
+          </template>
+        </div>
         <Input
           @input="onInput"
           @compositionend="onCompositionEnd"
+          :placeholder="$t('kbView.refSuggestions.placeholder')"
           v-model="query"
-          class="h-[32px] pl-8 rounded-sm focus-visible:outline-none focus-visible:ring-transparent"
+          class="h-[32px] pl-8 rounded-sm focus-visible:outline-none focus-visible:ring-transparent placeholder:text-muted-foreground/50"
         />
       </div>
       <!-- XXX scroll area 的高度是 250px，因为 max-h 是 300px，减去 input 的高度和中间的 padding 就是 250px，并不优雅 -->
@@ -78,7 +91,7 @@ import { generateKeydownHandlerSimple } from "@/context/keymap";
 import RefSuggestionsContext, { type SuggestionItem } from "@/context/refSuggestions";
 import { calcPopoverPos } from "@/utils/popover";
 import { hybridTokenize } from "@/utils/tokenize";
-import { Plus, Search, FileIcon } from "lucide-vue-next";
+import { Plus, Search, FileIcon, File } from "lucide-vue-next";
 import { computed, nextTick, watch } from "vue";
 import BlockContent from "../block-contents/BlockContent.vue";
 import { Input } from "../ui/input";
@@ -255,6 +268,9 @@ const handleKeydown = generateKeydownHandlerSimple({
     stopPropagation: true,
   },
 });
+
+const isFileRef = computed(() => query.value.startsWith("/"));
+const isFileEmbed = computed(() => /^[!！]/.test(query.value));
 </script>
 
 <style lang="scss">
