@@ -29,21 +29,19 @@
                                                         <FieldsManagerContext.Provider>
                                                           <BacklinksContext.Provider>
                                                             <RefSuggestionsContext.Provider>
-                                                              <FloatingEditorContext.Provider>
-                                                                <FieldValueInspectorContext.Provider>
-                                                                  <DailyNoteContext.Provider>
-                                                                    <FusionCommandContext.Provider>
-                                                                      <CommandsContext.Provider>
-                                                                        <KeymapContext.Provider>
-                                                                          <BlockContextMenuContext.Provider>
-                                                                            <KbViewContent />
-                                                                          </BlockContextMenuContext.Provider>
-                                                                        </KeymapContext.Provider>
-                                                                      </CommandsContext.Provider>
-                                                                    </FusionCommandContext.Provider>
-                                                                  </DailyNoteContext.Provider>
-                                                                </FieldValueInspectorContext.Provider>
-                                                              </FloatingEditorContext.Provider>
+                                                              <FieldValueInspectorContext.Provider>
+                                                                <DailyNoteContext.Provider>
+                                                                  <FusionCommandContext.Provider>
+                                                                    <CommandsContext.Provider>
+                                                                      <KeymapContext.Provider>
+                                                                        <BlockContextMenuContext.Provider>
+                                                                          <KbViewContent />
+                                                                        </BlockContextMenuContext.Provider>
+                                                                      </KeymapContext.Provider>
+                                                                    </CommandsContext.Provider>
+                                                                  </FusionCommandContext.Provider>
+                                                                </DailyNoteContext.Provider>
+                                                              </FieldValueInspectorContext.Provider>
                                                             </RefSuggestionsContext.Provider>
                                                           </BacklinksContext.Provider>
                                                         </FieldsManagerContext.Provider>
@@ -104,7 +102,6 @@ import FieldsManagerContext from "@/context/fieldsManager";
 import BacklinksContext from "@/context/backlinks";
 import PasteDialogContext from "@/context/pasteDialog";
 import CreateNewTreeDialogContext from "@/context/createNewTreeDialog";
-import FloatingEditorContext from "@/context/floatingEditor";
 import ExporterContext from "@/context/exporter";
 import FieldValueInspectorContext from "@/context/fieldValueInspector";
 import DailyNoteContext from "@/context/dailynote";

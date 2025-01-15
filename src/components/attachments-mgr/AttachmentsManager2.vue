@@ -1,7 +1,7 @@
 <template>
   <Dialog v-model:open="open">
     <DialogContent
-      class="flex flex-col max-w-[80vw] max-h-[80vh] w-[800px] h-[600px] gap-0 p-0 !outline-none"
+      class="attachments-mgr flex flex-col max-w-[80vw] max-h-[80vh] w-[800px] h-[600px] gap-0 p-0 !outline-none"
     >
       <!-- Header -->
       <div class="px-4 pt-5 pb-2">
@@ -121,12 +121,14 @@
                 :sub-dirents="Object.values(dirent.subDirents)"
                 :filtered-count="filterResult.dirFilteredCounts.get(dirent.name)"
                 :on-toggle="() => toggleDirectory(dirent.name)"
+                :highlight-terms="queryTerms"
               />
               <FileItem
                 v-else
                 :name="dirent.name"
                 :path="dirent.name"
                 :is-directory="false"
+                :highlight-terms="queryTerms"
                 @click="handleFileSelect(dirent)"
               />
             </template>
@@ -285,7 +287,7 @@ import {
   Eye,
   XCircle,
 } from "lucide-vue-next";
-import { onMounted, ref } from "vue";
+import { onMounted, ref, computed } from "vue";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../ui/dialog";
@@ -303,8 +305,13 @@ import type { Dirents } from "@/common/type-and-schemas/dirents";
 import AnimateImageFileViewerStaticSizing from "../attachment-viewer/AnimateImageFileViewerStaticSizing.vue";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { isAnimateImage, isAudio, isStaticImage, isText, isVideo } from "@/utils/fileType";
+import { hybridTokenize } from "@/utils/tokenize";
 
 const { t: $t } = useI18n();
+const queryTerms = computed(() => {
+  if (!searchQuery.value) return [];
+  return hybridTokenize(searchQuery.value, false, 1, false) ?? [];
+});
 const {
   open,
   refreshFiles,
@@ -414,12 +421,8 @@ onMounted(async () => {
 });
 </script>
 
-<style lang="scss" scoped>
-.file-list-container {
-  transition: width 0.3s ease;
-}
-
-.preview-panel {
-  transition: width 0.3s ease;
+<style lang="scss">
+.attachments-mgr .highlight-keep {
+  background-color: var(--highlight-text-bg);
 }
 </style>

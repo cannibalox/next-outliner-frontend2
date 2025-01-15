@@ -63,8 +63,6 @@
     <BlockMover />
     <!-- 粘贴对话框 -->
     <PasteDialog />
-    <!-- 浮动编辑器 -->
-    <FloatingEditor />
     <!-- 导出器 -->
     <Exporter />
     <!-- 属性检视器 -->
@@ -86,13 +84,11 @@ import BlockTree from "@/components/BlockTree.vue";
 import BlockContextMenu from "@/components/contextmenu/BlockContextMenu.vue";
 import Exporter from "@/components/exporter/Exporter.vue";
 import FieldValueInspector from "@/components/field-values-inspector/FieldValueInspector.vue";
-import FloatingEditor from "@/components/floating-editor/FloatingEditor.vue";
 import KeyBindings from "@/components/keybindings/KeyBindings.vue";
 import PasteDialog from "@/components/paste-dialog/PasteDialog.vue";
 import RefSuggestions from "@/components/ref-suggestions/RefSuggestions.vue";
 import SettingsPanel from "@/components/settings/SettingsPanel.vue";
 import TimeMachine from "@/components/time-machine/TimeMachine.vue";
-import CreateNewTreeDialogContext from "@/context/createNewTreeDialog";
 import MainTreeContext from "@/context/mainTree";
 import { Loader2 } from "lucide-vue-next";
 import { watch } from "vue";

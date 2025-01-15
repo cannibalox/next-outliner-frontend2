@@ -1094,6 +1094,56 @@ const CommandsContext = createContext(() => {
     }
   };
 
+  const foldAll = () => {
+    const tree = lastFocusedBlockTree.value;
+    const diId = lastFocusedDiId.value;
+    const di = diId ? tree?.getDi(diId) : null;
+    if (!tree || !diId || !di || !DI_FILTERS.isBlockDi(di)) return false;
+
+    const blockId = di.block.id;
+
+    const taskQueue = useTaskQueue();
+    taskQueue.addTask(() => {
+      const tr = blocksManager.createBlockTransaction({ type: "ui" });
+      blocksManager.forDescendants({
+        rootBlockId: blockId,
+        rootBlockLevel: 0,
+        nonFoldOnly: true,
+        includeSelf: true,
+        onEachBlock: (block) => {
+          !block.fold && tr.updateBlock({ ...block, fold: true });
+        },
+      });
+      tr.commit();
+    });
+    return true;
+  };
+
+  const expandAll = () => {
+    const tree = lastFocusedBlockTree.value;
+    const diId = lastFocusedDiId.value;
+    const di = diId ? tree?.getDi(diId) : null;
+    if (!tree || !diId || !di || !DI_FILTERS.isBlockDi(di)) return false;
+
+    const blockId = di.block.id;
+
+    const taskQueue = useTaskQueue();
+    taskQueue.addTask(() => {
+      const tr = blocksManager.createBlockTransaction({ type: "ui" });
+      blocksManager.forDescendants({
+        rootBlockId: blockId,
+        rootBlockLevel: 0,
+        nonFoldOnly: false,
+        includeSelf: true,
+        onEachBlock: (block) => {
+          block.fold && tr.updateBlock({ ...block, fold: false });
+        },
+      });
+      tr.commit();
+    });
+    return true;
+  };
+
   return {
     swapUpSelected,
     swapDownSelected,
@@ -1126,6 +1176,8 @@ const CommandsContext = createContext(() => {
     insertImage,
     insertAudio,
     insertVideo,
+    foldAll,
+    expandAll,
   };
 });
 
