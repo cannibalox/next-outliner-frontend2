@@ -509,6 +509,16 @@ export const messages = {
         cancel: "取消",
         delete: "删除",
       },
+      blockPath: {
+        image: "[图片]",
+        video: "[视频]",
+        code: "[代码]",
+        math: "[公式]",
+        carousel: "[轮播]",
+        audio: "[音频]",
+        query: "[查询]",
+        unknown: "[未知]",
+      },
     },
     adminDashboard: {
       title: "管理员面板",
@@ -1071,6 +1081,16 @@ export const messages = {
       common: {
         cancel: "Cancel",
         delete: "Delete",
+      },
+      blockPath: {
+        image: "[Image]",
+        video: "[Video]",
+        code: "[Code]",
+        math: "[Math]",
+        carousel: "[Carousel]",
+        audio: "[Audio]",
+        query: "[Query]",
+        unknown: "[Unknown]",
       },
     },
     adminDashboard: {
@@ -1635,6 +1655,16 @@ export const messages = {
         cancel: "取消",
         delete: "删除",
       },
+      blockPath: {
+        image: "[圖片]",
+        video: "[視頻]",
+        code: "[代碼]",
+        math: "[公式]",
+        carousel: "[輪播]",
+        audio: "[音頻]",
+        query: "[查詢]",
+        unknown: "[未知]",
+      },
     },
     adminDashboard: {
       title: "管理員面板",
@@ -2194,6 +2224,16 @@ export const messages = {
       common: {
         cancel: "取消",
         delete: "删除",
+      },
+      blockPath: {
+        image: "[圖片]",
+        video: "[視頻]",
+        code: "[代碼]",
+        math: "[公式]",
+        carousel: "[輪播]",
+        audio: "[音頻]",
+        query: "[查詢]",
+        unknown: "[未知]",
       },
     },
     adminDashboard: {
@@ -2760,6 +2800,16 @@ export const messages = {
       common: {
         cancel: "Annuler",
         delete: "Supprimer",
+      },
+      blockPath: {
+        image: "[图片]",
+        video: "[视频]",
+        code: "[代码]",
+        math: "[公式]",
+        carousel: "[轮播]",
+        audio: "[音频]",
+        query: "[查询]",
+        unknown: "[未知]",
       },
     },
     adminDashboard: {
@@ -3328,6 +3378,16 @@ export const messages = {
       common: {
         cancel: "Cancel",
         delete: "Delete",
+      },
+      blockPath: {
+        image: "[画像]",
+        video: "[视频]",
+        code: "[代码]",
+        math: "[公式]",
+        carousel: "[轮播]",
+        audio: "[音频]",
+        query: "[查询]",
+        unknown: "[未知]",
       },
     },
     adminDashboard: {
