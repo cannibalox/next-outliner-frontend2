@@ -28,7 +28,7 @@
         >
           <TextContent
             v-if="block.value.content[0] === BLOCK_CONTENT_TYPES.TEXT"
-            :block="block.value"
+            :block="block.value as TextBlock"
             :readonly="true"
             class="*:cursor-default"
             :highlight-terms="queryTerms"
@@ -50,6 +50,7 @@ import TextContent from "@/components/block-contents/TextContent.vue";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import BlockMoverContext from "@/context/blockMover";
+import type { TextBlock } from "@/context/blocks/view-layer/blocksManager";
 import { calcPopoverPos } from "@/utils/popover";
 import { hybridTokenize } from "@/utils/tokenize";
 import { Search } from "lucide-vue-next";
