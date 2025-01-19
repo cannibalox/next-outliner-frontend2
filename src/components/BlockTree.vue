@@ -186,7 +186,7 @@ const changeRef = eventBus.eventRefs.afterBlocksTrCommit;
 const editorViews = new Map<BlockId, PmEditorView | CmEditorView>();
 // 反链和潜在链接面板中所有被展开的 display item 的 itemId
 // 由于反链和潜在链接面板中默认都是折叠的，因此这里记录所有被展开的更合适
-const expandedBP = ref<Record<BlockId, boolean>>({});
+const expandedBP = ref<Record<DisplayItemId, boolean>>({});
 let fixedOffset: number | null = null;
 
 const updateDisplayItems = () => {
