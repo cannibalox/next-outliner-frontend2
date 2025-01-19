@@ -557,7 +557,6 @@ export const createBlocksManager = (syncLayer: SyncLayer) => {
       if (node.content.size == 1) {
         const onlyNode = node.content.firstChild;
         if (onlyNode && onlyNode.type.name === "blockRef_v2") {
-          console.log("blockRef_v2, boosting = -1.0");
           return -1.0; // 如果只有一个 blockRef_v2，则 boosting 为 -1.0，表示我们不希望其出现在搜索结果中
         }
       }
@@ -873,20 +872,21 @@ export const createBlocksManager = (syncLayer: SyncLayer) => {
     eventBus.emit("blocksDestroy");
   };
 
-  const { createBlockTransaction, addBlock, updateBlock, deleteBlock } = useBlockTransaction({
-    blocks,
-    yjsLayer: syncLayer,
-    latestBlockInfos,
-    latestBlockDatas,
-    getBlockRef,
-    getCtext,
-    getMtext,
-    getBoosting,
-    getOlinks,
-    mainRootBlockId,
-    lastFocusedBlockTree,
-    lastFocusedDiId,
-  });
+  const { createBlockTransaction, addBlock, updateBlock, deleteBlock, enrichBlock, shrinkBlock } =
+    useBlockTransaction({
+      blocks,
+      yjsLayer: syncLayer,
+      latestBlockInfos,
+      latestBlockDatas,
+      getBlockRef,
+      getCtext,
+      getMtext,
+      getBoosting,
+      getOlinks,
+      mainRootBlockId,
+      lastFocusedBlockTree,
+      lastFocusedDiId,
+    });
 
   const { undo, redo, addUndoPoint, clearUndoRedoHistory } = createUndoManager({
     createBlockTransaction,
@@ -922,6 +922,8 @@ export const createBlocksManager = (syncLayer: SyncLayer) => {
     createNewTree,
     addUndoPoint,
     clearUndoRedoHistory,
+    enrichBlock,
+    shrinkBlock,
   };
 };
 

@@ -2,7 +2,7 @@
   <Popover v-model:open="open">
     <PopoverTrigger class="hidden" />
     <PopoverContent
-      :class="`${contentClass} py-2 pb-0 px-1 max-h-[300px] max-w-[300px] overflow-hidden`"
+      :class="`${contentClass} z-[999] py-2 pb-0 px-1 max-h-[300px] max-w-[300px] overflow-hidden`"
       trap-focus
       tabindex="-1"
       @keydown="handleKeydown"
@@ -25,6 +25,7 @@
           class="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 text-sm outline-none [&.focus]:bg-accent [&.focus]:text-accent-foreground"
           :class="{ focus: focusItemIndex === index }"
           @mouseover="!suppressMouseOver && (focusItemIndex = index)"
+          @click="handleSelectItem(block.value.id)"
         >
           <TextContent
             v-if="block.value.content[0] === BLOCK_CONTENT_TYPES.TEXT"
@@ -64,6 +65,7 @@ const {
   suggestions,
   suppressMouseOver,
   updateSuggestions,
+  handleSelectItem,
   contentClass,
   handleKeydown,
 } = BlockMoverContext.useContext()!;

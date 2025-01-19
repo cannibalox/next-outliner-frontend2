@@ -25,7 +25,8 @@
         @click.stop="handleClickBullet"
         @contextmenu="handleContextmenu"
       >
-        <Diamond class="diamond" v-if="hasOrIsMirrors" />
+        <Field v-if="isField" class="!p-[1px]" />
+        <Diamond class="diamond" v-else-if="hasOrIsMirrors" />
         <Circle class="circle" v-else />
       </div>
 
@@ -70,6 +71,7 @@ import type { DisplayItem, DisplayItemId } from "@/utils/display-item";
 import BlockContextMenuContext from "@/context/blockContextMenu";
 import KeymapContext from "@/context/keymap";
 import SidebarContext from "@/context/sidebar";
+import Field from "../icons/Field.vue";
 
 const props = withDefaults(
   defineProps<{
@@ -118,6 +120,7 @@ const hasOrIsMirrors = computed(
   () => mirrorIds.value.size > 0 || props.block.type === "mirrorBlock",
 );
 const fold = computed(() => props.fold ?? props.block.fold);
+const isField = computed(() => props.block.metadata?.field !== undefined);
 const hasChildren = computed(() => props.block.childrenIds.length > 0);
 const selected = computed(() => selectedBlockIds.value?.allNonFolded.includes(props.block.id));
 
@@ -125,6 +128,7 @@ const selected = computed(() => selectedBlockIds.value?.allNonFolded.includes(pr
 const handleFocusIn = () => {
   lastFocusedDiId.value = props.itemId ?? null;
   lastFocusedBlockTree.value = props.blockTree ?? null;
+  console.log("set lastFocusedBlockTree", props.blockTree);
   // 一个块获得焦点时，清除块选择
   // 但是当拖拽时，不清除块选择
   if (!dragging.value) {

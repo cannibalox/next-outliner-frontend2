@@ -242,10 +242,10 @@ const addBacklinkItems = (
   expandedBP: Record<BlockId, boolean>,
   getBacklinksContext: () => ReturnType<typeof BacklinksContext.useContext>,
 ) => {
-  const { getBacklinksConsideringAliases } = getBacklinksContext() ?? {};
-  if (!getBacklinksConsideringAliases) return;
+  const { getBacklinks } = getBacklinksContext() ?? {};
+  if (!getBacklinks) return;
 
-  const backlinks = getBacklinksConsideringAliases(rootBlockId);
+  const backlinks = getBacklinks(rootBlockId);
   if (backlinks.size <= 0) return;
 
   // 只保留顶层反链
@@ -338,11 +338,11 @@ const addPotentialLinksItems = (
   getBacklinksContext: () => ReturnType<typeof BacklinksContext.useContext>,
   getIndexContext: () => ReturnType<typeof IndexContext.useContext>,
 ) => {
-  const { getBacklinksConsideringAliases } = getBacklinksContext() ?? {};
+  const { getBacklinks } = getBacklinksContext() ?? {};
   const { search } = getIndexContext() ?? {};
-  if (!search || !getBacklinksConsideringAliases) return;
+  if (!search || !getBacklinks) return;
 
-  const backlinks = backlinksCollector[0] ?? getBacklinksConsideringAliases(rootBlockId);
+  const backlinks = backlinksCollector[0] ?? getBacklinks(rootBlockId);
   const rootBlock = blocksManager.getBlock(rootBlockId);
 
   if (rootBlock && rootBlock.content[0] === BLOCK_CONTENT_TYPES.TEXT) {
