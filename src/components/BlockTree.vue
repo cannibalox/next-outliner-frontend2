@@ -2,7 +2,7 @@
   <div
     class="block-tree select-none"
     ref="$blockTree"
-    :block-tree-id="id"
+    :data-block-tree-id="id"
     :style="{
       '--padding-bottom': `${paddingBottom}px`,
       '--padding-top': `${paddingTop}px`,
