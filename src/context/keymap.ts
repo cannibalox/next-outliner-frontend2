@@ -154,6 +154,7 @@ const KeymapContext = createContext(() => {
 
   const { lastFocusedBlockTree, lastFocusedDiId } = LastFocusContext.useContext()!;
   const { blockEditor, blocksManager } = BlocksContext.useContext()!;
+  const { selectedBlockIds } = BlockSelectDragContext.useContext()!;
   const commands = CommandsContext.useContext()!;
 
   ////////////////////// Ctrl/Shift/Meta 状态 //////////////////////
@@ -772,7 +773,13 @@ const KeymapContext = createContext(() => {
       stopPropagation: true,
     },
     Enter: {
-      run: commands.createEmptyTextBlockBelow(),
+      run: () => {
+        if (selectedBlockIds.value && selectedBlockIds.value.topLevelOnly.length > 1) {
+          commands.createEmptyTextBlockBelow();
+          return true;
+        }
+        return false;
+      },
       stopPropagation: true,
       preventDefault: true,
     },
