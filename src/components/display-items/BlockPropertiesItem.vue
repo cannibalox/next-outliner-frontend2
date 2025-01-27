@@ -3,7 +3,7 @@
     <div class="indent-lines">
       <div class="indent-line" v-for="i in level + 1" :key="i" :data-level="i"></div>
     </div>
-    <div class="bg-muted/70 w-full ml-[18px] px-2 py-1 my-1 rounded">
+    <div class="border w-full ml-[20px] mt-2 mb-1 px-2 py-1 rounded-md">
       <div
         v-for="[key, property] in Object.entries(properties)"
         class="flex items-center w-full gap-2"

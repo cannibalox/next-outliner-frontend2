@@ -4,10 +4,7 @@ import type { BlockId } from "@/common/type-and-schemas/block/block-id";
 import type IndexContext from "@/context";
 import type BacklinksContext from "@/context/backlinks";
 import type { Block } from "@/context/blocks/view-layer/blocksManager";
-import type {
-  BlocksManager,
-  ForDescendantsOptions,
-} from "@/context/blocks/view-layer/blocksManager";
+import type { BlocksManager } from "@/context/blocks/view-layer/blocksManager";
 import { nanoid } from "nanoid";
 import { toRaw } from "vue";
 
