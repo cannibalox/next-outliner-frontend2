@@ -22,14 +22,38 @@ export type DisplayItemId = DisplayItem["itemId"];
 //   - side-pane-header
 //   - block-properties
 export type DisplayItem = { itemId: string } & (
-  | { type: "basic-block"; level: number; block: Block }
+  | { type: "basic-block"; level: number; block: Block; fold: boolean; canExpand: boolean }
   | { type: "root-block"; block: Block }
-  | { type: "backlink-block"; block: Block; refBlockId: BlockId }
+  | {
+      type: "backlink-block";
+      block: Block;
+      refBlockId: BlockId;
+      fold: boolean;
+      canExpand: boolean;
+    }
   | { type: "backlink-header"; blockId: BlockId; backlinks: BlockId[] }
-  | { type: "backlink-descendant"; block: Block; level: number }
+  | {
+      type: "backlink-descendant";
+      block: Block;
+      level: number;
+      fold: boolean;
+      canExpand: boolean;
+    }
   | { type: "potential-links-header"; blockId: BlockId; potentialLinks: BlockId[] }
-  | { type: "potential-links-block"; block: Block; refBlockId: BlockId }
-  | { type: "potential-links-descendant"; block: Block; level: number }
+  | {
+      type: "potential-links-block";
+      block: Block;
+      refBlockId: BlockId;
+      fold: boolean;
+      canExpand: boolean;
+    }
+  | {
+      type: "potential-links-descendant";
+      block: Block;
+      level: number;
+      fold: boolean;
+      canExpand: boolean;
+    }
   | { type: "missing-block"; blockId: BlockId; parentId: BlockId; level: number }
   | { type: "side-pane-header"; blockId: BlockId }
   | { type: "block-properties"; level: number; block: Block }
@@ -111,19 +135,28 @@ const addContentItems = (ctx: DisplayGeneratorContext, rootBlock: Block) => {
       rootBlock.fold && !params.addSidePaneHeader && currLevel === rootDisplayLevel;
     // 如果 enlargeRootBlock，则不用考虑根块，因为前面根块已经作为 rootBlockItem 添加了
     const includeSelf = params.enlargeRootBlock ? false : true;
+    const properties = getProperties(block);
+    const canExpand =
+      ctx.params.showBlockProperties && Object.keys(properties).length > 0
+        ? true
+        : typeof block.childrenIds == "string"
+          ? false
+          : block.childrenIds.length > 0;
     if (includeSelf || block.id != rootBlock.id) {
       ctx.displayItems.push({
         type: "basic-block",
         itemId: `block-${block.id}`,
         block,
         level: currLevel,
+        fold: !forceExpand && block.fold,
+        canExpand,
       });
     }
     if (!forceExpand && block.fold) return;
     if (typeof block.childrenIds == "string") return;
 
     if (ctx.params.showBlockProperties) {
-      addBlockPropertiesItem(ctx, block, currLevel);
+      addBlockPropertiesItem(ctx, block, currLevel, properties);
     }
 
     for (let i = 0; i < block.childrenIds.length; i++) {
@@ -198,11 +231,21 @@ const addBacklinkItems = (ctx: DisplayGeneratorContext, rootBlock: Block) => {
     const block = blocksManager.getBlock(backlink);
     if (!block) continue;
     // 对一个反链根块，其 itemId 格式为 `backlink-block-${backlink}`
+    const itemId = `backlink-block-${backlink}`;
+    const properties = getProperties(block);
+    const canExpand =
+      ctx.params.showBlockProperties && Object.keys(properties).length > 0
+        ? true
+        : typeof block.childrenIds == "string"
+          ? false
+          : block.childrenIds.length > 0;
     ctx.displayItems.push({
       type: "backlink-block",
-      itemId: `backlink-block-${backlink}`,
+      itemId,
       block,
       refBlockId: rootBlock.id,
+      fold: !expandedBP[itemId],
+      canExpand,
     });
 
     const dfs = (block: Block, currLevel: number) => {
@@ -211,6 +254,11 @@ const addBacklinkItems = (ctx: DisplayGeneratorContext, rootBlock: Block) => {
           ? `backlink-block-${backlink}`
           : `backlink-descendant-${backlink}-${block.id}`;
       const fold = !expandedBP[itemId];
+      const canExpand = ctx.params.showBlockProperties
+        ? true
+        : typeof block.childrenIds == "string"
+          ? false
+          : block.childrenIds.length > 0;
 
       if (block.id !== backlink) {
         ctx.displayItems.push({
@@ -218,6 +266,8 @@ const addBacklinkItems = (ctx: DisplayGeneratorContext, rootBlock: Block) => {
           itemId,
           block,
           level: currLevel,
+          fold,
+          canExpand,
         });
       }
 
@@ -238,9 +288,13 @@ const addBacklinkItems = (ctx: DisplayGeneratorContext, rootBlock: Block) => {
   ctx.backlinks = backlinks;
 };
 
-const addBlockPropertiesItem = (ctx: DisplayGeneratorContext, block: Block, level: number) => {
+const addBlockPropertiesItem = (
+  ctx: DisplayGeneratorContext,
+  block: Block,
+  level: number,
+  properties: Record<string, any>,
+) => {
   const { displayItems } = ctx;
-  const properties = getProperties(block);
   if (Object.keys(properties).length <= 0) return;
   displayItems.push({
     type: "block-properties",
@@ -313,11 +367,22 @@ const addPotentialLinksItems = (ctx: DisplayGeneratorContext, rootBlock: Block) 
       for (const potentialLink of potentialLinks) {
         const block = blocksManager.getBlock(potentialLink.id);
         if (!block) continue;
+        const itemId = `potential-links-block-${potentialLink.id}`;
+        const properties = getProperties(block);
+        const canExpand =
+          ctx.params.showBlockProperties && Object.keys(properties).length > 0
+            ? true
+            : typeof block.childrenIds == "string"
+              ? false
+              : block.childrenIds.length > 0;
+
         ctx.displayItems.push({
           type: "potential-links-block",
-          itemId: `potential-links-block-${potentialLink.id}`,
+          itemId,
           block,
           refBlockId: rootBlock.id,
+          fold: !expandedBP[itemId],
+          canExpand,
         });
 
         const dfs = (block: Block, currLevel: number) => {
@@ -326,6 +391,13 @@ const addPotentialLinksItems = (ctx: DisplayGeneratorContext, rootBlock: Block) 
               ? `potential-links-block-${potentialLink.id}`
               : `potential-links-descendant-${potentialLink.id}-${block.id}`;
           const fold = !expandedBP[itemId];
+          const properties = getProperties(block);
+          const canExpand =
+            ctx.params.showBlockProperties && Object.keys(properties).length > 0
+              ? true
+              : typeof block.childrenIds == "string"
+                ? false
+                : block.childrenIds.length > 0;
 
           if (block.id !== potentialLink.id) {
             ctx.displayItems.push({
@@ -333,6 +405,8 @@ const addPotentialLinksItems = (ctx: DisplayGeneratorContext, rootBlock: Block) 
               itemId,
               block,
               level: currLevel,
+              fold,
+              canExpand,
             });
           }
 
