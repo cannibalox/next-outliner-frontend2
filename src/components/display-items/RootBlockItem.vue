@@ -10,6 +10,7 @@
     :hide-bullet="true"
     :hide-fold-button="true"
     :hide-context-menu="true"
+    :can-expand="false"
   />
 </template>
 
