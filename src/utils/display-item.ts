@@ -114,10 +114,10 @@ export const generateDisplayItems = (params: DisplayGeneratorParams) => {
     const rootBlock = params.blocksManager.getBlock(rootBlockId);
     if (!rootBlock) continue;
 
-    addSidePaneHeaderItem(ctx, rootBlock);
+    params.addSidePaneHeader && addSidePaneHeaderItem(ctx, rootBlock);
     addContentItems(ctx, rootBlock);
-    addBacklinkItems(ctx, rootBlock);
-    addPotentialLinksItems(ctx, rootBlock);
+    params.showBacklinks && addBacklinkItems(ctx, rootBlock);
+    params.showPotentialLinks && addPotentialLinksItems(ctx, rootBlock);
   }
 
   return ctx.displayItems;
