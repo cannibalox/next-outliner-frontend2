@@ -102,7 +102,11 @@ export const mkPasteTextPlugin = (ctx: PmPluginCtx) => {
 
             // 如果当前块为空，则删除当前块
             if (currBlockEmpty) {
-              tr.deleteBlock(blockId);
+              blockEditor.deleteBlock({
+                blockId,
+                tr,
+                commit: false,
+              });
             }
 
             tr.commit();
@@ -175,7 +179,11 @@ export const mkPasteTextPlugin = (ctx: PmPluginCtx) => {
 
               // 如果当前块为空，则删除当前块
               if (currBlockEmpty) {
-                tr.deleteBlock(blockId);
+                blockEditor.deleteBlock({
+                  blockId,
+                  tr,
+                  commit: false,
+                });
               }
 
               tr.commit();
