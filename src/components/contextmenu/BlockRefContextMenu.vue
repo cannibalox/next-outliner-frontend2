@@ -186,6 +186,7 @@ const handleDeleteAlias = (aliasId: string) => {
 
 <style lang="scss">
 [data-radix-popper-content-wrapper]:has(> .block-ref-contextmenu-content) {
+  z-index: 999 !important;
   transform: translate(var(--popover-x), var(--popover-y)) !important;
 }
 </style>

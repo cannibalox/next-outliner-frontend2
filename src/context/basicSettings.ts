@@ -107,15 +107,19 @@ const BasicSettingsContext = createContext(() => {
   });
 
   // 监听 customCss 的变化，更新全局样式
-  watch(customCss, (newVal) => {
-    let customCssEl = document.head.querySelector("style#custom-css");
-    if (!customCssEl) {
-      customCssEl = document.createElement("style");
-      customCssEl.id = "custom-css";
-      document.head.appendChild(customCssEl);
-    }
-    customCssEl.textContent = newVal;
-  });
+  watch(
+    customCss,
+    (newVal) => {
+      let customCssEl = document.head.querySelector("style#custom-css");
+      if (!customCssEl) {
+        customCssEl = document.createElement("style");
+        customCssEl.id = "custom-css";
+        document.head.appendChild(customCssEl);
+      }
+      customCssEl.textContent = newVal;
+    },
+    { immediate: true },
+  );
 
   const ctx = {
     textFontFamily,
