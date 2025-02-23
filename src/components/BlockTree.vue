@@ -762,14 +762,28 @@ const handlePointerDown = (e: PointerEvent) => {
   document.addEventListener("pointerleave", handlePointerUpOrLeave);
 };
 
+const preventDefaultWhenDragging = (e: PointerEvent) => {
+  const selected = dndCtx.selectedBlockIds.value ?? null;
+  if (selected && selected.topLevelOnly.length > 0) {
+    e.preventDefault();
+  }
+};
+
 onMounted(() => {
   const el = $blockTree.value;
   if (el) Object.assign(el, { controller });
   blockTreeContext.registerBlockTree(controller);
+
+  // 修复 Safari 上拖动时会频繁选中光标下的块的问题
+  // 原因是 pointermove 我们用了 useThrottle，导致
+  // 有时 e.preventDefault() 没有生效
+  // 所以这里我们对每个 pointermove 事件，如果在拖动，则调用 e.preventDefault()
+  document.addEventListener("pointermove", preventDefaultWhenDragging);
 });
 
 onUnmounted(() => {
   blockTreeContext.unregisterBlockTree(props.id);
+  document.removeEventListener("pointermove", preventDefaultWhenDragging);
 });
 </script>
 
@@ -785,7 +799,7 @@ onUnmounted(() => {
       min-height: var(--padding-bottom);
       background-color: var(--bg-color-primary);
       position: relative;
-      z-index: 99;
+      z-index: 10;
     }
 
     [data-id="header"] {
