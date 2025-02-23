@@ -20,6 +20,13 @@
         {{ $t("kbView.commands.fieldSettings") }}
       </DropdownMenuItem> -->
       <DropdownMenuItem
+        :disabled="!openAliasesCommand(true, clickedBlockId!, undefined)"
+        @click="openAliasesCommand(false, clickedBlockId!, $event)"
+      >
+        <Field class="size-4 mr-2" />
+        {{ $t("kbView.commands.openAliases") }}
+      </DropdownMenuItem>
+      <DropdownMenuItem
         :disabled="!addMetadata(true, clickedBlockId!, undefined)"
         @click="addMetadata(false, clickedBlockId!, $event)"
       >
@@ -190,6 +197,7 @@ import BlockRefTagSettingsDialogContext from "@/context/blockRefTagSettingsDialo
 import { getProperties } from "@/common/helper-functions/block";
 import { nanoid } from "nanoid";
 import type { BlockProperties } from "@/common/type-and-schemas/block/block-properties";
+import BlockRefContextmenuContext from "@/context/blockRefContextmenu";
 
 type CommandExec = (
   test: boolean,
@@ -209,6 +217,7 @@ const { open, showPos, clickedBlockId } = BlockContextMenuContext.useContext()!;
 const { openDialog: openFieldSettingsDialog } = FieldSettingsDialogContext.useContext()!;
 const { openDialog: openBlockRefTagSettingsDialog } =
   BlockRefTagSettingsDialogContext.useContext()!;
+const { openAt: openAliases } = BlockRefContextmenuContext.useContext()!;
 
 watch(showPos, async () => {
   await nextTick();
@@ -352,6 +361,14 @@ const addMetadata: CommandExec = (test, blockId) => {
         metadata: { ...block.metadata, properties: newProperties },
       });
     });
+  }
+  return !!blockId;
+};
+
+const openAliasesCommand: CommandExec = (test, blockId) => {
+  if (!test && blockId) {
+    const pos = showPos.value!;
+    openAliases(pos, blockId);
   }
   return !!blockId;
 };

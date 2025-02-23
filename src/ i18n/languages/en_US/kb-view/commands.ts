@@ -30,6 +30,7 @@ const commands = {
   blockRefTagSettings: "Block Reference & Tag Settings",
   fieldSettings: "Field Settings",
   addMetadata: "Add Metadata",
+  openAliases: "Open Aliases Panel",
 };
 
 export default commands;

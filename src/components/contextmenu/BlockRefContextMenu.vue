@@ -1,7 +1,11 @@
 <template>
   <Popover v-model:open="open">
     <PopoverTrigger class="hidden" />
-    <PopoverContent class="block-ref-contextmenu-content p-3 w-[350px]" @open-auto-focus.prevent>
+    <PopoverContent
+      class="block-ref-contextmenu-content p-3 w-[350px]"
+      @open-auto-focus.prevent
+      @escape-key-down="recoverFocus"
+    >
       <div class="text-sm font-medium mb-2">{{ $t("kbView.blockRefContextMenu.title") }}</div>
 
       <!-- 别名列表 -->
@@ -72,6 +76,7 @@
         <Input
           v-model="newAlias"
           :placeholder="$t('kbView.blockRefContextMenu.addAlias')"
+          @keydown.enter.prevent="handleAddAlias"
           class="flex-1 h-8 text-sm"
         />
         <Button
@@ -89,20 +94,22 @@
 </template>
 
 <script setup lang="ts">
+import type { BlockId } from "@/common/type-and-schemas/block/block-id";
+import BacklinksContext from "@/context/backlinks";
 import BlockRefContextmenuContext from "@/context/blockRefContextmenu";
 import BlocksContext from "@/context/blocks/blocks";
 import type { Block } from "@/context/blocks/view-layer/blocksManager";
 import FieldsManagerContext from "@/context/fieldsManager";
+import LastFocusContext from "@/context/lastFocus";
+import { useTaskQueue } from "@/plugins/taskQueue";
+import { plainTextToTextContent } from "@/utils/pm";
 import { calcPopoverPos } from "@/utils/popover";
-import { GripVertical, Pencil, Plus, Trash2, Settings } from "lucide-vue-next";
+import { GripVertical, Plus, Trash2 } from "lucide-vue-next";
 import { nextTick, ref, watch } from "vue";
 import BlockContent from "../block-contents/BlockContent.vue";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { getPmSchema } from "../prosemirror/pmSchema";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -111,17 +118,18 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "../ui/alert-dialog";
-import { useTaskQueue } from "@/plugins/taskQueue";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import BacklinksContext from "@/context/backlinks";
-import { plainTextToTextContent } from "@/utils/pm";
-import { getPmSchema } from "../prosemirror/pmSchema";
-import type { BlockId } from "@/common/type-and-schemas/block/block-id";
+import BlockTreeContext from "@/context/blockTree";
 
 const { open, showPos, clickedBlockId } = BlockRefContextmenuContext.useContext()!;
 const { getFieldValues } = FieldsManagerContext.useContext()!;
+const { lastFocusedDi, lastFocusedBlockTree } = LastFocusContext.useContext()!;
 const { blocksManager, blockEditor } = BlocksContext.useContext()!;
 const { getAllAliases, addAlias, getBacklinks } = BacklinksContext.useContext()!;
+const { getBlockTree } = BlockTreeContext.useContext()!;
 
 type AliasInfo = {
   block: Block;
@@ -130,15 +138,24 @@ type AliasInfo = {
 
 const aliases = ref<AliasInfo[]>([]);
 const newAlias = ref("");
+// 记录打开之前聚焦的信息，关闭时恢复聚焦
+let focusedBlockTreeIdBeforeOpen: string | null = null;
+let focusedDiBeforeOpen: string | null = null;
 
 watch([open, clickedBlockId], ([open, clickedBlockId]) => {
-  if (!open || !clickedBlockId) return;
-  updateAliases(clickedBlockId);
+  if (open && clickedBlockId) {
+    updateAliases(clickedBlockId);
+  }
 });
 
 watch(showPos, async () => {
   await nextTick();
   if (!showPos.value) return;
+
+  // 记录打开时聚焦的信息
+  focusedDiBeforeOpen = lastFocusedDi.value?.itemId ?? null;
+  focusedBlockTreeIdBeforeOpen = lastFocusedBlockTree.value?.getId() ?? null;
+
   const el = document.querySelector("[data-radix-popper-content-wrapper]");
   if (!(el instanceof HTMLElement)) return;
   const { x, y } = showPos.value!;
@@ -152,7 +169,17 @@ watch(showPos, async () => {
   // 只能这样去覆盖
   document.body.style.setProperty("--popover-x", `${popoverPos.rightDown.x}px`);
   document.body.style.setProperty("--popover-y", `${popoverPos.rightDown.y}px`);
+
+  el.querySelector("input")?.focus(); // 打开时自动聚焦输入框
 });
+
+const recoverFocus = () => {
+  // 关闭时，恢复之前聚焦的元素
+  if (focusedDiBeforeOpen && focusedBlockTreeIdBeforeOpen) {
+    const tree = getBlockTree(focusedBlockTreeIdBeforeOpen);
+    if (tree) tree.focusDi(focusedDiBeforeOpen, { highlight: false, scrollIntoView: false });
+  }
+};
 
 const updateAliases = (blockId: BlockId) => {
   const aliasIds = getAllAliases(blockId, true);

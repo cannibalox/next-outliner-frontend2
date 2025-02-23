@@ -30,6 +30,7 @@ const commands = {
   blockRefTagSettings: "ブロック参照とタグ設定",
   fieldSettings: "フィールド設定",
   addMetadata: "メタデータを追加",
+  openAliases: "エイリアスパネルを開く",
 };
 
 export default commands;

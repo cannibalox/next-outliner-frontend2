@@ -30,6 +30,7 @@ const commands = {
   blockRefTagSettings: "區塊引用 & 標籤設定",
   fieldSettings: "字段設定",
   addMetadata: "添加元數據",
+  openAliases: "開啟別名面板",
 };
 
 export default commands;
