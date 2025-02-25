@@ -4,12 +4,12 @@
       <template v-for="(block, index) in displayPath" :key="index">
         <BreadcrumbItem v-if="typeof block !== 'string'">
           <BreadcrumbLink
-            class="no-underline cursor-pointer"
+            class="no-underline cursor-pointer select-none"
             @click="emit('click-path-segment', block.id)"
           >
             <template v-if="isTextContent(block)">
               <BlockContent
-                class="!max-w-[unset] *:cursor-pointer *:max-w-[30ch] *:!whitespace-pre *:truncate"
+                class="!max-w-[unset] pointer-events-none *:cursor-pointer *:max-w-[30ch] *:!whitespace-pre *:truncate"
                 :block="block"
                 :block-tree="undefined"
                 :readonly="true"

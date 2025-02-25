@@ -193,8 +193,8 @@ const handleKeydownOnCursorContainer = generateKeydownHandlerSimple({
         };
         const schema = getPmSchema({ getBlockRef: blocksManager.getBlockRef });
         blockEditor.insertNormalBlock({ pos, content: plainTextToTextContent("", schema) });
-        const diBelow = tree.getDiBelow(itemId);
         await tree.nextUpdate();
+        const diBelow = tree.getDiBelow(itemId);
         diBelow && tree.focusDi(diBelow[0].itemId);
       });
       return true;
