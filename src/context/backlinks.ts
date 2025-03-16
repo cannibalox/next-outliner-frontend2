@@ -72,7 +72,6 @@ const BacklinksContext = createContext(() => {
   //         - C
   // 这种阴间的情况
   const getAllAliases = (blockId: BlockId, includeSelf = true) => {
-    const ret: BlockId[] = includeSelf ? [blockId] : [];
     const fieldValues = getFieldValues(blockId) ?? {};
     // 情况 1：
     // - this block
@@ -80,33 +79,44 @@ const BacklinksContext = createContext(() => {
     //     - alias1
     //     - ...
     if ("Alias" in fieldValues) {
+      const ret: BlockId[] = [];
       const aliases = fieldValues.Alias;
       const res = z.array(z.string()).safeParse(aliases);
       if (res.success) {
+        if (includeSelf) ret.push(blockId);
         ret.push(...res.data);
-      }
-      return ret;
-    }
-    // 情况 2：
-    // - parent block
-    //   - [[Alias]]
-    //     - this block
-    {
-      const block = blocksManager.getBlock(blockId);
-      if (!block) return ret;
-      const parentBlock = block.parentRef.value;
-      const parentParentBlock = parentBlock?.parentRef.value;
-      if (!parentParentBlock) return ret;
-      const fieldValues = getFieldValues(parentParentBlock.id) ?? {};
-      if ("Alias" in fieldValues) {
-        const aliases = fieldValues.Alias;
-        const res = z.array(z.string()).safeParse(aliases);
-        if (res.success) {
-          ret.push(...res.data);
-        }
         return ret;
       }
     }
+    // 情况 2：
+    // - parent parent block
+    //   - [[Alias]] <- parent block
+    //     - this block
+    {
+      const block = blocksManager.getBlock(blockId);
+      if (block != null) {
+        const parentBlock = block.parentRef.value;
+        if (parentBlock != null) {
+          const parentParentBlock = parentBlock?.parentRef.value;
+          if (parentParentBlock != null) {
+            const fieldValues = getFieldValues(parentParentBlock.id) ?? {};
+            if ("Alias" in fieldValues) {
+              const aliases = fieldValues.Alias;
+              const res = z.array(z.string()).safeParse(aliases);
+              if (res.success) {
+                const ret: BlockId[] = [];
+                if (includeSelf) ret.push(parentParentBlock.id);
+                ret.push(...res.data);
+                return ret;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    const ret: BlockId[] = [];
+    if (includeSelf) ret.push(blockId);
     return ret;
   };
 

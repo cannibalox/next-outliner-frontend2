@@ -76,7 +76,12 @@
         <Input
           v-model="newAlias"
           :placeholder="$t('kbView.blockRefContextMenu.addAlias')"
-          @keydown.enter.prevent="handleAddAlias"
+          @keydown.enter.prevent="
+            (e: KeyboardEvent) => {
+              if (e.isComposing || e.keyCode === 229) return; // 防止与输入法冲突
+              handleAddAlias();
+            }
+          "
           class="flex-1 h-8 text-sm"
         />
         <Button
